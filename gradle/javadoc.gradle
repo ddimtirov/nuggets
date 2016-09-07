@@ -1,0 +1,30 @@
+/*
+ *    Copyright 2016 by Dimitar Dimitrov
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+javadoc {
+    (options as StandardJavadocDocletOptions).with {
+        delegate.linksOffline('https://docs.oracle.com/javase/8/docs/api/',         'gradle/javadocs/jdk')
+        delegate.linksOffline('http://javadox.com/org.jetbrains/annotations/15.0/', 'gradle/javadocs/jetbrains-annotations')
+        addStringOption('Xdoclint:all,-reference', '-quiet') // we report a few exceptions not declared on methods
+        windowTitle = "nuggets API"
+        docTitle = "<b>nuggets</b> - loosely coupled utilities for Java 8"
+        header = '<a href="https://github.com/ddimitrov/nuggets"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/52760788cde945287fbb584134c4cbc2bc36f904/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f77686974655f6666666666662e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_white_ffffff.png"></a>'
+        linkSource()
+        noIndex()
+        noHelp()
+        noTree()
+    }
+}

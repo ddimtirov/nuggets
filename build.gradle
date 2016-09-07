@@ -1,0 +1,39 @@
+/*
+ *    Copyright 2016 by Dimitar Dimitrov
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+plugins {
+    id 'com.gradle.build-scan' version '1.0'
+    id "net.ltgt.errorprone" version "0.0.8"
+    id "groovy"
+    id "pmd"
+    id "findbugs"
+}
+
+group 'io.github.ddimitrov'
+description 'Loosely coupled utilities for Java 8'
+
+repositories.jcenter()
+apply from: file('gradle/versions.gradle')
+apply from: file('gradle/javadoc.gradle')
+apply from: file('gradle/quality.gradle')
+
+dependencies {
+    compileOnly 'org.jetbrains:annotations:15.0'
+    testCompile 'javax.inject:javax.inject:1'
+    testCompile 'org.spockframework:spock-core:'
+    testRuntime 'cglib:cglib-nodep:'
+}
+
