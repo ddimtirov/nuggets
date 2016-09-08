@@ -20,6 +20,7 @@ plugins {
     id "groovy"
     id "pmd"
     id "findbugs"
+    id "jacoco"
 }
 
 group 'io.github.ddimitrov'

@@ -3,7 +3,14 @@ jdk: oraclejdk8
 os: linux
 sudo: false
 
-script: ./gradlew build --continue --stacktrace --profile
+script: ./gradlew build jacocoTestReport --continue --stacktrace --profile
+
+# codecov.io integration
+before_install:
+  - pip install --user codecov
+
+after_success:
+  - codecov
 
 # see https://docs.travis-ci.com/user/languages/java/#Projects-Using-Gradle
 before_cache:

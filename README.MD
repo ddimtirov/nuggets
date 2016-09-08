@@ -5,6 +5,7 @@ as well as features that make code easier to read and maintain.
 Licensed under the Apache License, Version 2.0
 
 [![Build Status](https://travis-ci.org/ddimtirov/nuggets.svg?branch=dev-infrastructure)](https://travis-ci.org/ddimtirov/nuggets)
+[![codecov](https://codecov.io/gh/ddimtirov/nuggets/branch/dev-infrastructure/graph/badge.svg)](https://codecov.io/gh/ddimtirov/nuggets)
 
 ### Functionality:
 - `Exceptions` - utils for [dealing with checked exceptions](https://kotlinlang.org/docs/reference/exceptions.html#checked-exceptions)
