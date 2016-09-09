@@ -10,34 +10,23 @@
 
 *[ ] Update README
 
-
-# TODO:  
-# TODO: 
-# TODO: 
-# TODO: https://scan.coverity.com/travis_ci
-# TODO: Publish javadocs to gh-pages
+---
 
 *[ ] Setup services
     *[ ] Build commits
-      *[ ] [TravisCI](https://travis-ci.org/ddimtirov/nuggets/settings)
-      *[ ] Publish Javadoc to gh-pages and refer from readme
+      *[x] TravisCI
+      *[x] Publish Javadoc to gh-pages and refer from readme
       *[ ] add to the matrix - osx, openjdk8
       *[ ] add windows to the matrix via appveyor
     *[ ] Code reports
-        *[ ] Codecov
-        *[ ] VersionEye
-        *[ ] Coverity
+        *[x] Codecov
+        *[x] VersionEye
+        *[ ] Coverity https://scan.coverity.com/travis_ci
 *[ ] Release  
     *[ ] Sign tagged releases   
     *[ ] Publish tagged releases to Github Releases  
     *[ ] Publish tagged releases to Bintray  
-    *[ ] Publish tagged releases to Central  
-*[ ] add badges to readme http://shields.io/
-
-
-
-License: https://img.shields.io/github/license/ddimitrov/nuggets.svg
-
+    *[ ] Publish tagged releases to Central 
     
 #### TODO: 
 - Exceptions

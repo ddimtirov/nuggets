@@ -6,8 +6,13 @@ Licensed under the Apache License, Version 2.0
 
 [![Build Status](https://travis-ci.org/ddimtirov/nuggets.svg?branch=dev-infrastructure)](https://travis-ci.org/ddimtirov/nuggets)
 [![codecov](https://codecov.io/gh/ddimtirov/nuggets/branch/dev-infrastructure/graph/badge.svg)](https://codecov.io/gh/ddimtirov/nuggets)
+[sourcegraph](https://sourcegraph.com/github.com/ddimtirov/nuggets@dev-infrastructure) 
+| [codeclimate](https://codeclimate.com/github/ddimtirov/nuggets)
+| [javadocs](https://ddimtirov.github.io/nuggets/javadoc/).
 
 ### Functionality:
+
+For detailed documentation, see the project's [javadocs](https://ddimtirov.github.io/nuggets/javadoc/).
 - `Exceptions` - utils for [dealing with checked exceptions](https://kotlinlang.org/docs/reference/exceptions.html#checked-exceptions)
   and [huge stacktraces](https://dzone.com/articles/filtering-stack-trace-hell)
   - rethrow checked exception as unchecked
