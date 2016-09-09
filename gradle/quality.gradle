@@ -39,3 +39,11 @@ jacocoTestReport {
         html.enabled true
     }
 }
+
+ext.'versioneye.projectid'='57d2624987b0f6003c14ac1e'
+versioneye {
+    dependencies = transitive
+    includePlugins = false
+    exclude 'errorprone', 'findbugs', 'pmd', 'jacocoAgent', 'jacocoAnt' // tools
+    exclude 'testCompileOnly', 'testCompile', 'testCompileClasspath', 'testRuntime' // tests
+}
