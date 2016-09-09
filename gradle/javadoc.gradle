@@ -27,4 +27,10 @@ javadoc {
         noHelp()
         noTree()
     }
+    doLast {
+        copy {
+            from file('LICENSE')
+            into destinationDir
+        }
+    }
 }

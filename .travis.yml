@@ -3,7 +3,12 @@ jdk: oraclejdk8
 os: linux
 sudo: false
 
-script: ./gradlew build jacocoTestReport --continue --stacktrace --profile
+script: ./gradlew build jacocoTestReport javadoc --continue --stacktrace --profile
+
+env:
+  global:
+    # GH_TOKEN for ddimtirov/nuggets
+    - secure: u0YEKxdx3cEbtJAZU9xeh7X+8ix3MZNirUor+i/u5WPflXmqAe32BO7Oh92lfM46h7b2e/AVSeA4UQUsRcz2HMWDLy3jVjIxpS4bIc4Lfpf06UH9ZSxmN3qfAVp6W8sN/YII0h9WfAaNLX5VxY91LmloTdtvS3zgRFoaBL+W0nVicu/O4yPBn8o5DGyf8q83gmx2jNI3RTMyvMrliQbS+jtzgCPDrW/KqKPHmiaEl7yuXShZnRlxrjDa65fkDPnCRbexklmbnaF2ssjVB3sKofvmzFQKIp+44Jvgpm93eXqFYOfcrma8+8J2g9u/WL9uOIy7lE7bCf098QmoOthyvL3lUGgRPIbuiPygrFPEUpb74zyLZB6BpIXG8VjTlqZtoVddQNyglU5Kiyh/2ZNK1nQPssxo/y868gl2QWn9ZB0N9EU2MLJf1kVsJMHVEeDMyKzoHQW1fjeLvPJkDBFJtOuLltB0kfWkOzGcdJHtznNWGZoLAEa6Yr8A0OZAEqrxG81sttDL/dYQJDhJdGn1U/Q6adk2MTa6HXjJgQbuACDw8TpmFp8Lv13d907ZmJFojjzUJS9TxTKIXQKzCZoCGFhWxajZdDI9jOq3Ypt4rZ/zXea9YlIDx4Op3immdbcW8mNiS2bJg1kw53a2CiCHYS7rKHyMKAXY/SkR6D81jZI=
 
 # codecov.io integration
 before_install:
@@ -11,6 +16,7 @@ before_install:
 
 after_success:
   - codecov
+  - ./publish-docs-to-github.sh
 
 # see https://docs.travis-ci.com/user/languages/java/#Projects-Using-Gradle
 before_cache:
