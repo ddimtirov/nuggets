@@ -28,7 +28,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static io.github.ddimitrov.nuggets.Exceptions.rethrow;
 
 /**
  * <p>Provides utilities for <a href="#encapsulation">circumventing Java encapsulation</a>,
@@ -214,7 +213,7 @@ public class Extractors {
             Field field = getAccessibleField(type, fieldName, true);
             return fieldType.cast(field.get(target));
         } catch (IllegalAccessException e) {
-            return rethrow(e);
+            return doSneakyThrow(e);
         }
     }
 
@@ -261,7 +260,7 @@ public class Extractors {
             Field field = getAccessibleField(type, fieldName, true);
             field.set(target, value);
         } catch (IllegalAccessException e) {
-            rethrow(e); // do not use #rethrow(Throwable, String) because we would go into mutual recursion
+            doSneakyThrow(e); // do not use #rethrow(Throwable, String) because we would go into mutual recursion
         }
     }
 
@@ -313,11 +312,11 @@ public class Extractors {
 
             return field;
         } catch (IllegalAccessException e) {
-            return rethrow(e);
+            return doSneakyThrow(e);
         }catch (NoSuchFieldException e) {
             Class<?> superclass = type.getSuperclass();
             return !checkSuperclasses || Object.class.equals(superclass)
-                    ? rethrow(e)
+                    ? doSneakyThrow(e)
                     : getAccessibleField(superclass, fieldName, true);
         }
     }
@@ -457,16 +456,16 @@ public class Extractors {
     @Contract(pure=true)
     public static <T> @NotNull Constructor<T> findInjectableConstructor(boolean requireAnnotation, @NotNull Constructor<?>... candidates) {
         if (candidates.length==0) {
-            return rethrow(new NoSuchMethodException("Need at least one candidate for injectable constructor!"));
+            return doSneakyThrow(new NoSuchMethodException("Need at least one candidate for injectable constructor!"));
         }
 
         Constructor<?>[] injectable = findInjectableCandidates(requireAnnotation, null, candidates);
         if (injectable.length>1) {
-            return rethrow(new NoSuchMethodException("Ambiguous injectable constructor: " + Arrays.toString(injectable)));
+            return doSneakyThrow(new NoSuchMethodException("Ambiguous injectable constructor: " + Arrays.toString(injectable)));
         }
 
         if (injectable.length<1) {
-            return rethrow(new NoSuchMethodException("No injectable constructor found in: " + Arrays.toString(candidates)));
+            return doSneakyThrow(new NoSuchMethodException("No injectable constructor found in: " + Arrays.toString(candidates)));
         }
 
         @SuppressWarnings("unchecked")  // cast Constructor<?> to Constructor<T>
@@ -573,5 +572,10 @@ public class Extractors {
             params[i++] = paramResolver.apply(type);
         }
         return params;
+    }
+
+    @Contract("_->fail") @SuppressWarnings("unchecked")
+    private static <T extends Throwable, R> R doSneakyThrow(@NotNull Throwable t) throws T {
+        throw (T) t;
     }
 }
