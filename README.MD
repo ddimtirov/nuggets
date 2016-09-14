@@ -2,17 +2,15 @@
 only non-trivial features, especially ones that I find I have needed repeatedly,
 as well as features that make code easier to read and maintain. 
 
-Licensed under the Apache License, Version 2.0
-
 [![Build Status](https://travis-ci.org/ddimtirov/nuggets.svg?branch=master)](https://travis-ci.org/ddimtirov/nuggets)
-[![codecov](https://codecov.io/gh/ddimtirov/nuggets/branch/master/graph/badge.svg)](https://codecov.io/gh/ddimtirov/nuggets)
-[sourcegraph](https://sourcegraph.com/github.com/ddimtirov/nuggets@master) 
-| [codeclimate](https://codeclimate.com/github/ddimtirov/nuggets)
-| [javadocs](https://ddimtirov.github.io/nuggets/javadoc/).
+[![codecov](https://codecov.io/gh/ddimtirov/nuggets/branch/master/graph/badge.svg)](https://codecov.io/gh/ddimtirov/nuggets) 
+[![Dependency Status](https://www.versioneye.com/user/projects/57d2624987b0f6003c14ac1e/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/57d2624987b0f6003c14ac1e)
 
 ### Functionality:
 
-For detailed documentation, see the project's [javadocs](https://ddimtirov.github.io/nuggets/javadoc/).
+See the [javadocs](https://ddimtirov.github.io/nuggets/javadoc/) for detailed documentation; 
+browse the sources at [sourcegraph](https://sourcegraph.com/github.com/ddimtirov/nuggets@master).
+
 - `Exceptions` - utils for [dealing with checked exceptions](https://kotlinlang.org/docs/reference/exceptions.html#checked-exceptions)
   and [huge stacktraces](https://dzone.com/articles/filtering-stack-trace-hell)
   - rethrow checked exception as unchecked
