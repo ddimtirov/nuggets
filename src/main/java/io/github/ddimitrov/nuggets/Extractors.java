@@ -395,6 +395,7 @@ public class Extractors {
      * or it threw exception.
      *
      * @param c type
+     * @param <T> inferring the return type.
      * @return default value
      */
     @Contract(pure=true)

@@ -369,8 +369,6 @@ class ExceptionsTransformationsSpec extends Specification {
                 .replace(System.lineSeparator(), '\n')  // use \n regardless of the system line separator
                 .replaceAll(~/:\d+\)/, ')')             // strip line numbers
 
-        // TODO: works in IDEA, but  blows with StackOverflowError when run in Gradle
-//        return es.replaceFirst(~/(?<=\tat org\.spockframework\.runtime\.Sputnik\.run\(Sputnik\.java\)\n)(?:.|\n)+/, '')
         def lines = es.split('\n')
         def startOfSpock = lines.findIndexOf { it =~ /Sputnik\.run/ }
         return startOfSpock<0 ? es : lines.take(startOfSpock + 1).join('\n') + '\n'
