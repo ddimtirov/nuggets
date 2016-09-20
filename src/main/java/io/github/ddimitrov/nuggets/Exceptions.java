@@ -433,4 +433,22 @@ public class Exceptions {
         }
         return sw.getBuffer().toString();
     }
+
+    public static Throwable parseThrowable(CharSequence text) {
+        String[] lines = text.toString().split(System.lineSeparator()); // one day we may make it fast
+        String className = "";
+        String message = "";
+        Class<Object> type = Extractors.getClassIfPresent(className);
+        Throwable t = null;
+        try {
+            t = Throwable.class.cast(type==null ? new Throwable() : type.newInstance());
+            Extractors.pokeField(t, "message", (type==null ? "MISSING: " + className + ": ": "") + message);
+            // TODO: set stacktrace
+            // TODO: set causes
+            // TODO: set suppressed
+            return t;
+        } catch (InstantiationException|IllegalAccessException e) {
+            return rethrow(e);
+        }
+    }
 }
