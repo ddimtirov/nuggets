@@ -26,7 +26,11 @@ browse the sources at [sourcegraph](https://sourcegraph.com/github.com/ddimtirov
   - create a default value for type (no-args constructor, zero, `false`, or `null`)
   - safely load potentially missing classes (useful for plugins and optional functionality)
   - dependency injection primitives (roll your custom DI injector in few lines)
-  
+- `TextTable` - formats complex data in logs, stdout and file reports
+  - rendering to any `Appendable` object (`StringBuilder`, `Writer`, etc.)
+  - alignment, padding and custom formatting per column
+  - default values for optional column
+  - extensible visual styles
 
 ### Non-functional Features:
 - no 3rd party dependencies at runtime
