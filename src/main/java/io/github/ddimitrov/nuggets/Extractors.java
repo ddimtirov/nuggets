@@ -313,7 +313,7 @@ public class Extractors {
             return field;
         } catch (IllegalAccessException e) {
             return doSneakyThrow(e);
-        }catch (NoSuchFieldException e) {
+        } catch (NoSuchFieldException e) {
             Class<?> superclass = type.getSuperclass();
             return !checkSuperclasses || Object.class.equals(superclass)
                     ? doSneakyThrow(e)

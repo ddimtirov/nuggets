@@ -20,9 +20,10 @@ import org.junit.Test
 
 @SuppressWarnings(["GroovyResultOfObjectAllocationIgnored", "GroovyAccessibility"])
 class FullLineCoveragePadding {
-    @Test void padding() {
+    @Test void callSomeCode() {
         new Exceptions()
         new Extractors()
         new ExceptionTransformerBuilder()
+        assert new TextTable.DataBuilder(true, Collections.singletonList(new TextTable.Column('dummy', 0))).toString()!=null
     }
 }

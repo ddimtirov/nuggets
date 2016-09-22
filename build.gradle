@@ -34,6 +34,7 @@ apply from: file('gradle/quality.gradle')
 
 dependencies {
     compileOnly 'org.jetbrains:annotations:15.0'
+    testCompileOnly 'org.jetbrains:annotations:15.0' // so that the Groovy compiler won't complain
     testCompile 'javax.inject:javax.inject:1'
     testCompile 'org.spockframework:spock-core:'
     testRuntime 'cglib:cglib-nodep:'
