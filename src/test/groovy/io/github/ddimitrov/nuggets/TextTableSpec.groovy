@@ -207,6 +207,7 @@ _2_4_6_8_0+----------+------------+---------------------+
         e.message == "Duplicate column 'same'"
     }
 
+//    @Unroll def "all columns: #useCase"(useCase, row, String expected) {
     def "rows need to populate all mandatory columns"(useCase, row, String expected) {
         setup:
         // normalize line endings and trim leading space
@@ -224,18 +225,18 @@ _2_4_6_8_0+----------+------------+---------------------+
 
         where:
         useCase                  | row                   || expected
-        'too few columns'        | [1, 2]                || '''Data doesn't match the columns: 
+        'too few columns'        | [1, 2]                || '''Data doesn't match the columns:
                                                                3 COLUMNS: [0-first, 1-second, 2-third]
                                                                2 DATA: [1, 2]'''
-        'too many columns'       | [1, 2, 3, 4]          || '''Data doesn't match the columns: 
+        'too many columns'       | [1, 2, 3, 4]          || '''Data doesn't match the columns:
                                                                3 COLUMNS: [0-first, 1-second, 2-third]
                                                                4 DATA: [1, 2, 3, 4]'''
-        'missing mapped columns' | [first: 1, second: 2] || '''Data doesn't match the columns: 
+        'missing mapped columns' | [first: 1, second: 2] || '''Non default column is null: 2-third
                                                                3 COLUMNS: [0-first, 1-second, 2-third]
-                                                               2 DATA: {first=1, second=2}->[1, 2]'''
+                                                               3 DATA: {first=1, second=2}->[1, 2, null]'''
     }
 
-    def 'specifying extra mapped columns is ok (they are ignored)'() {
+    def 'specifying extra mapped columns is always ok (they are ignored)'() {
         setup:
         def layout = TextTable.withColumns('first', 'second')
 
@@ -245,6 +246,108 @@ _2_4_6_8_0+----------+------------+---------------------+
         then:
         notThrown(IllegalArgumentException)
         table.format(0, new StringBuilder()).toString() !=~ 'ignored'
+    }
+
+    def 'specifying extra row columns is an error with regular data builder'() {
+        setup:
+        def layout = TextTable.withColumns('first', 'second')
+
+        when:
+        layout.withData().row(1, 2, 'problem').buildTable()
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'specifying extra row columns is OK with relaxed data builder'() {
+        setup:
+        def layout = TextTable.withColumns('first', 'second')
+
+        when:
+        def table = layout.withDataRelaxed().row(1, 2, 'ignored').buildTable()
+
+        then:
+        notThrown(IllegalArgumentException)
+        table.format(0, new StringBuilder()).toString() !=~ 'ignored'
+    }
+
+    def 'in the case of sparse table, skipped columns in the middle are ignored, but extra past the end are an error'() {
+        setup: 'Layout using 2nd, 3rd and 4th column in mixed order'
+        def data = new TextTable.DataBuilder(
+                true, // strict
+                [
+                        new TextTable.Column('family', 3),
+                        new TextTable.Column('given', 1),
+                        new TextTable.Column('middle', 2),
+                ]
+        )
+
+        when: 'We format a 4 column row'
+        def table = data
+                .row('Mr.', 'Austin', 'Danger', 'Powers')
+                .buildTable()
+
+        then: 'The columns are in the expected order, the title is skipped'
+        table.format(10, new StringBuilder()).toString()=='''
+          +--------+--------+--------+
+          | family | given  | middle |
+          +--------+--------+--------+
+          | Powers | Austin | Danger |
+          +--------+--------+--------+
+''' - '\n'
+
+        when: 'We format a row with more than 4 columns'
+        data.row('Mr.', 'Nigel', '', 'Powers', '(Austin\'s fasha)')
+
+        then: 'exception is thrown (obvious unhandled data)'
+        thrown(IllegalArgumentException)
+    }
+
+    def 'in the case of sparse table, extra columns past the end are also ignored'() {
+        setup: 'Layout using 2nd, 3rd and 4th column in mixed order'
+        def data = new TextTable.DataBuilder(
+                false, // lenient
+                [
+                        new TextTable.Column('family', 3),
+                        new TextTable.Column('given', 1),
+                        new TextTable.Column('middle', 2),
+                ]
+        )
+
+        when: 'We format a row with more than 4 columns'
+        def table = data
+                .row('Mr.', 'Nigel', '', 'Powers', '(Austin\'s fasha)')
+                .buildTable()
+
+        then: 'The columns are in the expected order, the title and note is skipped'
+        table.format(10, new StringBuilder()).toString()=='''
+          +--------+-------+--------+
+          | family | given | middle |
+          +--------+-------+--------+
+          | Powers | Nigel |        |
+          +--------+-------+--------+
+''' - '\n'
+    }
+
+    def 'in the case of sparse table, it may turn out that the row is not long enough'() {
+        setup: 'Layout using 2nd, 3rd and 4th column in mixed order'
+        def data = new TextTable.DataBuilder(
+                false, // lenient
+                [
+                        new TextTable.Column('family', 3),
+                        new TextTable.Column('given', 1),
+                        new TextTable.Column('middle', 2),
+                ]
+        )
+
+        when: 'We format a row with less than 4 columns with lenient layout'
+        data.row('Mr.', 'Nigel', 'Powers').buildTable()
+
+        then: 'The columns are in the expected order, the title and note is skipped'
+        IllegalArgumentException e = thrown()
+        e.message == '''Column index out of range: 3-family
+                        3 COLUMNS: [3-family, 1-given, 2-middle]
+                        3 DATA: [Mr., Nigel, Powers]'''.replace(EOL, '\n').replaceAll(~/\n\s*/, '\n').replace('\n', EOL)
     }
 
     def 'we can make columns optional by setting up a default value supplier'(useCase, List<?> rows, String expected) {
@@ -298,7 +401,7 @@ _2_4_6_8_0+----------+------------+---------------------+
 
         then:
         IllegalArgumentException e = thrown()
-        e.message == '''Data doesn't match the columns: 
+        e.message == '''Data doesn't match the columns:
                        3 COLUMNS: [0-first, 1-second, 2-third]
                        2 DATA: [1, 2]'''.replace(EOL, '\n').replaceAll(~/\n\s*/, '\n').replace('\n', EOL)
     }
@@ -363,20 +466,23 @@ _2_4_6_8_0+----------+------------+---------------------+
         ].collect { it.replaceAll ~/\n\s*/, '\n' }
     }
 
-    def 'we can use formatAgain() to skip the data profiling step (will lead to exception if column widths are not set)'() {
+    def 'we can disable the data profiling by setting `pendingAutoformat` to false'() {
         setup:
         def layout = TextTable.withColumns('A', 'B')
 
-        when: 'we try to put data longer than the column name in column A'
-        layout.withData().row(A: "123", B: 2).buildTable().formatAgain(10, new StringBuilder())
+        when: 'we disable autoformat and try to put data longer than the column name in column A'
+        def table = layout.withData().row(A: "123", B: 2).buildTable()
+        table.pendingAutoformat = false
+        table.format(10, new StringBuilder())
 
         then: 'we get exception'
         IllegalStateException e = thrown()
         e.message == "Formatted string '123'::length==3 > column 0-A::width==1"
 
-        when: 'we resize column A and put the same data'
-        layout.allColumns.A.width = 4
-        def formatted = layout.withData().row(A: "123", B: 2).buildTable().formatAgain(10, new StringBuilder()).toString()
+        when: 'if we manually sized column A and put the same data (for illustration purposes only)'
+        //noinspection GroovyAccessibility
+        table.columns.find { it.name=='A' }.width = 4
+        def formatted = table.format(10, new StringBuilder()).toString()
 
         then: 'all works'
         formatted == """
@@ -442,38 +548,5 @@ _2_4_6_8_0+----------+------------+---------------------+
           | abc   |
           +-------+
 """ - '\n'
-    }
-
-    @SuppressWarnings("GroovyAssignabilityCheck")
-//    @Unroll def 'assert pad(#length, "#pad")=="#expected"'(int length, String pad, String expected) {
-    def 'pad() function unit test'(int length, String pad, String expected) {
-        expect:
-        TextTable.pad(new StringBuilder(), length, pad) as String == expected
-
-        where:
-        length | pad  || expected
-        0      |  '1' || ''
-        1      |  '1' || '1'
-        2      |  '1' || '11'
-        5      |  '1' || '11111'
-        0      | '12' || ''
-        1      | '12' || '1'
-        2      | '12' || '12'
-        5      | '12' || '12121'
-        7      | '12' || '1212121'
-    }
-
-    def 'pad() function error-handling test'() {
-        setup:
-        def out = Mock(Appendable) {
-            //noinspection GroovyAssignabilityCheck
-           append(*_) >> { throw new IOException() }
-        }
-
-        when:
-        TextTable.pad(out, 10, ' ')
-
-        then:
-        thrown(IOException)
     }
 }
