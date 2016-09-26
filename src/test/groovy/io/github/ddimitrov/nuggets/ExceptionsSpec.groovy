@@ -35,7 +35,7 @@ class ExceptionsSpec extends Specification {
     }
 
     def "Use Exceptions.toString(throwable) to quickly format exceptions with stacktraces."() {
-        when: def string = Exceptions.toString(new IllegalArgumentException())
+        when: def string = Exceptions.toStacktraceString(new IllegalArgumentException())
         then: !string.empty
 
         when:  def lines = string.split('(\n|\r)+') as List<String>

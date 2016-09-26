@@ -16,6 +16,7 @@
 
 package io.github.ddimitrov.nuggets;
 
+import org.intellij.lang.annotations.Identifier;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -173,7 +174,7 @@ public class Extractors {
      * @see #peekField(Object, String, Class)
      */
     @Contract(pure=true)
-    public static <T> T peekField(@NotNull Object target, @NotNull String fieldName, @NotNull Class<T> fieldType) {
+    public static <T> T peekField(@NotNull Object target, @Identifier @NotNull String fieldName, @NotNull Class<T> fieldType) {
         return peekField(target, target.getClass(), fieldName, fieldType);
     }
 
@@ -202,7 +203,7 @@ public class Extractors {
     public static <T> T peekField(
             @Nullable Object target,
             @NotNull Class<?> type,
-            @NotNull String fieldName,
+            @Identifier @NotNull String fieldName,
             @NotNull Class<T> fieldType
     ) {
 
@@ -232,7 +233,7 @@ public class Extractors {
      * @see #peekField(Object, String, Class)
      * @see #pokeField(Object, Class, String, Object)
      */
-    public static void pokeField(@NotNull Object target, @NotNull String fieldName, @Nullable Object value) {
+    public static void pokeField(@NotNull Object target, @Identifier @NotNull String fieldName, @Nullable Object value) {
         pokeField(target, target.getClass(), fieldName, value);
     }
 
@@ -253,7 +254,7 @@ public class Extractors {
     public static void pokeField(
             @Nullable Object target,
             @NotNull Class<?> type,
-            @NotNull String fieldName,
+            @Identifier @NotNull String fieldName,
             @Nullable Object value
     ) {
         try {
@@ -285,7 +286,7 @@ public class Extractors {
      * @see Field#setAccessible(boolean)
      */
     @Contract(pure=true) @SuppressWarnings("JavaDoc")
-    public static @NotNull Field getAccessibleField(@NotNull Class<?> type, @NotNull String fieldName, boolean checkSuperclasses) {
+    public static @NotNull Field getAccessibleField(@NotNull Class<?> type, @Identifier @NotNull String fieldName, boolean checkSuperclasses) {
         try {
             Field field = type.getDeclaredField(fieldName);
             field.setAccessible(true);

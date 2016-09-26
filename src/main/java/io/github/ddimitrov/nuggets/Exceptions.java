@@ -23,6 +23,8 @@ import org.jetbrains.annotations.Nullable;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -37,7 +39,7 @@ import java.util.regex.Pattern;
  *
  * <h2>String conversion</h2>
  * <p>Every once in a while we need to format an exception without actually printing it.
- * That is where {@link Exceptions#toString(Throwable)} comes useful.</p>
+ * That is where {@link Exceptions#toStacktraceString(Throwable)} comes useful.</p>
  *
  * <h2>About Checked Exceptions</h2>
  * <p>The theory says that we should either handle a checked exception by performing recovery/compensating action,
@@ -243,7 +245,7 @@ public class Exceptions {
      * threads wanting to clean up the thread-pool stack-frames)</p>
      *
      * <p>Keep in mind that this transformer is not automatically applied to the
-     * argument of {@link #toString(Throwable)}, so one can easily dump the full
+     * argument of {@link #toStacktraceString(Throwable)}, so one can easily dump the full
      * stack if needed.</p>
      *
      * <p>If you are not sure what transformations to specify, you may want to just
@@ -426,7 +428,7 @@ public class Exceptions {
      * @param t the exception to format.
      * @return a string representing the output of {@link Throwable#printStackTrace()}
      */
-    public static @NotNull String toString(@NotNull Throwable t) {
+    public static @NotNull String toStacktraceString(@NotNull Throwable t) {
         StringWriter sw = new StringWriter();
         try(PrintWriter pw = new PrintWriter(sw)) {
             t.printStackTrace(pw);
@@ -434,21 +436,116 @@ public class Exceptions {
         return sw.getBuffer().toString();
     }
 
-    public static Throwable parseThrowable(CharSequence text) {
-        String[] lines = text.toString().split(System.lineSeparator()); // one day we may make it fast
-        String className = "";
-        String message = "";
+    private static final Pattern framePattern = Pattern.compile("\tat (.*)\\.(.*)\\((.*)(?::(\\d+))?\\)");
+    public static StackTraceElement parseStackFrame(int startIdx, CharSequence line) {
+        int classEnd = -1;
+        int methodEnd = -1;
+        int fileEnd = -1;
+        int lineEnd = -1;
+
+scan_loop:
+        for (int i = startIdx; i < line.length(); i++) {
+            switch (line.charAt(i)) {
+                case '.':
+                    if (methodEnd<0) classEnd = i;
+                    break;
+                case '(':
+                    if (classEnd >= 0 && fileEnd<0) methodEnd = i;
+                    break;
+                case ':':
+                    if (methodEnd >= 0) fileEnd = i;
+                    break;
+                case ')':
+                    if (fileEnd >= 0) {
+                        lineEnd = i;
+                    } else {
+                        fileEnd = i;
+                    }
+                    break scan_loop;
+                default: break; // make findbugs happy
+            }
+        }
+
+
+        String declaringClass = classEnd<0  ? null : line.subSequence(startIdx   , classEnd ).toString();
+        String methodName     = methodEnd<0 ? null : line.subSequence(classEnd +1, methodEnd).toString();
+        String fileName       = fileEnd<0   ? null : line.subSequence(methodEnd+1, fileEnd  ).toString();
+        String lineNumberStr  = lineEnd<0   ? null : line.subSequence(fileEnd  +1, lineEnd  ).toString();
+
+        if (declaringClass==null || methodName==null) {
+            throw new IllegalArgumentException("Malformed stack frame string (can't parse class and method): " + line);
+        }
+
+        int lineNumber = lineNumberStr == null ? -1 : Integer.parseInt(lineNumberStr);
+        if (fileName!=null) {
+            switch (fileName) {
+                case "Native Method" : lineNumber=-2; break;
+                case "Unknown Source": fileName=null; break;
+                default: break; // make findbugs happy
+            }
+        }
+
+        return new StackTraceElement(declaringClass, methodName, fileName, lineNumber);
+    }
+
+    public static Throwable parseStacktrace(CharSequence text) {
+        String eol = System.lineSeparator();
+
+        boolean classParsed = false;
+        boolean messageParsed = false;
+        String className = null;
+        String message = null;
+        List<StackTraceElement> stack = new ArrayList<>();
+        for (String line : text.toString().split(eol)) {
+            if (!classParsed) {
+                String[] classMessage = line.split(": ", 2);
+                className=classMessage[0];
+                message=classMessage.length>1 ? classMessage[1] : null;
+                classParsed = true;
+                continue;
+            }
+            if (!messageParsed) {
+                if (!line.startsWith("\tat ")) {
+                    message += eol + line;
+                    continue;
+                }
+                messageParsed = true;
+            }
+
+            if (!line.startsWith("\tat ")) {
+                break; // TODO add casues and suppressed
+            }
+
+            stack.add(parseStackFrame(4, line));
+        }
+
         Class<Object> type = Extractors.getClassIfPresent(className);
         Throwable t = null;
         try {
-            t = Throwable.class.cast(type==null ? new Throwable() : type.newInstance());
-            Extractors.pokeField(t, "message", (type==null ? "MISSING: " + className + ": ": "") + message);
-            // TODO: set stacktrace
-            // TODO: set causes
-            // TODO: set suppressed
+            t = type==null
+                    ? new ThrowableClassNotFoundException(className)
+                    : (Throwable) type.getConstructor().newInstance();
+
+            Extractors.pokeField(t, "detailMessage", message);
+            Extractors.pokeField(t, "stackTrace", stack.toArray(new StackTraceElement[0]));
             return t;
-        } catch (InstantiationException|IllegalAccessException e) {
+        } catch (InvocationTargetException|NoSuchMethodException|InstantiationException|IllegalAccessException e) {
             return rethrow(e);
         }
+    }
+}
+
+class ThrowableClassNotFoundException extends Exception {
+    public static volatile @NotNull String indicator="";
+    private final @NotNull String originalExceptionClassName;
+
+    public ThrowableClassNotFoundException(@NotNull String originalExceptionClassName) {
+        this.originalExceptionClassName = originalExceptionClassName;
+    }
+
+    @Override
+    public String toString() {
+        String className = getClass().getName();
+        return indicator + super.toString().replace(className, originalExceptionClassName);
     }
 }
