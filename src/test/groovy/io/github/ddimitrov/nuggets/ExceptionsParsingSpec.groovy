@@ -30,19 +30,29 @@ class ExceptionsParsingSpec extends Specification {
     def "roundtrip #useCase"(useCase, Throwable throwable) {
         setup:
         def stacktrace = Exceptions.toStacktraceString(throwable)
+        def stacktraceMissingException = stacktrace.replaceAll(~/Exception\b/, 'MissingException')
 
-        when:
+        when: 'Parsing an exception'
         def reversed = Exceptions.parseStacktrace(stacktrace)
 
-        then:
+        then: 'We get an exception with the same class, message and stacktrace'
         Exceptions.toStacktraceString(reversed)==stacktrace
+        reversed.class == throwable.class
+
+        when: 'Parsing an exception that has a class not available to the current JVM'
+        def reversedMissingException = Exceptions.parseStacktrace(stacktraceMissingException)
+
+        then: 'We get an instance of ThrowableClassNotFoundException with the same message, stack, toString() and printStackTrace()'
+        Exceptions.toStacktraceString(reversedMissingException)==stacktraceMissingException
+        reversedMissingException.class == ThrowableClassNotFoundException
 
         where:
-        useCase           | throwable
-        'plain exception' | new Exception()
-        'plain exception with text' | new Exception(" foo bar ")
+        useCase                                | throwable
+        'plain exception'                      | new Exception()
+        'plain exception with text'            | new Exception(" foo bar ")
         'plain exception with multi-line text' | new Exception(" foo \n bar ")
-        'plain exception with no stack' | new StacklessException(" foo \n bar ")
+        'plain exception with no stack'        | new StacklessException(" foo \n bar ")
+//        'exception with cause'                 | new Exception("main exception", new Error("the real cause"))
     }
 
     def "parse single stack frame"(String line) {

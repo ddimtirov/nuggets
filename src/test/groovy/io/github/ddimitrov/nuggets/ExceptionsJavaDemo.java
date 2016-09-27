@@ -82,7 +82,6 @@ public class ExceptionsJavaDemo {
      */
     public static <T> T traceCall(String description, Callable<T> callable) {
         try {
-            System.out.println("STARTED: " + description);
             T result = callable.call();  // throws Exception
             System.out.println("SUCCESS: " + description + " -> " + result);
             return result;

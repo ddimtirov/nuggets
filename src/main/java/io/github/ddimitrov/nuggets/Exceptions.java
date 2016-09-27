@@ -490,48 +490,52 @@ scan_loop:
 
     public static Throwable parseStacktrace(CharSequence text) {
         String eol = System.lineSeparator();
-
-        boolean classParsed = false;
-        boolean messageParsed = false;
-        String className = null;
-        String message = null;
-        List<StackTraceElement> stack = new ArrayList<>();
-        for (String line : text.toString().split(eol)) {
-            if (!classParsed) {
-                String[] classMessage = line.split(": ", 2);
-                className=classMessage[0];
-                message=classMessage.length>1 ? classMessage[1] : null;
-                classParsed = true;
-                continue;
-            }
-            if (!messageParsed) {
-                if (!line.startsWith("\tat ")) {
-                    message += eol + line;
-                    continue;
-                }
-                messageParsed = true;
-            }
-
-            if (!line.startsWith("\tat ")) {
-                break; // TODO add casues and suppressed
-            }
-
-            stack.add(parseStackFrame(4, line));
-        }
-
-        Class<Object> type = Extractors.getClassIfPresent(className);
-        Throwable t = null;
+        String[] lines = text.toString().split(eol);
         try {
-            t = type==null
-                    ? new ThrowableClassNotFoundException(className)
-                    : (Throwable) type.getConstructor().newInstance();
-
-            Extractors.pokeField(t, "detailMessage", message);
-            Extractors.pokeField(t, "stackTrace", stack.toArray(new StackTraceElement[0]));
-            return t;
-        } catch (InvocationTargetException|NoSuchMethodException|InstantiationException|IllegalAccessException e) {
+            return parseStacktraceInternal(eol, 0, lines);
+        } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             return rethrow(e);
         }
+    }
+
+    private static Throwable parseStacktraceInternal(String eol, int start, String[] lines) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        int i = start;
+
+        String[] classMessage = lines[i++].split(": ", 2);
+        String className = classMessage[0];
+        Class<Object> type = Extractors.getClassIfPresent(className);
+        Throwable t = type == null
+                ? new ThrowableClassNotFoundException(className)
+                : (Throwable) type.getConstructor().newInstance();
+        StringBuilder messageAccumulator = new StringBuilder(lines[0].length()); // one line messages are by far the most common case
+        if (classMessage.length > 1) messageAccumulator.append(classMessage[1]);
+
+        while (i < lines.length) {
+            if (lines[i].startsWith("\tat ")) break; // this is for the next section
+            messageAccumulator.append(eol).append(lines[i++]);
+        }
+        if (messageAccumulator.length()>0) {
+            String message = messageAccumulator.toString();
+            Extractors.pokeField(t, "detailMessage", message);
+        }
+
+        List<StackTraceElement> stackTraceAccumulator = new ArrayList<>(lines.length-i); // preallocate to avoid multiple resizing passes
+        while (i < lines.length) {
+            if (!lines[i].startsWith("\tat ")) break;
+            stackTraceAccumulator.add(parseStackFrame(4, lines[i++]));
+        }
+        StackTraceElement[] stackTrace = stackTraceAccumulator.toArray(new StackTraceElement[0]);
+        Extractors.pokeField(t, "stackTrace", stackTrace);
+
+        // TODO add suppressed
+
+        Throwable cause = null;
+        // TODO: causes
+        // TODO: support ### more
+        Extractors.pokeField(t, "cause", cause);
+
+        // TODO: support nesting
+        return t;
     }
 }
 
