@@ -24,10 +24,14 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.util.regex.Pattern.compile;
 
 /**
  * <p>Utility class providing methods for dealing with <a href="https://kotlinlang.org/docs/reference/exceptions.html#checked-exceptions">
@@ -211,6 +215,8 @@ import java.util.regex.Pattern;
 public class Exceptions {
     private static final boolean TRANSFORM_ON_RETHROW = Boolean.parseBoolean(System.getProperty("nuggets.Exceptions.transform-on-rethrow", "true"));
     private static final InheritableThreadLocal<Function<Throwable, Throwable>> TRANSFORMER = new InheritableThreadLocal<>();
+    public static final Pattern STRACE_MORE = Pattern.compile("\t\\.\\.\\. (\\d+) more");
+
     private Exceptions() {}
 
     /**
@@ -227,8 +233,8 @@ public class Exceptions {
      */
     public static void setupTransformOnRethrowDefaultConfig() {
         transformOnRethrow()
-                .filterStackFramesForClass(Pattern.compile("^(java.lang.reflect|sun.reflect).*"))
-                .filterStackFramesForClass(Pattern.compile("^(org.codehaus.groovy|org.gradle).*"))
+                .filterStackFramesForClass(compile("^(java.lang.reflect|sun.reflect).*"))
+                .filterStackFramesForClass(compile("^(org.codehaus.groovy|org.gradle).*"))
                 .unwrapThese(InvocationTargetException.class)
                 .unwrapWhen(ex -> ex.getMessage() == null && ex.getClass().equals(RuntimeException.class))
                 .build();
@@ -327,7 +333,7 @@ public class Exceptions {
      * @see #rethrow(ThrowingRunnable, Object)
      * @see <a href="#uc3a">Use Case 3 for example usage</a>
      */
-    @SuppressWarnings("JavaDoc") // declaring we throw an exception not in the signature
+    @SuppressWarnings({"JavaDoc", "ResultOfMethodCallIgnored"}) // declaring we throw an exception not in the signature
     public static void rethrow(@NotNull ThrowingRunnable throwingRunnable) {
         rethrow(throwingRunnable, null);
     }
@@ -436,7 +442,6 @@ public class Exceptions {
         return sw.getBuffer().toString();
     }
 
-    private static final Pattern framePattern = Pattern.compile("\tat (.*)\\.(.*)\\((.*)(?::(\\d+))?\\)");
     public static StackTraceElement parseStackFrame(int startIdx, CharSequence line) {
         int classEnd = -1;
         int methodEnd = -1;
@@ -492,13 +497,13 @@ scan_loop:
         String eol = System.lineSeparator();
         String[] lines = text.toString().split(eol);
         try {
-            return parseStacktraceInternal(eol, 0, lines);
+            return parseStacktraceInternal(eol, 0, null, lines);
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             return rethrow(e);
         }
     }
 
-    private static Throwable parseStacktraceInternal(String eol, int start, String[] lines) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+    private static Throwable parseStacktraceInternal(String eol, int start, Throwable caused, String[] lines) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
         int i = start;
 
         String[] classMessage = lines[i++].split(": ", 2);
@@ -524,14 +529,34 @@ scan_loop:
             if (!lines[i].startsWith("\tat ")) break;
             stackTraceAccumulator.add(parseStackFrame(4, lines[i++]));
         }
+        if (i < lines.length) {
+            Matcher matcher = STRACE_MORE.matcher(lines[i]);
+            if (matcher.matches()) {
+                String duplicateFramesStr = matcher.group(1);
+                int duplicateFrames = Integer.parseInt(duplicateFramesStr);
+                StackTraceElement[] causedStackTrace = caused.getStackTrace();
+                stackTraceAccumulator.addAll(Arrays.asList(Arrays.copyOfRange(
+                        causedStackTrace,
+                        causedStackTrace.length-duplicateFrames,
+                        causedStackTrace.length
+                )));
+            }
+        }
+
         StackTraceElement[] stackTrace = stackTraceAccumulator.toArray(new StackTraceElement[0]);
         Extractors.pokeField(t, "stackTrace", stackTrace);
 
         // TODO add suppressed
 
-        Throwable cause = null;
-        // TODO: causes
-        // TODO: support ### more
+        Throwable cause;
+        if (i<lines.length && lines[i].startsWith("Caused by: ")) {
+            String original = lines[i];
+            lines[i] = lines[i].replaceFirst("Caused by: ", "");
+            cause = parseStacktraceInternal(eol, i, t, lines);
+            lines[i] = original;
+        } else {
+            cause = null;
+        }
         Extractors.pokeField(t, "cause", cause);
 
         // TODO: support nesting

@@ -26,6 +26,10 @@ import spock.lang.Unroll
 @Subject(Exceptions)
 @SuppressWarnings("GroovyAccessibility")
 class ExceptionsParsingSpec extends Specification {
+    void setup() {
+        assert Exceptions.TRANSFORMER.get()==null : "Some of the previous tests did not clean up the global exception transformer"
+    }
+
     @Unroll
     def "roundtrip #useCase"(useCase, Throwable throwable) {
         setup:
@@ -52,7 +56,9 @@ class ExceptionsParsingSpec extends Specification {
         'plain exception with text'            | new Exception(" foo bar ")
         'plain exception with multi-line text' | new Exception(" foo \n bar ")
         'plain exception with no stack'        | new StacklessException(" foo \n bar ")
-//        'exception with cause'                 | new Exception("main exception", new Error("the real cause"))
+        'exception with cause'                 | new Exception("main exception", new Error("the real cause"))
+        'exception with deep cause'            | new Exception("main exception", deepException(5))
+        'exception with deep stackless cause'  | new StacklessException("main exception", deepException(5))
     }
 
     def "parse single stack frame"(String line) {
@@ -76,6 +82,15 @@ class ExceptionsParsingSpec extends Specification {
                     \tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
                 '''.split('\n').findAll { it.trim() }
         
+    }
+
+    private static Throwable deepException(int i=5) {
+        if (i==0) throw new RuntimeException("Deep exception")
+        try {
+            return deepException(i-1)
+        } catch (e) {
+            return e
+        }
     }
 }
 
