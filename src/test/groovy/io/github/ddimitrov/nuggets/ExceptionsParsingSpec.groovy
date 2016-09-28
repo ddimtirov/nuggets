@@ -57,8 +57,11 @@ class ExceptionsParsingSpec extends Specification {
         'plain exception with multi-line text' | new Exception(" foo \n bar ")
         'plain exception with no stack'        | new StacklessException(" foo \n bar ")
         'exception with cause'                 | new Exception("main exception", new Error("the real cause"))
-        'exception with deep cause'            | new Exception("main exception", deepException(5))
-        'exception with deep stackless cause'  | new StacklessException("main exception", deepException(5))
+        'exception with deep cause'            | new Exception("main exception", deepException(5, new RuntimeException("Deep exception")))
+        'exception with deep stackless cause'  | new StacklessException("main exception", deepException(5, new RuntimeException("Deep exception")))
+        'exception with multi-level cause'     | new Exception("main exception", new Error('foobar', deepException(5, new RuntimeException("Deep exception"))))
+        'exception w/ multi-level cause no msg'| new Exception(new Error(deepException(5, new RuntimeException("Deep exception"))))
+        'exception with circular cause'        | new Exception("main", circularException(5, new RuntimeException("loop")))
     }
 
     def "parse single stack frame"(String line) {
@@ -84,13 +87,29 @@ class ExceptionsParsingSpec extends Specification {
         
     }
 
-    private static Throwable deepException(int i=5) {
-        if (i==0) throw new RuntimeException("Deep exception")
+    private static Throwable deepException(int i=5, Throwable t) {
+        if (i==0) throw t
         try {
-            return deepException(i-1)
+            return deepException(i - 1, t)
         } catch (e) {
             return e
         }
+    }
+
+    private static Throwable circularException(int i, Throwable loop, Throwable prev=null) {
+        def cause = new Exception("looped cause " + i)
+        if (prev==null) {
+            loop.initCause(cause)
+            return circularException(i-1, loop, cause)
+        }
+
+        if (i<=0) {
+            prev.initCause(loop)
+            return loop
+        }
+
+        prev.initCause(cause)
+        return circularException(i-1, loop, cause)
     }
 }
 

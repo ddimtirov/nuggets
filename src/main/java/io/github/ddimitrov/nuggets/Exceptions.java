@@ -23,9 +23,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -497,13 +495,13 @@ scan_loop:
         String eol = System.lineSeparator();
         String[] lines = text.toString().split(eol);
         try {
-            return parseStacktraceInternal(eol, 0, null, lines);
+            return parseStacktraceInternal(eol, 0, new ArrayDeque<>(10), lines);
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             return rethrow(e);
         }
     }
 
-    private static Throwable parseStacktraceInternal(String eol, int start, Throwable caused, String[] lines) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+    private static Throwable parseStacktraceInternal(String eol, int start, Deque<Throwable> caused, String[] lines) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
         int i = start;
 
         String[] classMessage = lines[i++].split(": ", 2);
@@ -532,9 +530,10 @@ scan_loop:
         if (i < lines.length) {
             Matcher matcher = STRACE_MORE.matcher(lines[i]);
             if (matcher.matches()) {
+                i++;
                 String duplicateFramesStr = matcher.group(1);
                 int duplicateFrames = Integer.parseInt(duplicateFramesStr);
-                StackTraceElement[] causedStackTrace = caused.getStackTrace();
+                StackTraceElement[] causedStackTrace = caused.peekLast().getStackTrace();
                 stackTraceAccumulator.addAll(Arrays.asList(Arrays.copyOfRange(
                         causedStackTrace,
                         causedStackTrace.length-duplicateFrames,
@@ -548,11 +547,26 @@ scan_loop:
 
         // TODO add suppressed
 
+/*
+        System.out.printf("lines[%d/%d]==", lines.length, i);
+        if (i<lines.length) {
+            System.out.printf("%s (%s)%n", lines[i], lines[i].startsWith("Caused by: "));
+        } else {
+            System.out.println("IOBE");
+        }
+*/
         Throwable cause;
-        if (i<lines.length && lines[i].startsWith("Caused by: ")) {
+        if (i<lines.length && lines[i].startsWith("\t[CIRCULAR REFERENCE:") && lines[i].endsWith("]")) {
+            String loopedToString = lines[i].replaceFirst("^\t\\[CIRCULAR REFERENCE:", "").replaceFirst("]$", "");
+            cause = caused.stream()
+                          .filter(it -> Objects.equals(loopedToString, it.toString()))
+                          .findFirst().orElseThrow(() -> new IllegalArgumentException("Can not resolve circular cause: " + loopedToString));
+        } else if (i<lines.length && lines[i].startsWith("Caused by: ")) {
             String original = lines[i];
             lines[i] = lines[i].replaceFirst("Caused by: ", "");
-            cause = parseStacktraceInternal(eol, i, t, lines);
+            caused.addLast(t);
+            cause = parseStacktraceInternal(eol, i, caused, lines);
+            caused.removeLast();
             lines[i] = original;
         } else {
             cause = null;
