@@ -26,6 +26,8 @@ import spock.lang.Unroll
 @Subject(Exceptions)
 @SuppressWarnings("GroovyAccessibility")
 class ExceptionsParsingSpec extends Specification {
+    public static final String EOL = System.lineSeparator()
+
     void setup() {
         assert Exceptions.TRANSFORMER.get()==null : "Some of the previous tests did not clean up the global exception transformer"
     }
@@ -62,6 +64,39 @@ class ExceptionsParsingSpec extends Specification {
         'exception with multi-level cause'     | new Exception("main exception", new Error('foobar', deepException(5, new RuntimeException("Deep exception"))))
         'exception w/ multi-level cause no msg'| new Exception(new Error(deepException(5, new RuntimeException("Deep exception"))))
         'exception with circular cause'        | new Exception("main", circularException(5, new RuntimeException("loop")))
+    }
+
+
+    def "unknown exception classes are parsed with same to string unless marked"() {
+        given:
+        def stacktrace = """\
+            Result: com.acme.FunkyException: From outer space
+            \tat java.math.BigDecimal.divide(BigDecimal.java:1742)
+            \tat console.run(console.txt:25)
+            \tat com.intellij.rt.execution.CommandLineWrapper.main(CommandLineWrapper.java:48)
+            """.stripIndent().replace("\n", EOL)
+
+        when: 'we parse an unknown exception class'
+        def reversed = Exceptions.parseStacktrace(stacktrace)
+
+        then: 'we substitute with a surrogate exception'
+        reversed.class == ThrowableClassNotFoundException
+
+        and: 'the printStackTrace() representation will be the same as the parsed trace'
+        Exceptions.toStacktraceString(reversed) == stacktrace
+
+        when: 'we set a global indicator prefix to ThrowableClassNotFoundException'
+        ThrowableClassNotFoundException.indicator = 'MISSING: '
+
+        then: 'all the surrogate exceptions will be prefixed with the indicator'
+        reversed.toString() == 'MISSING: ' + stacktrace.split(EOL)[0]
+        Exceptions.toStacktraceString(reversed) == 'MISSING: ' + stacktrace
+
+        when: 'we clear the global indicator'
+        ThrowableClassNotFoundException.indicator = ''
+
+        then: 'all will become again identical to the parsed'
+        Exceptions.toStacktraceString(reversed) == stacktrace
     }
 
     def "parse single stack frame"(String line) {
