@@ -457,6 +457,12 @@ public class TextTable {
                 new String[]{"\u251c", "\u253c", "\u2524"},
                 new String[]{"\u2514", "\u2534", "\u2518"}),
 
+        /** ...but how about drawing rectangles with rounded corners? Can we do that now, too? */
+        UNICODE_THIN_ROUNDED("\u2500", "\u2502",
+                new String[]{"\u256d", "\u252c", "\u256e"},
+                new String[]{"\u251c", "\u253c", "\u2524"},
+                new String[]{"\u2570", "\u2534", "\u256f"}),
+
         /** Sturdy and solid, nothing stands out quite like UNICODE_THICK */
         UNICODE_THICK("\u2501", "\u2503",
                 new String[]{"\u250f", "\u2533", "\u2513"},

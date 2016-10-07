@@ -1,4 +1,4 @@
-package io.github.ddimitrov.nuggets
+﻿package io.github.ddimitrov.nuggets
 
 import spock.lang.Specification
 import spock.lang.Subject
@@ -156,30 +156,36 @@ _2_4_6_8_0+----------+------------+---------------------+
 
         where:
         style || expected
-        TextTable.Box.ASCII          || '''+-----------------+--------+
-                                           | first           | second |
-                                           +-----------------+--------+
-                                           | foo bar baz qux |        |
-                                           | qux             | 123    |
-                                           +-----------------+--------+'''
-        TextTable.Box.UNICODE_THIN   || '''┌─────────────────┬────────┐
-                                           │ first           │ second │
-                                           ├─────────────────┼────────┤
-                                           │ foo bar baz qux │        │
-                                           │ qux             │ 123    │
-                                           └─────────────────┴────────┘'''
-        TextTable.Box.UNICODE_THICK  || '''┏━━━━━━━━━━━━━━━━━┳━━━━━━━━┓
-                                           ┃ first           ┃ second ┃
-                                           ┣━━━━━━━━━━━━━━━━━╋━━━━━━━━┫
-                                           ┃ foo bar baz qux ┃        ┃
-                                           ┃ qux             ┃ 123    ┃
-                                           ┗━━━━━━━━━━━━━━━━━┻━━━━━━━━┛'''
-        TextTable.Box.UNICODE_DOUBLE ||'''╔═════════════════╦════════╗
-                                          ║ first           ║ second ║
-                                          ╠═════════════════╬════════╣
-                                          ║ foo bar baz qux ║        ║
-                                          ║ qux             ║ 123    ║
-                                          ╚═════════════════╩════════╝'''
+        TextTable.Box.ASCII                || '''+-----------------+--------+
+                                                 | first           | second |
+                                                 +-----------------+--------+
+                                                 | foo bar baz qux |        |
+                                                 | qux             | 123    |
+                                                 +-----------------+--------+'''
+        TextTable.Box.UNICODE_THIN         || '''┌─────────────────┬────────┐
+                                                 │ first           │ second │
+                                                 ├─────────────────┼────────┤
+                                                 │ foo bar baz qux │        │
+                                                 │ qux             │ 123    │
+                                                 └─────────────────┴────────┘'''
+        TextTable.Box.UNICODE_THIN_ROUNDED || '''╭─────────────────┬────────╮
+                                                 │ first           │ second │
+                                                 ├─────────────────┼────────┤
+                                                 │ foo bar baz qux │        │
+                                                 │ qux             │ 123    │
+                                                 ╰─────────────────┴────────╯'''
+        TextTable.Box.UNICODE_THICK        || '''┏━━━━━━━━━━━━━━━━━┳━━━━━━━━┓
+                                                 ┃ first           ┃ second ┃
+                                                 ┣━━━━━━━━━━━━━━━━━╋━━━━━━━━┫
+                                                 ┃ foo bar baz qux ┃        ┃
+                                                 ┃ qux             ┃ 123    ┃
+                                                 ┗━━━━━━━━━━━━━━━━━┻━━━━━━━━┛'''
+        TextTable.Box.UNICODE_DOUBLE       || '''╔═════════════════╦════════╗
+                                                 ║ first           ║ second ║
+                                                 ╠═════════════════╬════════╣
+                                                 ║ foo bar baz qux ║        ║
+                                                 ║ qux             ║ 123    ║
+                                                 ╚═════════════════╩════════╝'''
     }
 
     def 'when we use Java, 2D arrays for data are nicer than collections'() {
