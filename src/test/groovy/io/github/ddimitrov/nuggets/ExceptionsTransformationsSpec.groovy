@@ -311,7 +311,7 @@ class ExceptionsTransformationsSpec extends Specification {
         ))
 
         then:
-        Exceptions.toStacktraceString(unwrapped).replace(System.lineSeparator(), '\n') ==
+        Exceptions.toStackTraceString(unwrapped).replace(System.lineSeparator(), '\n') ==
                 '''java.lang.IllegalStateException: bad bad state
                    Caused by: java.lang.RuntimeException: with message
                    Caused by: java.lang.Exception: root cause
@@ -325,7 +325,7 @@ class ExceptionsTransformationsSpec extends Specification {
         ))
 
         then:
-        Exceptions.toStacktraceString(unwrappedRoot).replace(System.lineSeparator(), '\n') ==
+        Exceptions.toStackTraceString(unwrappedRoot).replace(System.lineSeparator(), '\n') ==
                 '''java.lang.RuntimeException: with message
                    Caused by: java.lang.RuntimeException
                 '''.replaceAll(STACKTRACE_LITERAL_PRETTYPRINT, '')
@@ -354,7 +354,7 @@ class ExceptionsTransformationsSpec extends Specification {
         ))
 
         then:
-        Exceptions.toStacktraceString(transformed).replace(System.lineSeparator(), '\n') ==
+        Exceptions.toStackTraceString(transformed).replace(System.lineSeparator(), '\n') ==
                 '''java.lang.RuntimeException
                    \tSuppressed: java.lang.IllegalStateException
                    \tSuppressed: java.lang.IllegalStateException: java.lang.RuntimeException: java.lang.IllegalStateException
@@ -365,7 +365,7 @@ class ExceptionsTransformationsSpec extends Specification {
 
     /** Formatting to get more readable tests and stable assertions */
     static String cleanString(Exception e) {
-        def es = Exceptions.toStacktraceString(e)
+        def es = Exceptions.toStackTraceString(e)
                 .replace(System.lineSeparator(), '\n')  // use \n regardless of the system line separator
                 .replaceAll(~/:\d+\)/, ')')             // strip line numbers
 
