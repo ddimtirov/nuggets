@@ -227,6 +227,11 @@ class ExtractorsEncapsulationSpec extends Specification {
         EncapsulationDomain.peekField('privateInlineableConstantField')==12
         EncapsulationDomain.peekField('privateFinalStaticField').class==Object
 
+        when:
+        EncapsulationDomain.pokeField('privateFinalStaticField', new Date()) 
+
+        then:
+        EncapsulationDomain.peekField('privateFinalStaticField').class==Date
     }
 
     @Use(Extractors)

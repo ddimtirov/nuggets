@@ -22,6 +22,8 @@ import org.jetbrains.annotations.NotNull;
 
 /** Extra API to make Groovy usage nicer */
 public class NuggetsExtensions {
+    private NuggetsExtensions() { }
+
     /**
      * <p>Extract the value of a static field regardless of its visibility. If there are multiple shadowed fields with the
      * given name, return the value of the first found when traversing the inheritance hierarchy starting from the
@@ -31,6 +33,7 @@ public class NuggetsExtensions {
      * public static final def UNSAFE = Unsafe.peekField("theUnsafe") as Unsafe
      * </code></pre>
      *
+     * @param self the class whose field we are peeking
      * @param fieldName the name of the field to extract.
      *
      * @return the extracted value of the requested field.
@@ -47,7 +50,9 @@ public class NuggetsExtensions {
      * given name, return the value of the first found when traversing the inheritance hierarchy starting from the
      * {@code type}, until {@code Object}. </p>
      *
+     * @param self the class whose field we are peeking
      * @param fieldName the name of the field to extract.
+     * @param value the desired new value
      *
      * @see Extractors#pokeField(Object, Class, String, Object)
      */

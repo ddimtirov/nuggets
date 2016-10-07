@@ -16,11 +16,13 @@
 
 package io.github.ddimitrov.nuggets
 
+import io.github.ddimitrov.nuggets.internal.groovy.NuggetsExtensions
 import org.junit.Test
 
 @SuppressWarnings(["GroovyResultOfObjectAllocationIgnored", "GroovyAccessibility"])
 class FullLineCoveragePadding {
     @Test void callSomeCode() {
+        new NuggetsExtensions()
         new Exceptions()
         new Extractors()
         new ExceptionTransformerBuilder()
