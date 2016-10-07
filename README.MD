@@ -19,7 +19,7 @@ browse the sources at [sourcegraph](https://sourcegraph.com/github.com/ddimtirov
   - cleanup exception stacktrace, causes and suppressed exceptions
     - preset stack transformer for Groovy
     - more on the way.
-  - dump an exception to multi-line string
+  - dump an exception stacktrace to multi-line string and parse it back 
 - `Extractors` - reflection utils  
   - `peek` and `poke` to a private or final field  
   - convert between wrapper and primitive classes
@@ -31,7 +31,15 @@ browse the sources at [sourcegraph](https://sourcegraph.com/github.com/ddimtirov
   - alignment, padding and custom formatting per column
   - default values for optional column
   - extensible visual styles
-
+- Special Groovy API  
+  - Use `Extractors` as Groovy [category](http://groovy-lang.org/metaprogramming.html#categories) 
+    to decorate any object with `peekField()/pokeField()`, which can be used access private or 
+    final fields as in this example: `foobar.peekField('finalField', Integer)`
+  - Any `java.lang.Class` will gain `peekField()/pokeField()` as 
+    [extension methods](http://groovy-lang.org/metaprogramming.html#_extension_modules)
+    that can be used to access static private or final fields - i.e. 
+    `SomeClass.pokeField('someFinalField', newValue)`
+  
 ### Non-functional Features:
 - no 3rd party dependencies at runtime
 - high quality testing and javadoc
