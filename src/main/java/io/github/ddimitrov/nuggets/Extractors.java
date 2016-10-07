@@ -182,10 +182,6 @@ public class Extractors {
      * <p>Extract the value of a field regardless of its visibility. If there are multiple shadowed fields with the
      * given name, return the value of the first found when traversing the inheritance hierarchy starting from the
      * {@code type}, until {@code Object}. </p>
-     * <p>You can use this method to easily get {@code Unsafe} and cache it for further usage, loke this:</p>
-     * <pre><code>
-     * public static final Unsafe UNSAFE = peekField(Unsafe.class, null, "theUnsafe", Unsafe.class);
-     * </code></pre>
      *
      * @param target the object containing the data. {@code null} if we are looking to extract a static field.
      * @param type the type from which to start the search for the field. See {@link #getAccessibleField getAccessibleField(type, name, true)} for the precise meaning.
