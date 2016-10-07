@@ -22,6 +22,8 @@ import spock.lang.Subject
 import spock.lang.Title
 import spock.lang.Unroll
 
+import java.util.function.Supplier
+
 @Title("Exceptions :: Parse from stack trace")
 @Subject(Exceptions)
 @SuppressWarnings("GroovyAccessibility")
@@ -48,9 +50,9 @@ class ExceptionsParsingSpec extends Specification {
         when: 'Parsing an exception that has a class not available to the current JVM'
         def reversedMissingException = Exceptions.parseStacktrace(stacktraceMissingException)
 
-        then: 'We get an instance of ThrowableClassNotFoundException with the same message, stack, toString() and printStackTrace()'
+        then: 'We get an instance of MissingClassSurrogateException with the same message, stack, toString() and printStackTrace()'
         Exceptions.toStacktraceString(reversedMissingException)==stacktraceMissingException
-        reversedMissingException.class == ThrowableClassNotFoundException
+        reversedMissingException.class == MissingClassSurrogateException
 
         where:
         useCase                                | throwable
@@ -59,11 +61,13 @@ class ExceptionsParsingSpec extends Specification {
         'plain exception with multi-line text' | new Exception(" foo \n bar ")
         'plain exception with no stack'        | new StacklessException(" foo \n bar ")
         'exception with cause'                 | new Exception("main exception", new Error("the real cause"))
-        'exception with deep cause'            | new Exception("main exception", deepException(5, new RuntimeException("Deep exception")))
-        'exception with deep stackless cause'  | new StacklessException("main exception", deepException(5, new RuntimeException("Deep exception")))
-        'exception with multi-level cause'     | new Exception("main exception", new Error('foobar', deepException(5, new RuntimeException("Deep exception"))))
-        'exception w/ multi-level cause no msg'| new Exception(new Error(deepException(5, new RuntimeException("Deep exception"))))
-        'exception with circular cause'        | new Exception("main", circularException(5, new RuntimeException("loop")))
+        'exception with deep cause'            | new Exception("main exception", deepException(5) { new RuntimeException("Deep exception") })
+        'exception with deep stackless cause'  | new StacklessException("main exception", deepException(5) { new RuntimeException("Deep exception") })
+        'exception with multi-level cause'     | new Exception("main exception", new Error('foobar', deepException(5) { new RuntimeException("Deep exception") } ))
+        'exception w/ multi-level cause no msg'| new Exception(new Error(deepException(5) { new RuntimeException("Deep exception")}))
+        'exception with circular cause'        | new Exception("main", addCircularCauses(5, new RuntimeException("loop")))
+        'exception with single suppressed'     | addSuppressed(1, new RuntimeException("main"))
+        'exception with five suppressed'       | addSuppressed(5, new RuntimeException("main"))
     }
 
 
@@ -80,23 +84,49 @@ class ExceptionsParsingSpec extends Specification {
         def reversed = Exceptions.parseStacktrace(stacktrace)
 
         then: 'we substitute with a surrogate exception'
-        reversed.class == ThrowableClassNotFoundException
+        reversed.class == MissingClassSurrogateException
 
         and: 'the printStackTrace() representation will be the same as the parsed trace'
         Exceptions.toStacktraceString(reversed) == stacktrace
 
-        when: 'we set a global indicator prefix to ThrowableClassNotFoundException'
-        ThrowableClassNotFoundException.indicator = 'MISSING: '
+        when: 'we set a global indicator prefix to MissingClassSurrogateException'
+        MissingClassSurrogateException.indicator = 'MISSING: '
 
         then: 'all the surrogate exceptions will be prefixed with the indicator'
         reversed.toString() == 'MISSING: ' + stacktrace.split(EOL)[0]
         Exceptions.toStacktraceString(reversed) == 'MISSING: ' + stacktrace
 
         when: 'we clear the global indicator'
-        ThrowableClassNotFoundException.indicator = ''
+        MissingClassSurrogateException.indicator = ''
 
         then: 'all will become again identical to the parsed'
         Exceptions.toStacktraceString(reversed) == stacktrace
+    }
+
+    def "reverse particularly hairy stack"() {
+        def hairyStack = '''\
+        java.lang.Throwable
+        \tat ideaGroovyConsole.run(ideaGroovyConsole.groovy:1)
+        \tat console.run(console.txt:25)
+        \tat com.intellij.rt.execution.CommandLineWrapper.main(CommandLineWrapper.java:48)
+        \tSuppressed: java.lang.RuntimeException
+        \t\tat ideaGroovyConsole.run(ideaGroovyConsole.groovy:2)
+        \t\t... 1 more
+        \tSuppressed: java.lang.IllegalArgumentException: java.lang.Error
+        \t\tat ideaGroovyConsole.run(ideaGroovyConsole.groovy:3)
+        \t\t... 1 more
+        \tCaused by: foo.bar.funkyMonkey
+        \t\t... 1 more
+        \tSuppressed: java.lang.IllegalArgumentException
+        \t\tat ideaGroovyConsole.run(ideaGroovyConsole.groovy:4)
+        \t\t... 1 more
+        Caused by: java.lang.Exception
+        \tat ideaGroovyConsole.run(ideaGroovyConsole.groovy:5)
+        \t... 1 more
+        '''.stripIndent().replace("\n", EOL)
+
+        when: def reversed = Exceptions.parseStacktrace(hairyStack)
+        then: Exceptions.toStacktraceString(reversed) == hairyStack
     }
 
     def "parse single stack frame"(String line) {
@@ -119,11 +149,11 @@ class ExceptionsParsingSpec extends Specification {
                     \tat org.codehaus.groovy.tools.GroovyStarter.<init>(GroovyStarter.java:131)
                     \tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
                 '''.split('\n').findAll { it.trim() }
-        
+
     }
 
-    private static Throwable deepException(int i=5, Throwable t) {
-        if (i==0) throw t
+    private static Throwable deepException(int i=5, Supplier<Throwable> t) {
+        if (i==0) throw t.get()
         try {
             return deepException(i - 1, t)
         } catch (e) {
@@ -131,11 +161,11 @@ class ExceptionsParsingSpec extends Specification {
         }
     }
 
-    private static Throwable circularException(int i, Throwable loop, Throwable prev=null) {
-        def cause = new Exception("looped cause " + i)
+    private static Throwable addCircularCauses(int i, Throwable loop, Throwable prev=null) {
+        def cause = new Exception('looped cause ' + i)
         if (prev==null) {
             loop.initCause(cause)
-            return circularException(i-1, loop, cause)
+            return addCircularCauses(i-1, loop, cause)
         }
 
         if (i<=0) {
@@ -144,8 +174,14 @@ class ExceptionsParsingSpec extends Specification {
         }
 
         prev.initCause(cause)
-        return circularException(i-1, loop, cause)
+        return addCircularCauses(i-1, loop, cause)
     }
+
+    private static Throwable addSuppressed(int i, Throwable t) {
+        i.times { t.addSuppressed(new Exception("Suppressed $it")) }
+        return t
+    }
+
 }
 
 @InheritConstructors

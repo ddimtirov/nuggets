@@ -25,6 +25,7 @@ import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -213,7 +214,6 @@ import static java.util.regex.Pattern.compile;
 public class Exceptions {
     private static final boolean TRANSFORM_ON_RETHROW = Boolean.parseBoolean(System.getProperty("nuggets.Exceptions.transform-on-rethrow", "true"));
     private static final InheritableThreadLocal<Function<Throwable, Throwable>> TRANSFORMER = new InheritableThreadLocal<>();
-    public static final Pattern STRACE_MORE = Pattern.compile("\t\\.\\.\\. (\\d+) more");
 
     private Exceptions() {}
 
@@ -495,28 +495,42 @@ scan_loop:
         String eol = System.lineSeparator();
         String[] lines = text.toString().split(eol);
         try {
-            return parseStacktraceInternal(eol, 0, new ArrayDeque<>(10), lines);
+            return parseStacktraceInternal(eol, "", new AtomicInteger(), new ArrayDeque<>(10), lines);
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             return rethrow(e);
         }
     }
 
-    private static Throwable parseStacktraceInternal(String eol, int start, Deque<Throwable> caused, String[] lines) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
-        int i = start;
+    private static final String STRACE_AT = "\tat ";
+    private static final String STRACE_SUPPRESSED = "\tSuppressed: ";
+    private static final String STRACE_CAUSED_BY = "Caused by: ";
+    private static final String STRACE_CIRCULAR_PREFIX = "\t[CIRCULAR REFERENCE:";
+    private static final String STRACE_CIRCULAR_SUFFIX = "]";
+    private static final String STRACE_SUPPRESSED_INDENT = "\t";
+    private static final Pattern STRACE_MORE = Pattern.compile(Pattern.quote(STRACE_SUPPRESSED_INDENT) + "*\t\\.\\.\\. (\\d+) more$");
+    private static Throwable parseStacktraceInternal(String eol, String prefix, AtomicInteger index, Deque<Throwable> caused, String[] lines) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        int i = index.get();
 
         String[] classMessage = lines[i++].split(": ", 2);
         String className = classMessage[0];
         Class<Object> type = Extractors.getClassIfPresent(className);
         Throwable t = type == null
-                ? new ThrowableClassNotFoundException(className)
+                ? new MissingClassSurrogateException(className)
                 : (Throwable) type.getConstructor().newInstance();
         StringBuilder messageAccumulator = new StringBuilder(lines[0].length()); // one line messages are by far the most common case
         if (classMessage.length > 1) messageAccumulator.append(classMessage[1]);
 
         while (i < lines.length) {
-            if (lines[i].startsWith("\tat ")) break; // this is for the next section
+            if (!lines[i].startsWith(prefix)) break;
+            if (lines[i].startsWith(STRACE_AT, prefix.length())) break;
+            if (lines[i].startsWith(STRACE_CAUSED_BY, prefix.length())) break;
+            if (lines[i].startsWith(STRACE_CIRCULAR_PREFIX, prefix.length()) && lines[i].endsWith(STRACE_CIRCULAR_SUFFIX)) break;
+
+            if (STRACE_MORE.matcher(lines[i]).matches()) break;
+
             messageAccumulator.append(eol).append(lines[i++]);
         }
+
         if (messageAccumulator.length()>0) {
             String message = messageAccumulator.toString();
             Extractors.pokeField(t, "detailMessage", message);
@@ -524,14 +538,15 @@ scan_loop:
 
         List<StackTraceElement> stackTraceAccumulator = new ArrayList<>(lines.length-i); // preallocate to avoid multiple resizing passes
         while (i < lines.length) {
-            if (!lines[i].startsWith("\tat ")) break;
-            stackTraceAccumulator.add(parseStackFrame(4, lines[i++]));
+            if (!lines[i].startsWith(STRACE_AT, prefix.length())) break;
+            StackTraceElement frame = parseStackFrame(prefix.length() + 4, lines[i++]);
+            stackTraceAccumulator.add(frame);
         }
         if (i < lines.length) {
-            Matcher matcher = STRACE_MORE.matcher(lines[i]);
-            if (matcher.matches()) {
+            Matcher more = STRACE_MORE.matcher(lines[i]);
+            if (more.matches())  {
                 i++;
-                String duplicateFramesStr = matcher.group(1);
+                String duplicateFramesStr = more.group(1);
                 int duplicateFrames = Integer.parseInt(duplicateFramesStr);
                 StackTraceElement[] causedStackTrace = caused.peekLast().getStackTrace();
                 stackTraceAccumulator.addAll(Arrays.asList(Arrays.copyOfRange(
@@ -545,50 +560,46 @@ scan_loop:
         StackTraceElement[] stackTrace = stackTraceAccumulator.toArray(new StackTraceElement[0]);
         Extractors.pokeField(t, "stackTrace", stackTrace);
 
-        // TODO add suppressed
-
-/*
-        System.out.printf("lines[%d/%d]==", lines.length, i);
-        if (i<lines.length) {
-            System.out.printf("%s (%s)%n", lines[i], lines[i].startsWith("Caused by: "));
-        } else {
-            System.out.println("IOBE");
-        }
-*/
-        Throwable cause;
-        if (i<lines.length && lines[i].startsWith("\t[CIRCULAR REFERENCE:") && lines[i].endsWith("]")) {
-            String loopedToString = lines[i].replaceFirst("^\t\\[CIRCULAR REFERENCE:", "").replaceFirst("]$", "");
-            cause = caused.stream()
-                          .filter(it -> Objects.equals(loopedToString, it.toString()))
-                          .findFirst().orElseThrow(() -> new IllegalArgumentException("Can not resolve circular cause: " + loopedToString));
-        } else if (i<lines.length && lines[i].startsWith("Caused by: ")) {
+        while (i<lines.length && lines[i].startsWith(prefix) && lines[i].startsWith(STRACE_SUPPRESSED, prefix.length())) {
             String original = lines[i];
-            lines[i] = lines[i].replaceFirst("Caused by: ", "");
+            lines[i] = lines[i].substring(prefix.length() + STRACE_SUPPRESSED.length());
             caused.addLast(t);
-            cause = parseStacktraceInternal(eol, i, caused, lines);
-            caused.removeLast();
-            lines[i] = original;
-        } else {
-            cause = null;
+            index.set(i);
+            try {
+                Throwable suppressed = parseStacktraceInternal(eol, prefix+ STRACE_SUPPRESSED_INDENT, index, caused, lines);
+                t.addSuppressed(suppressed);
+            } finally {
+                lines[i] = original;
+                i = index.get();
+                caused.remove(t);
+            }
         }
-        Extractors.pokeField(t, "cause", cause);
 
-        // TODO: support nesting
+        if (i<lines.length && lines[i].startsWith(prefix)) {
+            Throwable cause;
+            if (lines[i].startsWith(STRACE_CIRCULAR_PREFIX, prefix.length()) && lines[i].endsWith(STRACE_CIRCULAR_SUFFIX)) {
+                String line = lines[i++];
+                String loopedToString = line.substring(prefix.length() + STRACE_CIRCULAR_PREFIX.length(), line.length()-STRACE_CIRCULAR_SUFFIX.length());
+                cause = caused.stream()
+                              .filter(it -> Objects.equals(loopedToString, it.toString()))
+                              .findFirst().orElseThrow(() -> new IllegalArgumentException("Can not resolve circular cause: " + loopedToString));
+
+            } else if (lines[i].startsWith(STRACE_CAUSED_BY, prefix.length())) {
+                caused.addLast(t);
+                index.set(i);
+                String original = lines[i];
+                lines[i] = lines[i].substring(prefix.length() + STRACE_CAUSED_BY.length());
+                cause = parseStacktraceInternal(eol, prefix, index, caused, lines);
+                lines[i] = original;
+                i = index.get();
+                caused.removeLast();
+            } else {
+                cause = null;
+            }
+            Extractors.pokeField(t, "cause", cause);
+        }
+
+        index.set(i);
         return t;
-    }
-}
-
-class ThrowableClassNotFoundException extends Exception {
-    public static volatile @NotNull String indicator="";
-    private final @NotNull String originalExceptionClassName;
-
-    public ThrowableClassNotFoundException(@NotNull String originalExceptionClassName) {
-        this.originalExceptionClassName = originalExceptionClassName;
-    }
-
-    @Override
-    public String toString() {
-        String className = getClass().getName();
-        return indicator + super.toString().replace(className, originalExceptionClassName);
     }
 }

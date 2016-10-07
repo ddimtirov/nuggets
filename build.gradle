@@ -40,3 +40,7 @@ dependencies {
     testRuntime 'cglib:cglib-nodep:'
 }
 
+test {
+    // for predictable stack traces we disable the reflection bytecode generation
+    systemProperties 'sun.reflect.inflationThreshold': Integer.MAX_VALUE
+}
