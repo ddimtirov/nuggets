@@ -1,4 +1,4 @@
-﻿package io.github.ddimitrov.nuggets
+package io.github.ddimitrov.nuggets
 
 import spock.lang.Specification
 import spock.lang.Subject
