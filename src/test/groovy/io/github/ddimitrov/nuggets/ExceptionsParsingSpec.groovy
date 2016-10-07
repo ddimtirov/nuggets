@@ -37,29 +37,29 @@ class ExceptionsParsingSpec extends Specification {
     @Unroll
     def "roundtrip #useCase"(useCase, Throwable throwable) {
         setup:
-        def stacktrace = Exceptions.toStacktraceString(throwable)
+        def stacktrace = Exceptions.toStackTraceString(throwable)
         def stacktraceMissingException = stacktrace.replaceAll(~/Exception\b/, 'MissingException')
 
         when: 'Parsing an exception'
-        def reversed = Exceptions.parseStacktrace(stacktrace)
+        def reversed = Exceptions.parseStackTrace(stacktrace)
 
         then: 'We get an exception with the same class, message and stacktrace'
-        Exceptions.toStacktraceString(reversed)==stacktrace
+        Exceptions.toStackTraceString(reversed)==stacktrace
         reversed.class == throwable.class
 
         when: 'Parsing an exception that has a class not available to the current JVM'
-        def reversedMissingException = Exceptions.parseStacktrace(stacktraceMissingException)
+        def reversedMissingException = Exceptions.parseStackTrace(stacktraceMissingException)
 
         then: 'We get an instance of MissingClassSurrogateException with the same message, stack, toString() and printStackTrace()'
-        Exceptions.toStacktraceString(reversedMissingException)==stacktraceMissingException
+        Exceptions.toStackTraceString(reversedMissingException)==stacktraceMissingException
         reversedMissingException.class == MissingClassSurrogateException
 
         where:
         useCase                                | throwable
         'plain exception'                      | new Exception()
         'plain exception with text'            | new Exception(" foo bar ")
-        'plain exception with multi-line text' | new Exception(" foo \n bar ")
-        'plain exception with no stack'        | new StacklessException(" foo \n bar ")
+        'plain exception with multi-line text' | new Exception(" foo $EOL bar ")
+        'plain exception with no stack'        | new StacklessException(" foo $EOL bar ")
         'exception with cause'                 | new Exception("main exception", new Error("the real cause"))
         'exception with deep cause'            | new Exception("main exception", deepException(5) { new RuntimeException("Deep exception") })
         'exception with deep stackless cause'  | new StacklessException("main exception", deepException(5) { new RuntimeException("Deep exception") })
@@ -81,26 +81,26 @@ class ExceptionsParsingSpec extends Specification {
             """.stripIndent().replace("\n", EOL)
 
         when: 'we parse an unknown exception class'
-        def reversed = Exceptions.parseStacktrace(stacktrace)
+        def reversed = Exceptions.parseStackTrace(stacktrace)
 
         then: 'we substitute with a surrogate exception'
         reversed.class == MissingClassSurrogateException
 
         and: 'the printStackTrace() representation will be the same as the parsed trace'
-        Exceptions.toStacktraceString(reversed) == stacktrace
+        Exceptions.toStackTraceString(reversed) == stacktrace
 
         when: 'we set a global indicator prefix to MissingClassSurrogateException'
         MissingClassSurrogateException.indicator = 'MISSING: '
 
         then: 'all the surrogate exceptions will be prefixed with the indicator'
         reversed.toString() == 'MISSING: ' + stacktrace.split(EOL)[0]
-        Exceptions.toStacktraceString(reversed) == 'MISSING: ' + stacktrace
+        Exceptions.toStackTraceString(reversed) == 'MISSING: ' + stacktrace
 
         when: 'we clear the global indicator'
         MissingClassSurrogateException.indicator = ''
 
         then: 'all will become again identical to the parsed'
-        Exceptions.toStacktraceString(reversed) == stacktrace
+        Exceptions.toStackTraceString(reversed) == stacktrace
     }
 
     def "reverse particularly hairy stack"() {
@@ -125,13 +125,13 @@ class ExceptionsParsingSpec extends Specification {
         \t... 1 more
         '''.stripIndent().replace("\n", EOL)
 
-        when: def reversed = Exceptions.parseStacktrace(hairyStack)
-        then: Exceptions.toStacktraceString(reversed) == hairyStack
+        when: def reversed = Exceptions.parseStackTrace(hairyStack)
+        then: Exceptions.toStackTraceString(reversed) == hairyStack
     }
 
     def "parse single stack frame"(String line) {
         when:
-        def sf = Exceptions.parseStackFrame(line.indexOf('\tat ') + 4, line)
+        def sf = Exceptions.parseStackFrame(line, line.indexOf('\tat ') + 4)
 
         then:
         sf.toString()==line.split("\tat ")[1]

@@ -42,7 +42,7 @@ import static java.util.regex.Pattern.compile;
  *
  * <h2>String conversion</h2>
  * <p>Every once in a while we need to format an exception without actually printing it.
- * That is where {@link Exceptions#toStacktraceString(Throwable)} comes useful.</p>
+ * That is where {@link Exceptions#toStackTraceString(Throwable)} comes useful.</p>
  *
  * <h2>About Checked Exceptions</h2>
  * <p>The theory says that we should either handle a checked exception by performing recovery/compensating action,
@@ -249,7 +249,7 @@ public class Exceptions {
      * threads wanting to clean up the thread-pool stack-frames)</p>
      *
      * <p>Keep in mind that this transformer is not automatically applied to the
-     * argument of {@link #toStacktraceString(Throwable)}, so one can easily dump the full
+     * argument of {@link #toStackTraceString(Throwable)}, so one can easily dump the full
      * stack if needed.</p>
      *
      * <p>If you are not sure what transformations to specify, you may want to just
@@ -432,7 +432,7 @@ public class Exceptions {
      * @param t the exception to format.
      * @return a string representing the output of {@link Throwable#printStackTrace()}
      */
-    public static @NotNull String toStacktraceString(@NotNull Throwable t) {
+    public static @NotNull String toStackTraceString(@NotNull Throwable t) {
         StringWriter sw = new StringWriter();
         try(PrintWriter pw = new PrintWriter(sw)) {
             t.printStackTrace(pw);
@@ -440,15 +440,21 @@ public class Exceptions {
         return sw.getBuffer().toString();
     }
 
-    public static StackTraceElement parseStackFrame(int startIdx, CharSequence line) {
+    /**
+     * Parses a stack frame from its {@code toString()} representation.
+     * @param text containing the stack frame
+     * @param startIdx the number of bytes to skip (useful when processing exception lines)
+     * @return the reconstituted stack frame
+     */
+    public static @NotNull StackTraceElement parseStackFrame(@NotNull CharSequence text, int startIdx) {
         int classEnd = -1;
         int methodEnd = -1;
         int fileEnd = -1;
         int lineEnd = -1;
 
 scan_loop:
-        for (int i = startIdx; i < line.length(); i++) {
-            switch (line.charAt(i)) {
+        for (int i = startIdx; i < text.length(); i++) {
+            switch (text.charAt(i)) {
                 case '.':
                     if (methodEnd<0) classEnd = i;
                     break;
@@ -470,13 +476,13 @@ scan_loop:
         }
 
 
-        String declaringClass = classEnd<0  ? null : line.subSequence(startIdx   , classEnd ).toString();
-        String methodName     = methodEnd<0 ? null : line.subSequence(classEnd +1, methodEnd).toString();
-        String fileName       = fileEnd<0   ? null : line.subSequence(methodEnd+1, fileEnd  ).toString();
-        String lineNumberStr  = lineEnd<0   ? null : line.subSequence(fileEnd  +1, lineEnd  ).toString();
+        String declaringClass = classEnd<0  ? null : text.subSequence(startIdx   , classEnd ).toString();
+        String methodName     = methodEnd<0 ? null : text.subSequence(classEnd +1, methodEnd).toString();
+        String fileName       = fileEnd<0   ? null : text.subSequence(methodEnd+1, fileEnd  ).toString();
+        String lineNumberStr  = lineEnd<0   ? null : text.subSequence(fileEnd  +1, lineEnd  ).toString();
 
         if (declaringClass==null || methodName==null) {
-            throw new IllegalArgumentException("Malformed stack frame string (can't parse class and method): " + line);
+            throw new IllegalArgumentException("Malformed stack frame string (can't parse class and method): " + text);
         }
 
         int lineNumber = lineNumberStr == null ? -1 : Integer.parseInt(lineNumberStr);
@@ -491,11 +497,35 @@ scan_loop:
         return new StackTraceElement(declaringClass, methodName, fileName, lineNumber);
     }
 
-    public static Throwable parseStacktrace(CharSequence text) {
-        String eol = System.lineSeparator();
-        String[] lines = text.toString().split(eol);
+    /**
+     * <p>Reconstructs an exception graph (including type, message, causes, suppressed, stacktraces, hierarchy-loops)
+     * from a stacktrace. Does not populate any fields beypond what is in {@code Throwable}.</p>
+     * <p>If any exception is not available on the classpath, it is replaced with {@link MissingClassSurrogateException}
+     * that outputs the same {@code toString()} and {@code printStackTrace()} as in the parsed text.</p>
+     * <p>This method assumes that the stacktrace lines are delimited using the {@link System#lineSeparator()}</p>
+     *
+     * @param text the output of {@link Throwable#printStackTrace()}
+     * @return the throwable that produced the {@code text}
+     */
+    public static @NotNull Throwable parseStackTrace(@NotNull CharSequence text) {
+        return parseStackTrace(text, null);
+    }
+
+    /**
+     * <p>Reconstructs an exception graph (including type, message, causes, suppressed, stacktraces, hierarchy-loops)
+     * from a stacktrace. Does not populate any fields beypond what is in {@code Throwable}.</p>
+     * <p>If any exception is not available on the classpath, it is replaced with {@link MissingClassSurrogateException}
+     * that outputs the same {@code toString()} and {@code printStackTrace()} as in the parsed text.</p>
+     *
+     * @param text the output of {@link Throwable#printStackTrace()}
+     * @param eol line separator (i.e. when parsing files). If {@code null} will use {@link System#lineSeparator()}.
+     * @return the throwable that produced the {@code text}
+     */
+    private static @NotNull Throwable parseStackTrace(@NotNull CharSequence text, @Nullable String eol) {
+        String lineSeparator = eol==null ? System.lineSeparator() : eol;
+        String[] lines = text.toString().split(lineSeparator);
         try {
-            return parseStacktraceInternal(eol, "", new AtomicInteger(), new ArrayDeque<>(10), lines);
+            return parseStacktraceInternal(lineSeparator, "", new AtomicInteger(), new ArrayDeque<>(10), lines);
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             return rethrow(e);
         }
@@ -508,7 +538,11 @@ scan_loop:
     private static final String STRACE_CIRCULAR_SUFFIX = "]";
     private static final String STRACE_SUPPRESSED_INDENT = "\t";
     private static final Pattern STRACE_MORE = Pattern.compile(Pattern.quote(STRACE_SUPPRESSED_INDENT) + "*\t\\.\\.\\. (\\d+) more$");
-    private static Throwable parseStacktraceInternal(String eol, String prefix, AtomicInteger index, Deque<Throwable> caused, String[] lines) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+
+    private static @NotNull Throwable parseStacktraceInternal(
+            @NotNull String eol, @NotNull String prefix, @NotNull AtomicInteger index,
+            @NotNull Deque<Throwable> caused, @NotNull String[] lines
+    ) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
         int i = index.get();
 
         String[] classMessage = lines[i++].split(": ", 2);
@@ -539,7 +573,7 @@ scan_loop:
         List<StackTraceElement> stackTraceAccumulator = new ArrayList<>(lines.length-i); // preallocate to avoid multiple resizing passes
         while (i < lines.length) {
             if (!lines[i].startsWith(STRACE_AT, prefix.length())) break;
-            StackTraceElement frame = parseStackFrame(prefix.length() + 4, lines[i++]);
+            StackTraceElement frame = parseStackFrame(lines[i++], prefix.length() + 4);
             stackTraceAccumulator.add(frame);
         }
         if (i < lines.length) {
