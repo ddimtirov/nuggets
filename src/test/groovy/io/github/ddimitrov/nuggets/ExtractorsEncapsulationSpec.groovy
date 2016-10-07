@@ -19,6 +19,7 @@ package io.github.ddimitrov.nuggets
 import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.Title
+import spock.util.mop.Use
 
 @Title("Extractors :: Breaking encapsulation")
 @Subject(Extractors)
@@ -207,4 +208,43 @@ class ExtractorsEncapsulationSpec extends Specification {
         NullPointerException e = thrown()
         e.message==null
     }
+
+    def "use Extractors as Groovy Category"() {
+        setup:
+        def x = new EncapsulationDomain.ShadowingSubclass(666, 999, 6, 9)
+
+        expect: 'using Groovy`s use(category) {...} construct is useful, but inconvenient for tests'
+        use (Extractors) {
+            assert x.peekField('finalField', Integer)==6 // since it is nested we need to put explicit assertions
+            assert x.peekField('privateFinalField', Integer)==9
+            assert x.peekField('privateField', Integer)==2
+            return true // since it is in assertion block we need to return truthy value
+        }
+
+        and: 'a default extension method is added to Class objects by GroovyNuggetsStaticExtensions'
+        EncapsulationDomain.peekField('inlineableConstantField')==42
+        EncapsulationDomain.peekField('finalStaticField').class==Object
+        EncapsulationDomain.peekField('privateInlineableConstantField')==12
+        EncapsulationDomain.peekField('privateFinalStaticField').class==Object
+
+    }
+
+    @Use(Extractors)
+    def "use Extractors as Spock Category"() {
+        setup:
+        def x = new EncapsulationDomain.ShadowingSubclass(666, 999, 6, 9)
+
+        expect: 'no need to explicitly use Groovy category as it is injected by Spock'
+        x.peekField('finalField', Integer)==6
+        x.peekField('privateFinalField', Integer)==9
+        x.peekField('privateField', Integer)==2
+
+
+        and: 'a default extension method is added to Class objects by GroovyNuggetsStaticExtensions'
+        EncapsulationDomain.peekField('inlineableConstantField')==42
+        EncapsulationDomain.peekField('finalStaticField').class==Object
+        EncapsulationDomain.peekField('privateInlineableConstantField')==12
+        EncapsulationDomain.peekField('privateFinalStaticField').class==Object
+    }
+
 }
