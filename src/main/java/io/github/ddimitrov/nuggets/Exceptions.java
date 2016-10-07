@@ -481,9 +481,8 @@ scan_loop:
         String fileName       = fileEnd<0   ? null : text.subSequence(methodEnd+1, fileEnd  ).toString();
         String lineNumberStr  = lineEnd<0   ? null : text.subSequence(fileEnd  +1, lineEnd  ).toString();
 
-        if (declaringClass==null || methodName==null) {
-            throw new IllegalArgumentException("Malformed stack frame string (can't parse class and method): " + text);
-        }
+        Objects.requireNonNull(declaringClass, "can't parse stack frame's declaringClass");
+        Objects.requireNonNull(methodName, "can't parse stack frame's methodName");
 
         int lineNumber = lineNumberStr == null ? -1 : Integer.parseInt(lineNumberStr);
         if (fileName!=null) {
@@ -524,11 +523,7 @@ scan_loop:
     private static @NotNull Throwable parseStackTrace(@NotNull CharSequence text, @Nullable String eol) {
         String lineSeparator = eol==null ? System.lineSeparator() : eol;
         String[] lines = text.toString().split(lineSeparator);
-        try {
-            return parseStacktraceInternal(lineSeparator, "", new AtomicInteger(), new ArrayDeque<>(10), lines);
-        } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
-            return rethrow(e);
-        }
+        return rethrow(() -> parseStacktraceInternal(lineSeparator, "", new AtomicInteger(), new ArrayDeque<>(10), lines));
     }
 
     private static final String STRACE_AT = "\tat ";
