@@ -18,6 +18,8 @@ plugins {
     id 'com.gradle.build-scan' version '1.0'
     id "net.ltgt.errorprone" version "0.0.8"
     id "org.standardout.versioneye" version "1.4.0"
+    id "com.zoltu.kotlin" version "1.0.4" // TODO: this is republished from org.jetbrains.kotlin:kotlin-gradle-plugin - replace with first party when available
+//    id "org.jetbrains.dokka" version "0.9.9" TODO: fix and remove buildscript when working plugin uploaded
     id "groovy"
     id "pmd"
     id "findbugs"
@@ -33,10 +35,17 @@ apply from: file('gradle/javadoc.gradle')
 apply from: file('gradle/quality.gradle')
 
 dependencies {
-    compileOnly 'org.jetbrains:annotations:15.0'
+    compileOnly 'org.jetbrains:annotations:15.0',
+                'org.jetbrains.kotlin:kotlin-stdlib:',
+                'org.codehaus.groovy:groovy:'
+
     testCompileOnly 'org.jetbrains:annotations:15.0' // so that the Groovy compiler won't complain
-    testCompile 'javax.inject:javax.inject:1'
-    testCompile 'org.spockframework:spock-core:'
+
+    testCompile 'org.spockframework:spock-core:',
+                'org.jetbrains.kotlin:kotlin-stdlib:',
+                'org.jetbrains.kotlin:kotlin-test-junit:',
+                'javax.inject:javax.inject:1'
+
     testRuntime 'cglib:cglib-nodep:'
 }
 

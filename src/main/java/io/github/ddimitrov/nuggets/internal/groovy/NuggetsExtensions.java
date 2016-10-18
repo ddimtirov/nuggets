@@ -16,13 +16,33 @@
 
 package io.github.ddimitrov.nuggets.internal.groovy;
 
+import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
+import io.github.ddimitrov.nuggets.ExceptionTransformerBuilder;
 import io.github.ddimitrov.nuggets.Extractors;
 import org.intellij.lang.annotations.Identifier;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.function.Function;
+
 /** Extra API to make Groovy usage nicer */
 public class NuggetsExtensions {
     private NuggetsExtensions() { }
+
+    /**
+     * Manipulate the exception contents on ad-hoc basis
+     * @param self the target of this extension method
+     * @param transformationSpec a spec closure that will be run on {@link ExceptionTransformerBuilder} delegate.
+     * @return the transformed exception - typically we would throw or log that.
+     */
+    public static Throwable transform(Throwable self, @DelegatesTo(ExceptionTransformerBuilder.class) Closure<?> transformationSpec) {
+        ExceptionTransformerBuilder builder = new ExceptionTransformerBuilder();
+        transformationSpec.setDelegate(builder);
+        transformationSpec.call();
+        Function<Throwable, Throwable> transformation = builder.build();
+        return transformation.apply(self);
+    }
+
 
     /**
      * <p>Extract the value of a static field regardless of its visibility. If there are multiple shadowed fields with the

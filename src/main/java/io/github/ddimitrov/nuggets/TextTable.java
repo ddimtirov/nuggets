@@ -774,7 +774,7 @@ public class TextTable {
          * @throws IllegalArgumentException if the row does not match in the layout
          */
         @NotNull
-        public DataBuilder row(@NotNull List<?> row) {
+        public DataBuilder row(@NotNull List<@Nullable ?> row) {
             return appendRowChecked(row, row);
         }
 
@@ -785,7 +785,7 @@ public class TextTable {
          * @throws IllegalArgumentException if the row does not match in the layout
          */
         @NotNull
-        public DataBuilder row(@NotNull Object... row) {
+        public DataBuilder row(Object... row) { // we want not null row array, but nullable array components
             return appendRowChecked(Arrays.asList(row), Arrays.deepToString(row));
         }
 
@@ -812,7 +812,7 @@ public class TextTable {
          * @throws IllegalArgumentException if the row does not match in the layout
          */
         @NotNull
-        public DataBuilder rows(@NotNull Collection<@NotNull List<?>> rows) {
+        public DataBuilder rows(@NotNull Collection<@NotNull List<@Nullable ?>> rows) {
             rows.forEach(this::row);
             return this;
         }

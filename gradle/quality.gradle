@@ -25,6 +25,7 @@ tasks.withType(JavaCompile) {
 }
 
 tasks.withType(FindBugs) {
+    excludeFilter = file('gradle/quality/findbugs-suppressed.xml', PathValidation.FILE)
     it.reports {
         xml.enabled=false
         html.enabled=true

@@ -16,7 +16,6 @@
 
 package io.github.ddimitrov.nuggets
 
-import groovy.transform.InheritConstructors
 import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.Title
@@ -182,9 +181,4 @@ class ExceptionsParsingSpec extends Specification {
         return t
     }
 
-}
-
-@InheritConstructors
-class StacklessException extends Exception {
-    @Override synchronized Throwable fillInStackTrace() { return this }
 }
