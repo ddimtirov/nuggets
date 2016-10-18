@@ -14,19 +14,13 @@
  *    limitations under the License.
  */
 
-configurations.all {
-    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-        switch (requested.name) {
-            case 'groovy-all': details.useTarget group:
-                    requested.group, name: 'groovy', version: requested.version
-                    break
-        }
+package io.github.ddimitrov.nuggets
 
-        switch (requested.group) {
-            case 'org.spockframework':  return useVersion('1.1-groovy-2.4-rc-2')
-            case 'org.codehaus.groovy': return useVersion('2.4.7')
-            case 'org.jetbrains.kotlin': return useVersion('1.0.4')
-            case 'cglib': return useVersion('3.2.4')
-        }
-    }
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+
+@CompileStatic @InheritConstructors
+class StacklessException extends Exception {
+    @Override
+    synchronized Throwable fillInStackTrace() { return this }
 }

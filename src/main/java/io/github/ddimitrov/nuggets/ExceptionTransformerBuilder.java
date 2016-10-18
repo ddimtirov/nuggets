@@ -211,7 +211,7 @@ public class ExceptionTransformerBuilder {
      * @return the builder instance for chaining
      * @throws IllegalStateException if the transform function has already been built.
      */
-    public @NotNull ExceptionTransformerBuilder replaceStackTrace(@NotNull Function<StackTraceElement[], StackTraceElement[]> stackMapper) {
+    public @NotNull ExceptionTransformerBuilder replaceStackTrace(@NotNull Function<StackTraceElement[], @NotNull StackTraceElement[]> stackMapper) {
         if (done) throw new IllegalStateException("Can not change state once you have called build()!");
         this.stackMapper = this.stackMapper.andThen(stackMapper);
         return this;
@@ -297,7 +297,7 @@ public class ExceptionTransformerBuilder {
         for (int i = 0; i < suppressedExceptions.size(); i++) {
             suppressedExceptions.set(i, transform(suppressedExceptions.get(i)));
         }
-        if (!suppressedExceptions.isEmpty()) suppressedExceptions.removeIf(it -> it==null);
+        if (!suppressedExceptions.isEmpty()) suppressedExceptions.removeIf(Objects::isNull);
 
         // map stack frames
         StackTraceElement[] stack = t.getStackTrace();

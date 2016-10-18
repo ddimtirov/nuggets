@@ -23,7 +23,6 @@ import spock.lang.Title
 
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ExecutionException
-
 // note: due to the nature of assertions, this test is extremely fussy - read below for how to use it
 //
 // Always run this test as a part of a suite (i.e. don't run directly)
@@ -372,5 +371,27 @@ class ExceptionsTransformationsSpec extends Specification {
         def lines = es.split('\n')
         def startOfSpock = lines.findIndexOf { it =~ /Sputnik\.run/ }
         return startOfSpock<0 ? es : lines.take(startOfSpock + 1).join('\n') + '\n'
+    }
+    
+    def "use as Groovy extension method"() {
+        when:
+        def e = new IllegalArgumentException().transform {
+            int summary = 0 // used by various closures
+            unwrapThese                      RuntimeException, InvocationTargetException
+            unwrapWhen                      { it instanceof RuntimeException && (it.message || it.message==it.cause.toString()) }
+            replaceStackTrace               { summary=it.size(); return it.size()%2 ? new StackTraceElement[0] : it }
+            replaceMessage                  { "$it.message // insightful summary (${->summary} frames truncated)" as String }
+            filterStackFramesForClass       ~/org\.spockframework\.(runtime|util)\..*/
+            filterStackFramesForClass       ~/(sun|java\.lang)\.reflect\..*/
+            filterStackFramesForClassPrefix "org.junit."
+            filterStackFramesForClassPrefix "org.codehaus.groovy."
+        }
+
+        then:
+        e.message=~/insightful summary/
+        with(e.stackTrace*.toString()) {
+            !grep(~/org\.codehaus\.groovy\..*/)
+            !grep(~/.*\.reflect\..*/)
+        }
     }
 }
