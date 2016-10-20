@@ -39,7 +39,13 @@ browse the sources at [sourcegraph](https://sourcegraph.com/github.com/ddimtirov
     [extension methods](http://groovy-lang.org/metaprogramming.html#_extension_modules)
     that can be used to access static private or final fields - i.e. 
     `SomeClass.pokeField('someFinalField', newValue)`
-  
+- Special Kotlin API
+  - Transform Exceptions in more natural way, by adding `throwable.transform {...}`
+    extension method. Added few extension methods to the transform builder.
+  - Access encapsulated fields by using `clazz.peek/pokeStaticField(...)` 
+    and `instance.peek/pokeField(...)`
+  - Added `col(name) { ... }` extension method for more natural config 
+    of a table column.    
 ### Non-functional Features:
 - no 3rd party dependencies at runtime
 - high quality testing and javadoc

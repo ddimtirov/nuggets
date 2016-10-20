@@ -215,7 +215,7 @@ public class Extractors {
     }
 
     /**
-     * <p>Extract the value of an instance field regardless of its visibility or {@code final} modifier.
+     * <p>Modify the value of an instance field regardless of its visibility or {@code final} modifier.
      * If there are multiple shadowed fields with the given name, set the value of the first found when
      * traversing the inheritance hierarchy starting from the {@code type}, until {@code Object}. </p>
      * <p>If you are looking to set a static field, or would like to set the value of a shadowed field, use the
@@ -223,7 +223,7 @@ public class Extractors {
      *
      * @param target the object on which to set the field. {@code null} if we are looking to set a static field.
      * @param fieldName the name of the field to set.
-     * @param value the expected type of the value to set.
+     * @param value the new value to set.
      *
      * @see #getAccessibleField(Class, String, boolean)
      * @see #peekField(Object, String, Class)
@@ -234,14 +234,14 @@ public class Extractors {
     }
 
     /**
-     * <p>Extract the value of a field regardless of its visibility or {@code final} modifier. If there are
+     * <p>Modify the value of a field regardless of its visibility or {@code final} modifier. If there are
      * multiple shadowed fields with the given name, set the value of the first found when traversing the
      * inheritance hierarchy starting from the {@code type}, until {@code Object}. </p>
      *
      * @param target the object on which to set the field. {@code null} if we are looking to set a static field.
      * @param type the type from which to start the search for the field. See {@link #getAccessibleField getAccessibleField(type, name, true)} for the precise meaning.
      * @param fieldName the name of the field to set.
-     * @param value the expected type of the value to set.
+     * @param value the new value to set.
      *
      * @see #getAccessibleField(Class, String, boolean)
      * @see #peekField(Object, Class, String, Class)
