@@ -782,7 +782,7 @@
 <span class="sourceLineNo">774</span>         * @throws IllegalArgumentException if the row does not match in the layout<a name="line.774"></a>
 <span class="sourceLineNo">775</span>         */<a name="line.775"></a>
 <span class="sourceLineNo">776</span>        @NotNull<a name="line.776"></a>
-<span class="sourceLineNo">777</span>        public DataBuilder row(@NotNull List&lt;?&gt; row) {<a name="line.777"></a>
+<span class="sourceLineNo">777</span>        public DataBuilder row(@NotNull List&lt;@Nullable ?&gt; row) {<a name="line.777"></a>
 <span class="sourceLineNo">778</span>            return appendRowChecked(row, row);<a name="line.778"></a>
 <span class="sourceLineNo">779</span>        }<a name="line.779"></a>
 <span class="sourceLineNo">780</span><a name="line.780"></a>
@@ -793,7 +793,7 @@
 <span class="sourceLineNo">785</span>         * @throws IllegalArgumentException if the row does not match in the layout<a name="line.785"></a>
 <span class="sourceLineNo">786</span>         */<a name="line.786"></a>
 <span class="sourceLineNo">787</span>        @NotNull<a name="line.787"></a>
-<span class="sourceLineNo">788</span>        public DataBuilder row(@NotNull Object... row) {<a name="line.788"></a>
+<span class="sourceLineNo">788</span>        public DataBuilder row(Object... row) { // we want not null row array, but nullable array components<a name="line.788"></a>
 <span class="sourceLineNo">789</span>            return appendRowChecked(Arrays.asList(row), Arrays.deepToString(row));<a name="line.789"></a>
 <span class="sourceLineNo">790</span>        }<a name="line.790"></a>
 <span class="sourceLineNo">791</span><a name="line.791"></a>
@@ -820,7 +820,7 @@
 <span class="sourceLineNo">812</span>         * @throws IllegalArgumentException if the row does not match in the layout<a name="line.812"></a>
 <span class="sourceLineNo">813</span>         */<a name="line.813"></a>
 <span class="sourceLineNo">814</span>        @NotNull<a name="line.814"></a>
-<span class="sourceLineNo">815</span>        public DataBuilder rows(@NotNull Collection&lt;@NotNull List&lt;?&gt;&gt; rows) {<a name="line.815"></a>
+<span class="sourceLineNo">815</span>        public DataBuilder rows(@NotNull Collection&lt;@NotNull List&lt;@Nullable ?&gt;&gt; rows) {<a name="line.815"></a>
 <span class="sourceLineNo">816</span>            rows.forEach(this::row);<a name="line.816"></a>
 <span class="sourceLineNo">817</span>            return this;<a name="line.817"></a>
 <span class="sourceLineNo">818</span>        }<a name="line.818"></a>
