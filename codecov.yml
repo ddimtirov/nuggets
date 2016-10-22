@@ -1,0 +1,5 @@
+coverage:
+  precision: 0
+  round: nearest
+  ignore:
+  - .*/kotlin/.* # inline functions will never be covered
