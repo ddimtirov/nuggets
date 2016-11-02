@@ -33,7 +33,8 @@ import java.util.regex.Pattern;
 import static java.util.regex.Pattern.compile;
 
 /**
- * <p>Utility class providing methods for dealing with <a href="https://kotlinlang.org/docs/reference/exceptions.html#checked-exceptions">
+ * <p><span class="badge green">Entry Point</span> Utility class providing methods for dealing with
+ * <a href="https://kotlinlang.org/docs/reference/exceptions.html#checked-exceptions">
  * checked exceptions</a> and <a href="https://dzone.com/articles/filtering-stack-trace-hell">
  * huge stacktraces</a>. Typically, you would want to import statically the family of {@code rethrow(...)}
  * methods, and use the others through explicit class reference.</p>

@@ -31,7 +31,8 @@ import java.util.function.Predicate;
 
 
 /**
- * <p>Provides utilities for <a href="#encapsulation">circumventing Java encapsulation</a>,
+ * <p><span class="badge green">Entry Point</span> Provides utilities for
+ * <a href="#encapsulation">circumventing Java encapsulation</a>,
  * as well as building blocks for <a href="#di">custom dependency injection</a>.
  * All functions provided by this class are threadsafe.</p>
  *

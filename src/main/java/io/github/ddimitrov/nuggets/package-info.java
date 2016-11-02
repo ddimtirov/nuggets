@@ -15,7 +15,8 @@
  */
 
 /**
- * <b>nuggets</b> is a set of loosely coupled utilities for Java 8 - see each class javadoc for details.
+ * <b>nuggets</b> is a set of loosely coupled utilities for Java 8 - see the javadoc of the
+ * <span class="badge green">Entry Point</span> classes for detailed documentation.
  */
 @org.jetbrains.annotations.NonNls
 package io.github.ddimitrov.nuggets;

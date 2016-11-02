@@ -30,7 +30,8 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
- * <p>Builds a transformer function manipulating exception messages, stack traces and nesting structure.</p>
+ * <p>Builds a transformer function manipulating exception messages, stack traces and nesting structure
+ * (used internally by {@link Exceptions}).</p>
  * <p> Most of the methods of this class return the current instance, so they can be chained. We call these
  * <em>configuration methods</em> and their purpose is to define the behaviour of transforming function.
  * Calling configuration method after the transforming function is built is an error.</p>

@@ -29,7 +29,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
- * <p>Formats data as text-table, suitable for logging and printing. The recommended way is to
+ * <p><span class="badge green">Entry Point</span> Formats data as text-table, suitable for logging and printing. The recommended way is to
  * use a builder-based DSL (though you may use the classes directly to achieve advanced scenarios).
  * All following examples focus on the DSL:</p>
  *
@@ -45,14 +45,14 @@ import java.util.stream.Collectors;
  *
  * <p>Which will be rendered as:</p>
  *
- * <pre>
+ * <pre><tt>
  * +-----+---------------+------------------------------+
  * | key | value         | notes                        |
  * +-----+---------------+------------------------------+
  * | OP  | Austin Powers | International Man of Mystery |
  * | NP  | Nigel Powers  | NP complete                  |
  * +-----+---------------+------------------------------+
- * </pre>
+ * </tt></pre>
  *
  * <a>We may as well specify different visual style like this:</a>
  *
@@ -116,7 +116,7 @@ import java.util.stream.Collectors;
  *       });
  * </code></pre>
  *
- * <p>If a value is an instance od {@code Supplier} or {@code Callable} (or id the value
+ * <p>If a value is an instance of {@code Supplier} or {@code Callable} (or id the value
  * is {@code null} and the default value is instance of these interfaces), the functional
  * interface will be called and the result will be rendered.</p>
  *
@@ -389,7 +389,7 @@ public class TextTable {
     }
 
     /**
-     * <p>Specifies the characters used to draw the lines and corners of a table.
+     * <p>Specifies the characters used to draw the lines and corners of a {@link TextTable table}.
      * As of now, the whole table is drawn with the same set of characters
      * (we don't allow to customize per row or per cell).</p>
      * <p>Typically you would want to use one of the {@link Box} values, though
@@ -439,8 +439,8 @@ public class TextTable {
 
     /**
      * <p>Preset styles, specifying the characters used to draw the lines and corners
-     * of a table. As of now, the whole table is drawn with the same set of characters
-     * (we don't allow to customize per row or per cell).</p>
+     * of a {@link TextTable table}. As of now, the whole table is drawn with the same
+     * set of characters (we don't allow to customize per row or per cell).</p>
      * <p>You don't need to use this class if you prefer to provide your own styles.</p>
      * @see TextTable#presetBox(Style)
      */
@@ -505,7 +505,7 @@ public class TextTable {
     }
 
     /**
-     * Defines the formatting attributes for a single column.
+     * Defines the formatting attributes for a single column of a {@link TextTable table}.
      */
     public static class Column {
         /**
@@ -641,7 +641,7 @@ public class TextTable {
     }
 
     /**
-     * <p>Provides a nice and compact DSL to build a set of columns.</p>
+     * <p>Provides a nice and compact DSL to build a set of columns for a {@link TextTable table}.</p>
      *
      * <p>A known limitation is that layouts built with this builder will be
      * isomorphic with the data rows (i.e. you can't have a 3 column layout,
