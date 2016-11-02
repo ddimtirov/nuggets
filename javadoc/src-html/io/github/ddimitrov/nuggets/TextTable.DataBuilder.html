@@ -37,7 +37,7 @@
 <span class="sourceLineNo">029</span>import java.util.stream.Collectors;<a name="line.29"></a>
 <span class="sourceLineNo">030</span><a name="line.30"></a>
 <span class="sourceLineNo">031</span>/**<a name="line.31"></a>
-<span class="sourceLineNo">032</span> * &lt;p&gt;Formats data as text-table, suitable for logging and printing. The recommended way is to<a name="line.32"></a>
+<span class="sourceLineNo">032</span> * &lt;p&gt;&lt;span class="badge green"&gt;Entry Point&lt;/span&gt; Formats data as text-table, suitable for logging and printing. The recommended way is to<a name="line.32"></a>
 <span class="sourceLineNo">033</span> * use a builder-based DSL (though you may use the classes directly to achieve advanced scenarios).<a name="line.33"></a>
 <span class="sourceLineNo">034</span> * All following examples focus on the DSL:&lt;/p&gt;<a name="line.34"></a>
 <span class="sourceLineNo">035</span> *<a name="line.35"></a>
@@ -53,14 +53,14 @@
 <span class="sourceLineNo">045</span> *<a name="line.45"></a>
 <span class="sourceLineNo">046</span> * &lt;p&gt;Which will be rendered as:&lt;/p&gt;<a name="line.46"></a>
 <span class="sourceLineNo">047</span> *<a name="line.47"></a>
-<span class="sourceLineNo">048</span> * &lt;pre&gt;<a name="line.48"></a>
+<span class="sourceLineNo">048</span> * &lt;pre&gt;&lt;tt&gt;<a name="line.48"></a>
 <span class="sourceLineNo">049</span> * +-----+---------------+------------------------------+<a name="line.49"></a>
 <span class="sourceLineNo">050</span> * | key | value         | notes                        |<a name="line.50"></a>
 <span class="sourceLineNo">051</span> * +-----+---------------+------------------------------+<a name="line.51"></a>
 <span class="sourceLineNo">052</span> * | OP  | Austin Powers | International Man of Mystery |<a name="line.52"></a>
 <span class="sourceLineNo">053</span> * | NP  | Nigel Powers  | NP complete                  |<a name="line.53"></a>
 <span class="sourceLineNo">054</span> * +-----+---------------+------------------------------+<a name="line.54"></a>
-<span class="sourceLineNo">055</span> * &lt;/pre&gt;<a name="line.55"></a>
+<span class="sourceLineNo">055</span> * &lt;/tt&gt;&lt;/pre&gt;<a name="line.55"></a>
 <span class="sourceLineNo">056</span> *<a name="line.56"></a>
 <span class="sourceLineNo">057</span> * &lt;a&gt;We may as well specify different visual style like this:&lt;/a&gt;<a name="line.57"></a>
 <span class="sourceLineNo">058</span> *<a name="line.58"></a>
@@ -124,7 +124,7 @@
 <span class="sourceLineNo">116</span> *       });<a name="line.116"></a>
 <span class="sourceLineNo">117</span> * &lt;/code&gt;&lt;/pre&gt;<a name="line.117"></a>
 <span class="sourceLineNo">118</span> *<a name="line.118"></a>
-<span class="sourceLineNo">119</span> * &lt;p&gt;If a value is an instance od {@code Supplier} or {@code Callable} (or id the value<a name="line.119"></a>
+<span class="sourceLineNo">119</span> * &lt;p&gt;If a value is an instance of {@code Supplier} or {@code Callable} (or id the value<a name="line.119"></a>
 <span class="sourceLineNo">120</span> * is {@code null} and the default value is instance of these interfaces), the functional<a name="line.120"></a>
 <span class="sourceLineNo">121</span> * interface will be called and the result will be rendered.&lt;/p&gt;<a name="line.121"></a>
 <span class="sourceLineNo">122</span> *<a name="line.122"></a>
@@ -397,7 +397,7 @@
 <span class="sourceLineNo">389</span>    }<a name="line.389"></a>
 <span class="sourceLineNo">390</span><a name="line.390"></a>
 <span class="sourceLineNo">391</span>    /**<a name="line.391"></a>
-<span class="sourceLineNo">392</span>     * &lt;p&gt;Specifies the characters used to draw the lines and corners of a table.<a name="line.392"></a>
+<span class="sourceLineNo">392</span>     * &lt;p&gt;Specifies the characters used to draw the lines and corners of a {@link TextTable table}.<a name="line.392"></a>
 <span class="sourceLineNo">393</span>     * As of now, the whole table is drawn with the same set of characters<a name="line.393"></a>
 <span class="sourceLineNo">394</span>     * (we don't allow to customize per row or per cell).&lt;/p&gt;<a name="line.394"></a>
 <span class="sourceLineNo">395</span>     * &lt;p&gt;Typically you would want to use one of the {@link Box} values, though<a name="line.395"></a>
@@ -447,8 +447,8 @@
 <span class="sourceLineNo">439</span><a name="line.439"></a>
 <span class="sourceLineNo">440</span>    /**<a name="line.440"></a>
 <span class="sourceLineNo">441</span>     * &lt;p&gt;Preset styles, specifying the characters used to draw the lines and corners<a name="line.441"></a>
-<span class="sourceLineNo">442</span>     * of a table. As of now, the whole table is drawn with the same set of characters<a name="line.442"></a>
-<span class="sourceLineNo">443</span>     * (we don't allow to customize per row or per cell).&lt;/p&gt;<a name="line.443"></a>
+<span class="sourceLineNo">442</span>     * of a {@link TextTable table}. As of now, the whole table is drawn with the same<a name="line.442"></a>
+<span class="sourceLineNo">443</span>     * set of characters (we don't allow to customize per row or per cell).&lt;/p&gt;<a name="line.443"></a>
 <span class="sourceLineNo">444</span>     * &lt;p&gt;You don't need to use this class if you prefer to provide your own styles.&lt;/p&gt;<a name="line.444"></a>
 <span class="sourceLineNo">445</span>     * @see TextTable#presetBox(Style)<a name="line.445"></a>
 <span class="sourceLineNo">446</span>     */<a name="line.446"></a>
@@ -513,7 +513,7 @@
 <span class="sourceLineNo">505</span>    }<a name="line.505"></a>
 <span class="sourceLineNo">506</span><a name="line.506"></a>
 <span class="sourceLineNo">507</span>    /**<a name="line.507"></a>
-<span class="sourceLineNo">508</span>     * Defines the formatting attributes for a single column.<a name="line.508"></a>
+<span class="sourceLineNo">508</span>     * Defines the formatting attributes for a single column of a {@link TextTable table}.<a name="line.508"></a>
 <span class="sourceLineNo">509</span>     */<a name="line.509"></a>
 <span class="sourceLineNo">510</span>    public static class Column {<a name="line.510"></a>
 <span class="sourceLineNo">511</span>        /**<a name="line.511"></a>
@@ -649,7 +649,7 @@
 <span class="sourceLineNo">641</span>    }<a name="line.641"></a>
 <span class="sourceLineNo">642</span><a name="line.642"></a>
 <span class="sourceLineNo">643</span>    /**<a name="line.643"></a>
-<span class="sourceLineNo">644</span>     * &lt;p&gt;Provides a nice and compact DSL to build a set of columns.&lt;/p&gt;<a name="line.644"></a>
+<span class="sourceLineNo">644</span>     * &lt;p&gt;Provides a nice and compact DSL to build a set of columns for a {@link TextTable table}.&lt;/p&gt;<a name="line.644"></a>
 <span class="sourceLineNo">645</span>     *<a name="line.645"></a>
 <span class="sourceLineNo">646</span>     * &lt;p&gt;A known limitation is that layouts built with this builder will be<a name="line.646"></a>
 <span class="sourceLineNo">647</span>     * isomorphic with the data rows (i.e. you can't have a 3 column layout,<a name="line.647"></a>
