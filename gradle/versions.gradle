@@ -23,9 +23,9 @@ configurations.all {
         }
 
         switch (requested.group) {
-            case 'org.spockframework':  return useVersion('1.1-groovy-2.4-rc-2')
+            case 'org.spockframework':  return useVersion('1.1-groovy-2.4-rc-3')
             case 'org.codehaus.groovy': return useVersion('2.4.7')
-            case 'org.jetbrains.kotlin': return useVersion('1.0.4')
+            case 'org.jetbrains.kotlin': return useVersion('1.0.5')
             case 'cglib': return useVersion('3.2.4')
         }
     }
