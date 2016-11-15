@@ -16,6 +16,8 @@
 
 plugins {
     id 'com.gradle.build-scan' version '1.0'
+    id "com.jfrog.artifactory" version "4.4.8" // update periodically
+    id "com.jfrog.bintray" version "1.7.2"
     id "net.ltgt.errorprone" version "0.0.8"
     id "org.standardout.versioneye" version "1.4.0"
     id "com.zoltu.kotlin" version "1.0.4" // TODO: this is republished from org.jetbrains.kotlin:kotlin-gradle-plugin - replace with first party when available
@@ -24,12 +26,18 @@ plugins {
     id "pmd"
     id "findbugs"
     id "jacoco"
+    id "maven-publish"
 }
 
-group 'io.github.ddimitrov'
+group 'io.github.ddimtirov'
 description 'Loosely coupled utilities for Java 8'
 
-repositories.jcenter()
+ext.bintrayUsername = project.findProperty('bintrayUsername')?:System.getenv('BINTRAY_USER')?:''
+ext.bintrayKey = project.findProperty('bintrayKey')?:System.getenv('BINTRAY_KEY')?:''
+
+apply from: file('gradle/publishing.gradle')
+apply from: file('gradle/artifactory.gradle')
+apply from: file('gradle/bintray.gradle')
 apply from: file('gradle/versions.gradle')
 apply from: file('gradle/javadoc.gradle')
 apply from: file('gradle/quality.gradle')
