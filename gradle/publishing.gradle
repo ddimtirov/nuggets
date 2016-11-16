@@ -24,6 +24,11 @@ task javadocJar(type: Jar) {
     from javadoc
 }
 
+tasks.withType(Jar) {
+    from file('LICENSE')
+    duplicatesStrategy = 'EXCLUDE'
+}
+
 artifacts {
     archives sourcesJar, javadocJar
 }
