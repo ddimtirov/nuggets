@@ -147,10 +147,12 @@ hr {
 
 .summary .blockList > table > caption { display: none }
 .summary .blockList > table #i0 { border-top: none }
-.summary .blockList > table    { border-collapse: collapse; border: none }
 .summary .blockList > table th { display: none }
 .summary .blockList > table td { background-color: white }
 .summary .blockList > table .colFirst { text-align: right }
+.blockList > table.typeSummary,
+.summary .blockList > table { border-collapse: collapse; border: none }
+.blockList > table.typeSummary tr+tr,
 .summary .blockList > table tr+tr {
     border-top: 1px dotted lightgray;
 }
