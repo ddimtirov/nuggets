@@ -322,6 +322,16 @@ ul.subNavList li {
 .summary .blockList > table td        { background-color: white }
 .summary .blockList > table .colFirst { text-align: right }
 
+.contentContainer .blockList h4+pre {
+    font-size: 1rem;
+    margin-top: -1em;
+    margin-bottom: 0.5em;
+    padding: 0.4em 0.4em;
+    border-radius: 0.3em;
+    white-space: normal; /* Javadoc is horrible with formatting signatures */
+    background-color: #F8F8F8;
+    color: #333;
+}
 
 .header, .footer, .contentContainer, .sourceContainer, .classUseContainer, .serializedFormContainer, .constantValuesContainer {
     clear: both;
