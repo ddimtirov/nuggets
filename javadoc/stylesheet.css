@@ -78,12 +78,14 @@ sup { font-size: 0.7rem; }
 .serializedFormContainer       dl dt,
 .contentContainer .details     dl dt,
 .contentContainer .description dl dt { font-size: 1rem; }
+
+.header .subTitle { font-size: 1rem; color: white; }
+.header:hover .subTitle { font-size: 1rem; color: inherit; }
 /*</editor-fold>*/
 
 
 /* Sizing */
 table .badge {
-    border-width: 1px;
     padding: 0.33rem 0.5rem 0.25rem 0.25rem;
     border-radius: 0 0.7rem 0.7rem 0;
 }
@@ -95,10 +97,6 @@ table .badge {
 
 a, a:link, a:visited, a:hover, a:focus, a:active {
     padding: 0.3em 0;
-}
-
-a:focus {
-    outline-width: 1px;
 }
 
 .subNav {
@@ -134,13 +132,11 @@ code, tt {
 }
 
 .block p code {
-    border-width: 1px;
     padding: 0.1em 0.4em;
     border-radius: 0.3em;
 }
 
 .contentContainer > ul.inheritance {
-    border-width: 1px;
     padding: 1em;
     border-radius: .3em;
 }
@@ -227,9 +223,8 @@ hr {
     margin-top: 3em;
 }
 
-.header h2, h3 {
-    margin: 2em 0 0.5em;
-}
+.header h2 { margin: 0 0 0.5em; }
+h3 { margin: 2em 0 0.5em; }
 
 
 @media print {
@@ -257,7 +252,7 @@ table .badge {
     font-weight: bold;
     text-transform: uppercase;
     vertical-align: middle;
-    border-style: solid;
+    border: 1px solid;
 }
 
 .badge.green {
@@ -278,15 +273,15 @@ a, a:link, a:visited, a:hover, a:focus, a:active {
 
 .block pre,
 .block p code { background-color: #FAFAFA }
-.block p code { border: dotted lightgray; }
+.block p code { border: 1px dotted lightgray; }
 .bar { color: slategray; }
 a:hover { background-color: aliceblue }
-a:focus { outline: steelblue dotted; }
+a:focus { outline: 1px steelblue dotted; }
 .navBarCell1Rev { background-color: steelblue; color: white; }
 .topNav, .subNav, .bottomNav { color: silver }
 hr { border: solid #DDD; }
 .contentContainer > ul.inheritance {
-    border: dotted lightgray;
+    border: 1px dotted lightgray;
     background-color: #FAFAFA;
 }
 .title { color: #2c4557; }
@@ -350,7 +345,7 @@ ul.inheritance li { display: inline; list-style: none; }
 table dt code     { vertical-align: top; }
 
 .header ul li,
-.footer ul li     {                  list-style: none; }
+.footer ul li     { list-style: none; }
 
 .contentContainer .description dl dt,
 .contentContainer .details     dl dt,
