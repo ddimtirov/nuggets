@@ -188,7 +188,6 @@ code, tt {
 
 dd + dd {
     margin-top: 0.3em;
-    border-top-width: 1px;
     padding-top: 0.3em;
 }
 
@@ -228,6 +227,7 @@ h3 { margin: 2em 0 0.5em; }
 
 
 @media print {
+    .header .docSummary+p,
     .topNav, .subNav, .bottomNav, .github-corner {
         display: none;
     }
@@ -338,7 +338,7 @@ ul.subNavList li {
 
 /* Page layout container styles */
 .aboutLanguage    { float: right; /*custom footer*/ }
-dd + dd           { border-top: dotted #EEE; }
+dd + dd           { border-top: 1px dotted #EEE; }
 td.colFirst       { white-space: nowrap; }
 ul.horizontal  li { display: inline; }
 ul.inheritance li { display: inline; list-style: none; }
