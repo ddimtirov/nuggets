@@ -19,14 +19,23 @@ env:
     # BINTRAY_USER & BINTRAY_KEY
     - secure: HF19auHUTRaUgbPykpnsloFCreDFQ8Cr09kZaEZKgXuQnQU9AWNlvCzh3bBBIhnbCMaa2EB0BOWWpmtZ/cbs1qWuCejri0wgLcGIJfW+I9OisY/cMxac7qR/8oXY9Ng702QSyxWHzMCa24KiQdvLSfPgcdcJs4468YGk0w8j5IpclOBoc2pphEv6M7GlEyu8b6iWo9e+1W5LV8TuF8Twe0MNfPrJpU3pSb8/Df6YKnF7h+Fm++LHuKAw+m1IvuSxla2klcySjXzC2HdlaIXcfRgHCFA96y5gqSSn704kRDIF2TVARVbJH0MvkjHQTuusZemyV8kZ7NCDSG9eS6FxgwteAV9hQa4gTHOBrTO2LP/KVLJgUgGKfyZIKCpr5FCRReYnOtkkxwW6X1tgXcNO03VtOkmyVcMfAp6CZ1KTOWs1nefRIqZnfEr7V9amI8xBojt8wVnTdhDtFlDG69za2OH1yoNxY6O5bmaNCZ0sMXW/KjrePZWh9pfPSeBaH8d5Q9rxxUd+m0h6TMuJ7uOAiU2tjfvlkS2U8KdWUKzzF8h8Bn/ukBnlsVEA1/wFOZiWsQOwDxfsC9VVn49cjejVn8uoPokvsse5lHxnPEktrWfUuVSBF3VNsH+EGT8su5tyN4KARQ61O/jaWPtW4swrU1QGmd/3h7PGJuya1tnO30c=
     - secure: TuOf/FL4ISdG6FRMHVxA9UPxHDqJGvZRKu13H/8z1gxLGFGFNUsWlr1LekjUfBxGjjTKa9xpTBR1af3CRyotd5Yn6gspQnqr9vVrfPdboRwu1xLYtVD8amrPEBM7BKZ8HxxVR5RRaxkMMHeOPKYIF05P9V381pjRPgOBUolEVUyBfmSipzVX+eid6hdn2ePWZYL2FM+Ge23aIPkvwedafmiRItWX42cqYeLou3fsYXFukGVFGRvjj7PaM9mSLcu4hHru5WvxrELb/DxGdxphPNhHCkK4bWaN3H8HTpf6rKNpqplMYxClfN+n8Ciw68BFSS7eH/ns7H0pr/vYNQ/xjvteCDaoy9XJfdyTYH3BcrECll278W2r07X6kdkLQLqIqNsrUEC1ck75sRCVxwzQpZJ4FJZcfR5rw4CxdouHJXxWvCACkJ6tX48mtVX8JDUNkMPywgmdrAMjr7FYcKqf3RQtp1LPW/GYQmZbyLpOGhNOv6CTCH6D8Y/T+EeWmCvUvEWqLjBBdu6uEnuboYs/wCQWueqaKfZohb94KQ7c4UUG0yHxDgdWUC7bukA6txnE/xonWOVv7xbG2mRsG4Jt6ynwnBhfEhjG1LH5xhkkHpqdEfRwZNy/O2npbCaanBhvKIk85b0J8vp6uRNHMXZsy1ouLX5iknxi7wSmranO2wg=
+    # Codacy
+    - secure: od/L5mnmQZ0DDbcleQbq8ZiRxPvc3AsCW+6IiMlIt7dMd4Hg4OkNQ2mIXOKYZRF1IwYG2e1rW7TcNyOZiAP7S0ih7XzlzSpW7U3P//j3u1MVLWbWLcI9bhNNiJaO54nydytUFKI5N4H3sR2BRnuIx2MI4WsZFsyxs2x2RIOz6uPvnCMkrq4GKYHkgFAbW0g0zo5Bmgs6fIFGLo5N6l4HJemGVCRVdGM6VApFzagPMbjQCuC+TyV8Agi6X3jq932qeHz69kVNT28TN5xTUA8i2X1EpI7vXudJ3v60ZJZxyBs4G5pE0A/faPMhvpDzxsVYPDR5IfMQMjjhYrjUf14/r3Ubj2uEAM82NjnkAz9Mn+N++HJ1/1HqvnyURmpeEnydrAWl8wIIgPIKHJybg5lJvcgUjvPctrySZagRrgvwRMZZng8C7WsWtbTbdNwjCU4bfuesine0shN2encXMcXL1eD1A81FoJSQshcpghYpBU/SNr0wsnApHHSDrm0AnJx7952YvBbK0J4NruXp1IVvmAgu1tRDkj8mlIutr4QRrEFU080JzaVhpAEkD17aR8ifuMTRfpR47Uzb6hwB0wp8NBU2Dto5bm9dXwLBJA/6WDyF6HiId+mWEJLg4boHXfSddQniyqK2P/jaHGuH4EawmoT01b+wmV62Yp1gbQiUJ9E=
 
-# codecov.io integration
 before_install:
+  # codecov.io
   - pip install --user codecov
+  # codacy.com
+  - curl -sL https://github.com/jpm4j/jpm4j.installers/raw/master/dist/biz.aQute.jpm.run.jar >jpm4j.jar
+  - java -jar jpm4j.jar -u init
+  - ~/jpm/bin/jpm install com.codacy:codacy-coverage-reporter:assembly
 
 after_success:
-  - codecov
   - ./publish-docs-to-github.sh
+  # codecov.io
+  - codecov
+  # codacy.com
+  - ~/jpm/bin/codacy-coverage-reporter -l Java -r build/reports/jacoco/test/jacocoTestReport.xml
 
 # see https://docs.travis-ci.com/user/languages/java/#Projects-Using-Gradle
 before_cache:

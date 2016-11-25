@@ -8,7 +8,7 @@ as well as features that make code easier to read and maintain.
 
 ### Functionality:
 
-See the [javadocs](https://ddimtirov.github.io/nuggets/javadoc/) for detailed documentation; 
+See the [javadocs](https://ddimtirov.github.io/nuggets/javadoc/io/github/ddimitrov/nuggets/package-summary.html) for detailed documentation; 
 browse the sources at [sourcegraph](https://sourcegraph.com/github.com/ddimtirov/nuggets@master).
 
 - `Exceptions` - utils for [dealing with checked exceptions](https://kotlinlang.org/docs/reference/exceptions.html#checked-exceptions)
