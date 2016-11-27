@@ -40,7 +40,7 @@ javadoc {
     }
     doLast {
         copy { (delegate as CopySpec).with {
-            from file('LICENSE')
+            from files('LICENSE', 'RELEASENOTES.md')
             into destinationDir
         }}
     }
