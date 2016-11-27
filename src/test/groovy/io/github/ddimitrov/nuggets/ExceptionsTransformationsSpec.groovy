@@ -330,6 +330,34 @@ class ExceptionsTransformationsSpec extends Specification {
                 '''.replaceAll(STACKTRACE_LITERAL_PRETTYPRINT, '')
     }
 
+    def "filter out useless stack frames inserted by the ConfigSlurper"() {
+        setup: "Read this one from a file, as it is too big to quote"
+        def hairyStacktrace = getClass().getResource('ConfigSlurper-stacktrace.txt').text.replace('        ', '\t')
+        def hairyException = Exceptions.parseStackTrace(hairyStacktrace)
+
+        expect: "the exception onject is properly parsed"
+        Exceptions.toStackTraceString(hairyException)==hairyStacktrace
+
+        when: "transformed with the default transformer"
+        Exceptions.rethrowTransformed(hairyException, true)
+                .filterPresetReflection()
+                .filterPresetGroovyMop()
+                .filterPresetGroovyInternals()
+                .filterPresetGroovyScripts()
+                .build()
+
+        then: "get rid of the pesky 'script14794455002432071560243.groovy' with no line number immediately followed by the one with line number"
+        Exception e = thrown()
+        Exceptions.toStackTraceString(e)=='''\
+        groovy.lang.MissingMethodException: No signature of method: groovy.util.ConfigObject.recManager() is applicable for argument types: (script14794455002432071560243$_run_closure2$_closure4) values: [script14794455002432071560243$_run_closure2$_closure4@34f6515b]
+        \tat script14794455002432071560243$_run_closure2.doCall(script14794455002432071560243.groovy:13)
+        \tat groovy.util.ConfigSlurper$_parse_closure5.doCall(ConfigSlurper.groovy:256)
+        \tat script14794455002432071560243.run(script14794455002432071560243.groovy:9)
+        \tat groovy.util.ConfigSlurper$_parse_closure5.doCall(ConfigSlurper.groovy:268)
+        \tat groovy.util.ConfigSlurper.parse(ConfigSlurper.groovy:286)
+        \tat groovy.util.ConfigSlurper.parse(ConfigSlurper.groovy:170)
+        '''.stripIndent().replace("\n", System.lineSeparator())
+    }
     def "suppressed exceptions are filtered as with the same settings nad can not be suppressed (bad idea IMHO)"() {
         setup:
         def transformer = new ExceptionTransformerBuilder()

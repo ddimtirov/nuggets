@@ -232,10 +232,11 @@ public class Exceptions {
      */
     public static void setupTransformOnRethrowDefaultConfig() {
         transformOnRethrow()
-                .filterStackFramesForClass(compile("^(java.lang.reflect|sun.reflect).*"))
-                .filterStackFramesForClass(compile("^(org.codehaus.groovy|org.gradle).*"))
-                .unwrapThese(InvocationTargetException.class)
-                .unwrapWhen(ex -> ex.getMessage() == null && ex.getClass().equals(RuntimeException.class))
+                .unwrapPresetCommonWrappers()
+                .filterPresetReflection()
+                .filterPresetGroovyInternals()
+                .filterPresetGroovyScripts()
+                .filterStackFramesForClass(compile("^org\\.gradle\\..*"))
                 .build();
     }
 
@@ -521,7 +522,7 @@ scan_loop:
      * @param eol line separator (i.e. when parsing files). If {@code null} will use {@link System#lineSeparator()}.
      * @return the throwable that produced the {@code text}
      */
-    private static @NotNull Throwable parseStackTrace(@NotNull CharSequence text, @Nullable String eol) {
+    public static @NotNull Throwable parseStackTrace(@NotNull CharSequence text, @Nullable String eol) {
         String lineSeparator = eol==null ? System.lineSeparator() : eol;
         String[] lines = text.toString().split(lineSeparator);
         return rethrow(() -> parseStacktraceInternal(lineSeparator, "", new AtomicInteger(), new ArrayDeque<>(10), lines));
@@ -544,9 +545,14 @@ scan_loop:
         String[] classMessage = lines[i++].split(": ", 2);
         String className = classMessage[0];
         Class<Object> type = Extractors.getClassIfPresent(className);
-        Throwable t = type == null
-                ? new MissingClassSurrogateException(className)
-                : (Throwable) type.getConstructor().newInstance();
+        Throwable t ;
+        try {
+            t = type == null
+                    ? new MissingClassSurrogateException(className)
+                    : (Throwable) type.getConstructor().newInstance();
+        } catch (NoSuchMethodException e) {
+            t = new MissingClassSurrogateException(className);
+        }
         StringBuilder messageAccumulator = new StringBuilder(lines[0].length()); // one line messages are by far the most common case
         if (classMessage.length > 1) messageAccumulator.append(classMessage[1]);
 

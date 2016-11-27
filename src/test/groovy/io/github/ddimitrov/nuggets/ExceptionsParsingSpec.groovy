@@ -20,6 +20,7 @@ import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.Title
 import spock.lang.Unroll
+import spock.lang.IgnoreIf
 
 import java.util.function.Supplier
 
@@ -126,6 +127,25 @@ class ExceptionsParsingSpec extends Specification {
 
         when: def reversed = Exceptions.parseStackTrace(hairyStack)
         then: Exceptions.toStackTraceString(reversed) == hairyStack
+    }
+
+    @IgnoreIf({Extractors.getClassIfPresent('groovy.lang.MissingMethodException')==null})
+    def "if the exception does not have a noargs constructor, it is parsed as surrogate"() {
+        setup:
+        def hairyStack = '''\
+        groovy.lang.MissingMethodException: No signature of method: java.util.Date.<init> is applicable for argument types: (long) values: [0]
+        \tat org.codehaus.groovy.runtime.ScriptBytecodeAdapter.unwrap(ScriptBytecodeAdapter.java:58)
+        \tat org.codehaus.groovy.runtime.callsite.PogoMetaClassSite.call(PogoMetaClassSite.java:54)
+        \tat org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCall(CallSiteArray.java:48)
+        '''.stripIndent().replace("\n", EOL)
+
+        when:
+        def reversed = Exceptions.parseStackTrace(hairyStack)
+
+        then:
+        Exceptions.toStackTraceString(reversed) == hairyStack
+        reversed.getClass()==MissingClassSurrogateException
+        reversed.message=='No signature of method: java.util.Date.<init> is applicable for argument types: (long) values: [0]'
     }
 
     def "parse single stack frame"(String line) {

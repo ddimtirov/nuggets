@@ -20,6 +20,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -319,6 +320,113 @@ public class ExceptionTransformerBuilder {
         }
 
         return t;
+    }
+
+    /**
+     * Removes stack frames related to Java Reflection.
+     *
+     * @return the builder instance for chaining
+     * @throws IllegalStateException if the transform function has already been built.
+     */
+    public @NotNull ExceptionTransformerBuilder filterPresetReflection() {
+        return filterStackFramesForClass(Pattern.compile("^(java\\.lang\\.reflect|sun\\.reflect)\\..*"));
+    }
+
+    /**
+     * Removes stack frames related to Groovy implementation (keeping the actual API classes).
+     *
+     * @return the builder instance for chaining
+     * @throws IllegalStateException if the transform function has already been built.
+     */
+    public @NotNull ExceptionTransformerBuilder filterPresetGroovyInternals() {
+        return filterStackFramesForClassPrefix("org.codehaus.groovy");
+    }
+
+    /**
+     * Removes stack frames related to Groovy Meta-Object Protocol.
+     *
+     * @return the builder instance for chaining
+     * @throws IllegalStateException if the transform function has already been built.
+     */
+    public @NotNull ExceptionTransformerBuilder filterPresetGroovyMop() {
+        return filterStackFramesForClass(Pattern.compile("^groovy\\.lang\\.(?:(?:Expando|Delegating)?MetaClass(?:Impl)?|MetaMethod)$"));
+    }
+
+    /**
+     * Removes stack frames related to Groovy Scripts bytecode generation.
+     *
+     * @return the builder instance for chaining
+     * @throws IllegalStateException if the transform function has already been built.
+     */
+    public @NotNull ExceptionTransformerBuilder filterPresetGroovyScripts() {
+        return replaceStackTrace(ExceptionTransformerBuilder::deleteAdjacentFramesWithoutLineNumbers);
+    }
+
+    /**
+     * Unwraps exception that don't provide useful information (i.e. softening wrappers, or useless
+     * wrapping when crossing layers).
+     *
+     * @return the builder instance for chaining
+     * @throws IllegalStateException if the transform function has already been built.
+     */
+    public @NotNull ExceptionTransformerBuilder unwrapPresetCommonWrappers() {
+        return unwrapThese(InvocationTargetException.class)
+                .unwrapWhen(ex -> ex.getMessage() == null && ex.getClass().equals(RuntimeException.class));
+
+    }
+
+
+    /**
+     * Removes a some extraneous Groovy frames, added by some Groovy utils, for example, exceptions from Groovy's
+     * {@code ConfigSlurper} often look like this:
+     *
+     * <pre>
+     * groovy.lang.MissingMethodException: No signature of method: groovy.util.ConfigObject.recManager() is applicable for argument types: (script14794455002432071560243$_run_closure2$_closure4) values: [script14794455002432071560243$_run_closure2$_closure4@34f6515b]
+     *     at org.codehaus.groovy.runtime.ScriptBytecodeAdapter.unwrap(ScriptBytecodeAdapter.java:58)
+     *     ...
+     *     at script14794455002432071560243$_run_closure6.doCall(script14794455002432071560243.groovy:42)
+     *     at script14794455002432071560243$_run_closure6.doCall(script14794455002432071560243.groovy)
+     *     ...
+     *     at script14794455002432071560243$_run_closure2.doCall(script14794455002432071560243.groovy:13)
+     *     at script14794455002432071560243$_run_closure2.doCall(script14794455002432071560243.groovy)
+     *     ...
+     *     at groovy.util.ConfigSlurper.parse(ConfigSlurper.groovy:170)
+     * </pre>
+     *
+     * Notice the duplicated stack frames with and without a line number. In this case the frame
+     * without line number is not useful ans is better stripped.
+     *
+     * @param stack the raw stack frames
+     * @return the transformed stack frames
+     */
+    @Contract("_->_")
+    public static @NotNull StackTraceElement[] deleteAdjacentFramesWithoutLineNumbers(StackTraceElement[] stack) {
+        for (int i = 0; i < stack.length; i++) {
+            StackTraceElement frame = stack[i];
+            if (frame==null) continue;
+
+            if (frame.getLineNumber() < 0) {
+                boolean sameAsPrev = i != 0 && stack[i - 1] != null &&
+                        Objects.equals(stack[i - 1].getClassName(), frame.getClassName()) &&
+                        Objects.equals(stack[i - 1].getMethodName(), frame.getMethodName());
+                boolean sameAsNext = i < stack.length - 1 && stack[i + 1] != null &&
+                        Objects.equals(stack[i + 1].getClassName(), frame.getClassName()) &&
+                        Objects.equals(stack[i + 1].getMethodName(), frame.getMethodName());
+                if (sameAsPrev || sameAsNext) {
+                    stack[i] = null;
+                }
+            }
+
+            boolean syntheticTrampoline = "callCurrent".equals(frame.getMethodName())
+                    && frame.getClassName().contains("$")
+                    && frame.getFileName() == null;
+
+            if (syntheticTrampoline) {
+                stack[i] = null;
+            }
+        }
+
+        return stack;
     }
 }
 
