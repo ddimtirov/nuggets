@@ -52,7 +52,7 @@ publishing {
                 issues.appendNode( 'url', "https://github.com/ddimtirov/${project.name}/issues" )
 
                 def scm = root.appendNode( 'scm' )
-                scm.appendNode( 'url', 'https://github.com/ddimtirov/${project.name}' )
+                scm.appendNode( 'url', "https://github.com/ddimtirov/${project.name}")
                 scm.appendNode( 'connection', "scm:git:https://github.com/ddimtirov/${project.name}.git")
                 scm.appendNode( 'developerConnection', "scm:git:git@github.com:ddimtirov/${project.name}.git")
 

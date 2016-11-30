@@ -7,7 +7,7 @@ as well as features that make code easier to read and maintain.
 [![Codacy Coverage](https://api.codacy.com/project/badge/Coverage/0951cb36db314ff1bf69646402f4b988)](https://www.codacy.com/app/dimitar-dimitrov/nuggets?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ddimtirov/nuggets&amp;utm_campaign=Badge_Coverage)
 [![codecov](https://codecov.io/gh/ddimtirov/nuggets/branch/master/graph/badge.svg)](https://codecov.io/gh/ddimtirov/nuggets) 
 [![Dependency Status](https://www.versioneye.com/user/projects/57d2624987b0f6003c14ac1e/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/57d2624987b0f6003c14ac1e)
-
+[ ![Latest Release](https://api.bintray.com/packages/ddimitrov/oss/nuggets/images/download.svg) ](https://bintray.com/ddimitrov/oss/nuggets/_latestVersion)
 ### Functionality:
 
 Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nuggets/javadoc/io/github/ddimitrov/nuggets/package-summary.html) for detailed documentation. 
@@ -49,6 +49,7 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
     and `instance.peek/pokeField(...)`
   - Added `col(name) { ... }` extension method for more natural config 
     of a table column.    
+    
 ### Non-functional Features:
 - Fat-jar friendly (don't add yet another jar to your distribution)
   - no 3rd party dependencies at runtime 

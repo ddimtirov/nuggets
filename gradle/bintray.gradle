@@ -20,6 +20,8 @@ bintray {
     user = bintrayUsername
     key = bintrayKey
     publications = ['mavenJava']
+    publish=true   // whether to publish or keep it staged
+    override=false // whether to overwrite existing version
     pkg {
         repo = 'oss'
         name = project.name
@@ -30,13 +32,25 @@ bintray {
         websiteUrl = "https://github.com/ddimtirov/${project.name}"
         issueTrackerUrl = "https://github.com/ddimtirov/${project.name}/issues"
         vcsUrl = "https://github.com/ddimtirov/${project.name}.git"
+        githubRepo= "ddimtirov/${project.name}"
 
         publicDownloadNumbers = true
         attributes = [:]
         version {
             name = project.version
+            released = new Date()
             vcsTag = "v$project.version"
             attributes = [:]
+            gpg {
+                sign = true
+                passphrase = project.findProperty('pgp.passphrase')
+            }
+            mavenCentralSync {
+                sync = true
+                user     = project.findProperty('ossrhToken.user')
+                password = project.findProperty('ossrhToken.pass')
+                close = '1' // closed the staging repo and released artifacts to Central
+            }
         }
     }
 }
