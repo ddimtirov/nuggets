@@ -16,12 +16,121 @@
 
 package io.github.ddimitrov.nuggets
 
+import io.github.ddimitrov.nuggets.internal.groovy.NuggetsExtensions
 import spock.lang.Specification
 
 import java.text.SimpleDateFormat
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Function
 
 class FunctionsSpec extends Specification {
+    private static final NAME_TO_VALIDATOR_RESULT = [
+            [null, NullPointerException],
+            ['', IllegalArgumentException],
+            ['   ', IllegalArgumentException],
+            ['foo', null],
+            ['f&o', null],
+            ['f o', null],
+            [' f o', IllegalArgumentException],
+            ['f o ', IllegalArgumentException],
+    ]
+
+    def "named functions from Java"() {
+        when:
+        def sequence = FunctionsJavaUsage.createNamedSequence("sequence")
+        def eatIt = FunctionsJavaUsage.createNamedConsumer("eat it")
+        def eatTwo = FunctionsJavaUsage.createNamedBiConsumer("eat two")
+        def isOdd = FunctionsJavaUsage.createNamedParityTester("is odd")
+        def isFactor = FunctionsJavaUsage.createNamedFactorTester("is factor")
+        def doubler = FunctionsJavaUsage.createNamedDoubler("doubler")
+        def multiplier = FunctionsJavaUsage.createNamedMultiplier("multiplier")
+
+        then:
+        sequence.toString() == "sequence"
+        eatIt.toString() == "eat it"
+        eatTwo.toString() == "eat two"
+        isOdd.toString() == "is odd"
+        isFactor.toString() == "is factor"
+        doubler.toString() == "doubler"
+        multiplier.toString() == "multiplier"
+
+        and:
+        sequence.get()==0 & sequence.get()==1 & sequence.get()==2
+        eatIt.accept("foo")==null & eatTwo.accept('foo', 'bar')==null
+        isOdd.test(13) & !isOdd.test(12)
+        isFactor.test(12, 4) & !isFactor.test(12, 5)
+        doubler.apply(3)==6 & doubler.apply(7)==14
+        multiplier.apply(3, 3)==9 & multiplier.apply(3, 7)==21
+    }
+
+    def "names need to be trimmed and non-empty"(String name, Class<? extends Exception> ex, boolean testGroovy) {
+        expect:
+        try {
+            def f = testGroovy ? {}.named(name)
+                    : FunctionsJavaUsage.createNamedSequence(name)
+            assert ex==null & f.toString()==name
+        } catch(Throwable e) {
+            assert ex!=null && e
+        }
+
+        where:
+        //noinspection GroovyAssignabilityCheck
+        [name, ex, testGroovy] << NAME_TO_VALIDATOR_RESULT.collectMany { [
+                it + [true],
+                it + [false]
+        ]}.iterator()
+    }
+
+    @SuppressWarnings(["GroovyAccessibility", "GroovyAssignabilityCheck"])
+    def "test name-check exception Java"(String name, Class<? extends Exception> ex) {
+        when:
+        Functions.checkName(name)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        where: // only non-null names, or the Jetbrains annotation assertions will trigger in IDEA
+        [name, ex] << NAME_TO_VALIDATOR_RESULT.findAll { it[0]!=null && it[1]!=null }.iterator()
+    }
+
+    @SuppressWarnings(["GroovyUnusedAssignment", "GroovyAssignabilityCheck"])
+    def "test name-check exception Groovy"(String name, Class<? extends Exception> ex) {
+        expect:
+        try {
+            def x = NuggetsExtensions.named(null, name)
+        } catch (AssertionError e) { // when IDEA generates its assertions
+            assert e.message ==~ ~/Argument 1 for @Pattern parameter of .*NuggetsExtensions\.named does not match pattern .*/
+        } catch (e) {
+            assert e.class==ex
+        }
+
+        where: // only non-null names, or the Jetbrains annotation assertions will trigger in IDEA
+        [name, ex] << NAME_TO_VALIDATOR_RESULT.findAll { it[0]!=null && it[1]!=null }.iterator()
+    }
+
+    def "named closures from Groovy"() {
+        given:
+        def i = new AtomicInteger()
+        def doubledSequence = { -> i.getAndIncrement()*2 }
+
+        when: def namedClosure = doubledSequence.named("doubled sequence")
+        then: namedClosure.toString() == "doubled sequence"
+
+        when: 'we pass in a supplier, it is evaluated every time, providing up-to-date description'
+        def describedClosure = doubledSequence.named { "doubled sequence (next ${i.get()*2})" }
+
+        then: "the generator's toString() lets us know what is the next value"
+        describedClosure.toString()=="doubled sequence (next 0)"
+        describedClosure.toString()=="doubled sequence (next 0)"
+        describedClosure()==0
+        describedClosure.toString()=="doubled sequence (next 2)"
+        describedClosure()==2
+        describedClosure.toString()=="doubled sequence (next 4)"
+        describedClosure.toString()=="doubled sequence (next 4)"
+        describedClosure()==4
+        describedClosure.toString()=="doubled sequence (next 6)"
+    }
+
 
     def "fallback dispatch Java API"() {
         given:
@@ -115,5 +224,4 @@ class FunctionsSpec extends Specification {
         parser('2016.12') instanceof Double
         parser('2016') instanceof Long
     }
-
 }

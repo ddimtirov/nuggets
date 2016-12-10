@@ -16,12 +16,14 @@
 
 package io.github.ddimitrov.nuggets
 
+import io.github.ddimitrov.nuggets.internal.groovy.DelegatedClosure
 import io.github.ddimitrov.nuggets.internal.groovy.NuggetsExtensions
 import org.junit.Test
 
 @SuppressWarnings(["GroovyResultOfObjectAllocationIgnored", "GroovyAccessibility"])
 class FullLineCoveragePadding {
-    @Test void callSomeCode() {
+    @Test void constructors() {
+        new Functions()
         new NuggetsExtensions()
         new Exceptions()
         new Extractors()
@@ -29,5 +31,19 @@ class FullLineCoveragePadding {
         new ExceptionTransformerBuilder()
         new DispatchException()
         assert new TextTable.DataBuilder(true, Collections.singletonList(new TextTable.Column('dummy', 0))).toString()!=null
+    }
+    @Test void delegates() {
+        def c = new DelegatedClosure({ Object... it ->}) {}
+        c.asWritable()
+        c.dehydrate()
+        c.rehydrate(c.delegate, c.owner, c.getThisObject())
+        c.clone()
+        !c.isCase("dummy")
+        c.getParameterTypes().length==1
+        c.getMaximumNumberOfParameters()==1
+        c.setProperty "delegate", c.getProperty("delegate")
+        c.setResolveStrategy      c.getResolveStrategy()
+        c.setDelegate             c.getDelegate()
+        c.setDirective            c.getDirective()
     }
 }

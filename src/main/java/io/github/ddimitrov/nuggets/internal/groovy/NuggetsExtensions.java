@@ -20,10 +20,13 @@ import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
 import io.github.ddimitrov.nuggets.ExceptionTransformerBuilder;
 import io.github.ddimitrov.nuggets.Extractors;
+import io.github.ddimitrov.nuggets.Functions;
 import org.intellij.lang.annotations.Identifier;
+import org.intellij.lang.annotations.Pattern;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /** Extra API to make Groovy usage nicer */
 public class NuggetsExtensions {
@@ -80,4 +83,30 @@ public class NuggetsExtensions {
         Extractors.pokeField(null, self, fieldName, value);
     }
 
+    private static final java.util.regex.Pattern validName = java.util.regex.Pattern.compile(Functions.VALID_NAME_PATTERN);
+    public static <T> @NotNull Closure<T> named(
+            @NotNull Closure<T> self,
+            @NotNull @Pattern(Functions.VALID_NAME_PATTERN) String name
+    ) {
+        if (!validName.matcher(name).matches()) { // can not be covered when generating IDEA assertions
+            throw new IllegalArgumentException("Name should be non-empty and cannot start or end with whitespace!");
+        }
+        class NamedClosure extends DelegatedClosure<T> {
+            private static final long serialVersionUID = 3793550532851315223L;
+            public NamedClosure() { super(self); }
+            @Override public String toString() { return name; }
+        }
+        return new NamedClosure();
+    }
+
+    public static <T> Closure<T> named(@NotNull Closure<T> self, Supplier<?> nameSupplier) {
+        class DescribedClosure extends DelegatedClosure<T> {
+            private static final long serialVersionUID = -3060677360371749062L;
+            public DescribedClosure() { super(self); }
+            @Override public String toString() { return nameSupplier.get().toString(); }
+        }
+        return new DescribedClosure();
+    }
+
 }
+

@@ -18,4 +18,8 @@
         <Class name="~io\.github\.ddimitrov\.nuggets\.internal\.kotlin\..*Kt" />
         <Bug pattern="BC_BAD_CAST_TO_ABSTRACT_COLLECTION" />
     </Match>
+    <Match>
+        <Class name="io.github.ddimitrov.nuggets.internal.groovy.NuggetsExtensions$1DescribedClosure" />
+        <Bug pattern="SE_BAD_FIELD" />
+    </Match>
 </FindBugsFilter>
