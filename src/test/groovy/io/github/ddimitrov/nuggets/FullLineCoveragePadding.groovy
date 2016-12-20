@@ -25,7 +25,9 @@ class FullLineCoveragePadding {
         new NuggetsExtensions()
         new Exceptions()
         new Extractors()
+        new Functions()
         new ExceptionTransformerBuilder()
+        new DispatchException()
         assert new TextTable.DataBuilder(true, Collections.singletonList(new TextTable.Column('dummy', 0))).toString()!=null
     }
 }
