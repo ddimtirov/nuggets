@@ -577,4 +577,121 @@ public class Extractors {
     private static <T extends Throwable, R> R doSneakyThrow(@NotNull Throwable t) throws T {
         throw (T) t;
     }
+
+    /**
+     * <p>Super-type linearization is an algorithm used to obtain an ordered
+     * sequence of all super-types in the presence of multiple inheritance.
+     * The list should provide the following guarantees:</p>
+     *
+     * <ol>
+     * <li>All classes in the result should be assignable from {@code type}
+     *     (i.e. {@code it} is supertype of {@code type)}, and the result
+     *     should contain all supertypes of {@code type}</li>
+     * <li>The linearization result of any supertype should result in a subset
+     *     of the subtype linearization, preserving the same relative order.</li>
+     * <li>The ordering is by "specificity".</li>
+     * </ol>
+     *
+     * <p>An informal definition of specificity ordering is <em>"given two types -
+     * {@code A} and {@code B}, more specific is the type you would expect to match
+     * if you had overloads with both types and an argument of type {@code type}"</em>.
+     * It is a concept easy to understand intuitively, and
+     * <a href="https://blogs.oracle.com/mcimadamore/entry/testing_overload_resolution">surprisingly tricky</a>
+     * around the edge cases.</p>
+     *
+     * <p>In practice I currently use the following algorithm, which is a simple and
+     * good enough approximation to the JLS rules (see the referenced link):</p>
+     * <ol>
+     * <li>Superclasses come first, in the order of inheritance, except for
+     *     Object which comes last. (That is, if {@code type} is not an interface)</li>
+     * <li>In the middle are all interfaces in breadth-first, left-to-right order.
+     *     On multiple inheritances from the same interface, the first wins.</li>
+     * </ol>
+     * @param type the type we are linearizing
+     * @return a sequence of all supertypes of the type, ordered by specificity
+     * @see <a href="http://docs.oracle.com/javase/specs/jls/se8/html/jls-15.html#jls-15.12.2.5">JLS 15.12.2.5 - specificity rules for method resolution</a>
+     * @see <a href="https://en.wikipedia.org/wiki/C3_linearization">C3 alorithm for linearization</a>
+     */
+    public static Iterable<? extends Class<?>> linearized(@NotNull Class<?> type) {
+        LinkedHashSet<Class<?>> linearized = new LinkedHashSet<>(); // both ordering and uniqueness are important
+
+        // step 1: put super-classes first, up to but excluding Object (classes take precedence to interfaces)
+            for (Class<?> c = type; c != Object.class; c = c.getSuperclass()) {
+                linearized.add(c);
+                if (type.isInterface()) break; // interfaces are handled in the next step (still we need to put the seed)
+            }
+
+        // step 2: collect all interfaces in left-to-right breadth-first fashion
+        Collection<Class<?>> prev = new ArrayList<>(linearized); // what we added in the previous round
+        Collection<Class<?>> curr = new ArrayList<>();           // what we are going to add on this round
+        do {
+            for (Class<?> t : prev) {   // add the super interfaces of all types found in the prev round
+                curr.addAll(Arrays.asList(t.getInterfaces()));
+            }
+
+            curr.removeAll(linearized); // remove the types already in the resulting set
+            linearized.addAll(curr);    // add the new types to the resulting set
+
+            // prepare for the curr iteration: swap prev<->curr, clear the curr
+            Collection<Class<?>> temp = curr;
+            curr = prev;
+            prev = temp;
+            curr.clear();
+        } while(!prev.isEmpty());
+
+        // step 3: add Object last (or it would be more specific than all of then interfaces, which is counter-intuitive)
+        if (!type.isInterface()) {
+            linearized.add(Object.class);
+        }
+
+        return linearized;
+    }
+
+    /**
+     * <p>Walks through all accessible members (fields, methods or constructors)
+     * of a given type and its supertypes, regardless of their visibility or
+     * modifiers. Members of derived classes are processed before the members of
+     * base classes.</p>
+     * <p>Each member is made {@link AccessibleObject#setAccessible(boolean) accessible}
+     * before being passed to the processor, so you can  invoke operations
+     * on it directly.</p>
+     * @param <T> the inferred type of the accessible member.
+     * @param extractor a function extracting a list of accessible members
+ *                  from a class. Typically one of
+ *                  {@link Class#getDeclaredConstructors()},
+ *                  {@link Class#getDeclaredFields()},
+ *                  {@link Class#getDeclaredMethods()}
+     * @param startType the class from which we should start processing
+     *                  working up the inheritance hierarchy towards
+     *                  the {@code stopClass}
+     * @param stopType the class where we should stop processing
+*                  (if {@code null}, we will stop at {@code Object})
+     * @param processor typically lambda that will process each accessible
+*                  member. If needed to access {@code o} - do it through
+*                  the closure.
+     */
+    public static <T extends AccessibleObject> void eachAccessible(
+            @NotNull Function<Class<?>, T[]> extractor,
+            Class<?> startType, @Nullable Class<Object> stopType,
+            @NotNull Extractors.AccessibleMemberProcessor<@NotNull T> processor
+    ) {
+        Class<?> type = startType;
+        try {
+            Class<Object> stop = stopType == null ? Object.class : stopType;
+            while (type!=null && type !=stop) {
+                for (T it : extractor.apply(type)) {
+                    it.setAccessible(true);
+                    processor.process(it);
+                }
+                type = type.getSuperclass();
+            }
+        } catch (Exception e) {
+            Exceptions.rethrow(e);
+        }
+    }
+
+    @FunctionalInterface
+    public interface AccessibleMemberProcessor<T extends AccessibleObject> {
+        void process(T subject) throws Exception;
+    }
 }
