@@ -22,6 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.*;
 
 /**
@@ -267,5 +268,30 @@ public final class Functions {
 
             return Exceptions.rethrow(new DispatchException("failed to " + verb + " " + functions.length + " fallback fuctions!", suppressed));
         };
+    }
+
+    public static <T, K, R> @NotNull Function<T, R> multidispatch(
+            @NotNull Function<@Nullable T, @Nullable K> selector,
+            @NotNull Function<@Nullable K, @NotNull Function<T, R>> functionLookup
+    ) {
+        return t -> {
+            K key = selector.apply(t);
+            Function<T, R> function = functionLookup.apply(key);
+            return function.apply(t);
+        };
+    }
+
+    public static <R> @NotNull Function<Object, R> multidispatch(@NotNull Map<@NotNull Class<?>, @NotNull Function<?, R>> typeToFunction) {
+        Function<Class<?>, Function<?, R>> classFunctionFunction = type -> {
+            if (type == null) return typeToFunction.get(null);
+
+            for (Class<?> t : Extractors.linearized(type)) {
+                if (typeToFunction.containsKey(t)) return typeToFunction.get(t);
+            }
+
+            return null;
+        };
+        //noinspection unchecked - not even sure if Java's generics can express this
+        return (Function) Functions.<Object, Class, Function<Object, R>>multidispatch(Object::getClass, (Function) classFunctionFunction);
     }
 }

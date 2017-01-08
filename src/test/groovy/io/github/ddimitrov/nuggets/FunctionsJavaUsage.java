@@ -19,8 +19,7 @@ package io.github.ddimitrov.nuggets;
 import org.intellij.lang.annotations.Subst;
 
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.*;
 
@@ -84,4 +83,20 @@ class FunctionsJavaUsage {
                 it -> Integer.parseInt(it.toString())
         );
     }
+
+    public static void main(String[] args) {
+        Function<Integer, Double> f = Integer::doubleValue;
+
+        class NewOrder {} class Execution {} class Whatever {}
+        Map<Class<?>, Function<?, Integer>> processors = new HashMap<>();
+        processors.put(NewOrder.class , (NewOrder  it) -> { System.out.println("it = " + it); return 1; });
+        processors.put(Execution.class, (Execution it) -> { System.out.println("it = " + it); return 2; });
+        processors.put(Whatever.class , (Whatever  it) -> { System.out.println("it = " + it); return 3; });
+//        Function<?, Integer> multiMethod = Functions.multidispatch(new ImplementationMap<>() // not checked in - use Guava's ClassToInstanceMap instead
+//                .add(NewOrder.class , (NewOrder  it) -> { System.out.println("it = " + it); return 1; })
+//                .add(Execution.class, (Execution it) -> { System.out.println("it = " + it); return 2; })
+//                .add(Whatever.class , (Whatever  it) -> { System.out.println("it = " + it); return 3; })
+//        );
+    }
+
 }
