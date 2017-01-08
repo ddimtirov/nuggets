@@ -20,8 +20,8 @@ plugins {
     id "com.jfrog.bintray" version "1.7.2"
     id "net.ltgt.errorprone" version "0.0.8"
     id "org.standardout.versioneye" version "1.4.0"
-    id "com.zoltu.kotlin" version "1.0.4" // TODO: this is republished from org.jetbrains.kotlin:kotlin-gradle-plugin - replace with first party when available
-//    id "org.jetbrains.dokka" version "0.9.9" TODO: fix and remove buildscript when working plugin uploaded
+    id "com.zoltu.kotlin" version "1.0.6" // TODO: this is republished from org.jetbrains.kotlin:kotlin-gradle-plugin - replace with first party when available
+//    id "org.jetbrains.dokka" version "0.9.12-dev-1" TODO: update when works
     id "groovy"
     id "pmd"
     id "findbugs"

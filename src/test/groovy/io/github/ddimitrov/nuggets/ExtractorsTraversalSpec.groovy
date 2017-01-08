@@ -53,7 +53,7 @@ class ExtractorsTraversalSpec extends Specification {
         expect:
         Extractors.eachAccessible({ it.declaredConstructors }, type, null) {
             def signature = it.toString() - type.enclosingClass.name
-            assert expectedSignatures.remove(signature) : "missing signature for $type.simpleName"
+            assert expectedSignatures.remove(signature) : "missing signature `$signature` for $type.simpleName - remaining signatures to check: $expectedSignatures"
         }
         assert expectedSignatures.empty : "extra signatures for $type.simpleName"
 
@@ -75,8 +75,9 @@ class ExtractorsTraversalSpec extends Specification {
     def "iteration through accessible fields"(Class type, List<String> expectedSignatures) {
         expect:
         Extractors.eachAccessible({ it.declaredFields }, type, null) {
+            if (it.name=='$jacocoData') return // injected by the JaCoCo instrumentation
             def signature = it.toString() - type.enclosingClass.name
-            assert expectedSignatures.remove(signature) : "missing signature for $type.simpleName"
+            assert expectedSignatures.remove(signature) : "missing signature `$signature` for $type.simpleName - remaining signatures to check: $expectedSignatures"
         }
         assert expectedSignatures.empty : "extra signatures for $type.simpleName"
 
@@ -99,8 +100,9 @@ class ExtractorsTraversalSpec extends Specification {
     def "iteration through accessible methods"(Class type, List<String> expectedSignatures) {
         expect:
         Extractors.eachAccessible({ it.declaredMethods }, type, null) {
+            if (it.name=='$jacocoInit') return // injected by the JaCoCo instrumentation
             def signature = it.toString() - type.enclosingClass.name
-            assert expectedSignatures.remove(signature) : "missing signature for $type.simpleName"
+            assert expectedSignatures.remove(signature) : "missing signature `$signature` for $type.simpleName - remaining signatures to check: $expectedSignatures"
         }
         assert expectedSignatures.empty : "extra signatures for $type.simpleName"
 
@@ -126,9 +128,12 @@ class ExtractorsTraversalSpec extends Specification {
         Extractors.eachAccessible({ it.declaredMethods }, C3, C2) {
             signatures << it.toString() - C3.enclosingClass.name
         }
+        signatures.removeAll { it.endsWith '.$jacocoInit()' }  // added by the Jacoco agent if run with coverage
+
         then:
-        signatures==['private static void $C3.foo()', 'private void $C3.bazz()'] & !signatures.any { it.contains('$C1') }
+        signatures as Set==['private static void $C3.foo()', 'private void $C3.bazz()'] as Set & !signatures.any { it.contains('$C1') }
     }
+
     def "iteration through accessible objects can throw exceptions"() {
         when:
         Extractors.eachAccessible({ it.declaredMethods }, C3, C2) {

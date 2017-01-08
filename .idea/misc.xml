@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="EntryPointsManager">
-    <entry_points version="2.0" />
     <list size="1">
       <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.Contract" />
     </list>
@@ -25,7 +24,7 @@
     <option name="OPTION_INCLUDE_LIBS" value="true" />
     <option name="OPTION_LINK_TO_JDK_DOCS" value="true" />
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="true" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="false" project-jdk-name="1.8u112" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
   <component name="TaskProjectConfiguration">
