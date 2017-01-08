@@ -243,7 +243,7 @@
 <span class="sourceLineNo">235</span>         *         If {@code failFast==true} we would rethrow immediately if any of the {@code fallbacks} throws exception.<a name="line.235"></a>
 <span class="sourceLineNo">236</span>         */<a name="line.236"></a>
 <span class="sourceLineNo">237</span>    @SafeVarargs<a name="line.237"></a>
-<span class="sourceLineNo">238</span>    public static &lt;T, R&gt; @NotNull Function&lt;T, R&gt; fallback(boolean failFast, @Nullable Predicate&lt;R&gt; approveResult, @NotNull Function&lt;T, R&gt;... functions) {<a name="line.238"></a>
+<span class="sourceLineNo">238</span>    public static &lt;T, R&gt; @NotNull Function&lt;T, R&gt; fallback(boolean failFast, @Nullable Predicate&lt;@Nullable R&gt; approveResult, @NotNull Function&lt;@Nullable T, @Nullable R&gt;... functions) {<a name="line.238"></a>
 <span class="sourceLineNo">239</span>        if (functions.length==0) throw new IllegalArgumentException("Need to provide at least one function!");<a name="line.239"></a>
 <span class="sourceLineNo">240</span><a name="line.240"></a>
 <span class="sourceLineNo">241</span>        if ((failFast || functions.length==1) &amp;&amp; approveResult==null) {<a name="line.241"></a>
