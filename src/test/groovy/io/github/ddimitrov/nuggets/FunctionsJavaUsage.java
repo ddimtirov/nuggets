@@ -31,27 +31,27 @@ class FunctionsJavaUsage {
         return Functions.sup(name, new AtomicInteger()::getAndIncrement);
     }
 
-    public static Consumer<Object> createNamedConsumer(String name) {
-        return Functions.con(name, it -> { Objects.requireNonNull(it); });
+    public static Consumer<Object> createNamedConsumer(@Subst("con") String name) {
+        return Functions.con(name, (Consumer<Object>) Objects::requireNonNull);
     }
 
-    public static BiConsumer<Object, Object> createNamedBiConsumer(String name) {
+    public static BiConsumer<Object, Object> createNamedBiConsumer(@Subst("con")String name) {
         return Functions.con(name, (x, y) -> {});
     }
 
-    public static Predicate<Integer> createNamedParityTester(String name) {
+    public static Predicate<Integer> createNamedParityTester(@Subst("is odd") String name) {
         return Functions.pre(name, it -> it%2 == 1);
     }
 
-    public static BiPredicate<Integer, Integer> createNamedFactorTester(String name) {
+    public static BiPredicate<Integer, Integer> createNamedFactorTester(@Subst("is factor") String name) {
         return Functions.pre(name, (x, y) -> x%y==0);
     }
 
-    public static Function<Integer, Integer> createNamedDoubler(String name) {
+    public static Function<Integer, Integer> createNamedDoubler(@Subst("double") String name) {
         return Functions.fun(name, x -> 2*x);
     }
 
-    public static BiFunction<Integer, Integer, Integer> createNamedMultiplier(String name) {
+    public static BiFunction<Integer, Integer, Integer> createNamedMultiplier(@Subst("*") String name) {
         return Functions.fun(name, (x, y) -> x*y);
     }
 

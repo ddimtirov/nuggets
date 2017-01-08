@@ -477,6 +477,8 @@ public class TextTable {
 
         private final @NotNull String horizontal;
         private final @NotNull String vertical;
+
+        @SuppressWarnings("ImmutableEnumChecker")
         private final @NotNull String[][] joints;
 
         Box(@NotNull String horizontal, @NotNull String vertical, @NotNull String[]... joints) {
@@ -633,7 +635,6 @@ public class TextTable {
         @SuppressWarnings("unchecked")
         @Contract(pure = true)
         private static @NotNull String defaultFormatter(@Nullable Object value) {
-            // TODO: replace with multi-function in v0.2.0
             if (value instanceof Callable) return Exceptions.rethrow((Callable) value).toString();
             if (value instanceof Supplier) return ((Supplier) value).get().toString();
             return String.valueOf(value);

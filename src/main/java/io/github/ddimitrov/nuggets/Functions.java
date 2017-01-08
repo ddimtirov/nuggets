@@ -235,7 +235,7 @@ public final class Functions {
          *         If {@code failFast==true} we would rethrow immediately if any of the {@code fallbacks} throws exception.
          */
     @SafeVarargs
-    public static <T, R> @NotNull Function<T, R> fallback(boolean failFast, @Nullable Predicate<R> approveResult, @NotNull Function<T, R>... functions) {
+    public static <T, R> @NotNull Function<T, R> fallback(boolean failFast, @Nullable Predicate<@Nullable R> approveResult, @NotNull Function<@Nullable T, @Nullable R>... functions) {
         if (functions.length==0) throw new IllegalArgumentException("Need to provide at least one function!");
 
         if ((failFast || functions.length==1) && approveResult==null) {
