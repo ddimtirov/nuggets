@@ -210,9 +210,7 @@ public class Extractors {
             }
             Field field = getAccessibleField(type, fieldName, true);
             return fieldType.cast(field.get(target));
-        } catch (IllegalAccessException e) {
-            return doSneakyThrow(e);
-        }
+        } catch (IllegalAccessException e) { return doSneakyThrow(e); }
     }
 
     /**
@@ -257,9 +255,7 @@ public class Extractors {
         try {
             Field field = getAccessibleField(type, fieldName, true);
             field.set(target, value);
-        } catch (IllegalAccessException e) {
-            doSneakyThrow(e); // do not use #rethrow(Throwable, String) because we would go into mutual recursion
-        }
+        } catch (IllegalAccessException e) { doSneakyThrow(e); }
     }
 
 
@@ -309,14 +305,12 @@ public class Extractors {
             }
 
             return field;
-        } catch (IllegalAccessException e) {
-            return doSneakyThrow(e);
         } catch (NoSuchFieldException e) {
             Class<?> superclass = type.getSuperclass();
             return !checkSuperclasses || Object.class.equals(superclass)
                     ? doSneakyThrow(e)
                     : getAccessibleField(superclass, fieldName, true);
-        }
+        } catch (IllegalAccessException e) { return doSneakyThrow(e); }
     }
 
     /**
@@ -657,18 +651,18 @@ public class Extractors {
      * on it directly.</p>
      * @param <T> the inferred type of the accessible member.
      * @param extractor a function extracting a list of accessible members
- *                  from a class. Typically one of
- *                  {@link Class#getDeclaredConstructors()},
- *                  {@link Class#getDeclaredFields()},
- *                  {@link Class#getDeclaredMethods()}
+     *                  from a class. Typically one of
+     *                  {@link Class#getDeclaredConstructors()},
+     *                  {@link Class#getDeclaredFields()},
+     *                  {@link Class#getDeclaredMethods()}
      * @param startType the class from which we should start processing
      *                  working up the inheritance hierarchy towards
      *                  the {@code stopClass}
      * @param stopType the class where we should stop processing
-*                  (if {@code null}, we will stop at {@code Object})
+     *                  (if {@code null}, we will stop at {@code Object})
      * @param processor typically lambda that will process each accessible
-*                  member. If needed to access {@code o} - do it through
-*                  the closure.
+     *                  member. If needed to access {@code o} - do it through
+     *                  the closure.
      */
     public static <T extends AccessibleObject> void eachAccessible(
             @NotNull Function<Class<?>, T[]> extractor,
