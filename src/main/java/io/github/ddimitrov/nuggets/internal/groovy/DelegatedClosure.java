@@ -32,7 +32,6 @@ public abstract class DelegatedClosure<T> extends Closure<T> {
     @Override public Closure<?> asWritable()                                                  { return self.asWritable(); }
     @Override public Closure<T> dehydrate()                                                   { return self.dehydrate(); }
     @Override public Closure<T> rehydrate(Object delegate, Object owner, Object thisObject)   { return self.rehydrate(delegate, owner, thisObject); }
-    @Override public Object     clone()                                                       { return self.clone(); }
     @Override public boolean    isCase(Object candidate)                                      { return self.isCase(candidate); }
     @Override public Object     getThisObject()                                               { return self.getThisObject(); }
     @Override public Object     getOwner()                                                    { return self.getOwner(); }
