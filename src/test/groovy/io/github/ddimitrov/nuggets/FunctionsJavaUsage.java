@@ -84,4 +84,21 @@ class FunctionsJavaUsage {
                 it -> Integer.parseInt(it.toString())
         );
     }
+
+    public static <T,R> Function<T,R> debugFun(Function<T, R> f, Consumer<T> before, Consumer<R> after) {
+        return f.compose(Functions.tap(before))
+                .andThen(Functions.tap(after));
+    }
+
+    public static <T> Predicate<T> debugPre1(Predicate<T> p, Consumer<T> before, Consumer<Boolean> after) {
+        return Functions.snoop(Functions.yes(before).and(p), after);
+    }
+
+    public static <T> Predicate<T> debugPre2(Predicate<T> p, Consumer<T> before, Consumer<Boolean> after) {
+        return Functions.snoop(Functions.no(before).or(p), after);
+    }
+
+    public static <T> Supplier<T> debugSup(Supplier<T> s, Consumer<T> dummy, Consumer<T> after) {
+        return Functions.snoop(s, after);
+    }
 }

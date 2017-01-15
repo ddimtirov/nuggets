@@ -82,7 +82,7 @@ class FunctionsSpec extends Specification {
     }
 
     @SuppressWarnings(["GroovyAccessibility", "GroovyAssignabilityCheck"])
-    def "test name-check exception Java"(String name, Class<? extends Exception> ex) {
+    "test name-check exception Java"(String name, Class<? extends Exception> ex) {
         when:
         Functions.checkName(name)
 
@@ -94,7 +94,7 @@ class FunctionsSpec extends Specification {
     }
 
     @SuppressWarnings(["GroovyUnusedAssignment", "GroovyAssignabilityCheck"])
-    def "test name-check exception Groovy"(String name, Class<? extends Exception> ex) {
+    "test name-check exception Groovy"(String name, Class<? extends Exception> ex) {
         expect:
         try {
             def x = NuggetsExtensions.named(null, name)
@@ -206,7 +206,7 @@ class FunctionsSpec extends Specification {
         def failFast = false
         def validator = null
 
-        def parser = Functions.<String, Object>fallback(failFast, validator, // fixme - casting to function all over the place is not nice
+        def parser = Functions.<String, Object>fallback(failFast, validator, // fixme GROOVY-8045 - remove coercing to function
                 Long.&parseLong as Function,
                 Double.&parseDouble as Function,
                 { new SimpleDateFormat("yyyy-MM-dd").parse(it) } as Function,
@@ -223,5 +223,25 @@ class FunctionsSpec extends Specification {
         parser('2016-12-15') instanceof Date
         parser('2016.12') instanceof Double
         parser('2016') instanceof Long
+    }
+
+    @SuppressWarnings(["GrReassignedInClosureLocalVar", "GroovyAssignabilityCheck"])
+    "demo tapping and snooping"(Closure prep, Closure subject, Closure usage, def result, def before, def after) {
+        given:
+        def actualBefore = null
+        def actualAfter = null
+        def f = prep(subject, { actualBefore = it}, { actualAfter = it })
+
+        expect:
+        usage(f)==result
+        actualBefore==before
+        actualAfter==after
+
+        where:
+        prep                         | subject                              | usage           || result | before | after
+        FunctionsJavaUsage.&debugFun | { Integer it -> (it * 2) as Integer} | { it.apply(5) } || 10     | 5      | 10
+        FunctionsJavaUsage.&debugPre1| { Integer it -> it % 2 == 0 }        | { it.test(6)  } || true   | 6      | true
+        FunctionsJavaUsage.&debugPre2| { Integer it -> it % 2 == 0 }        | { it.test(7)  } || false  | 7      | false
+        FunctionsJavaUsage.&debugSup | new AtomicInteger().&incrementAndGet | { it.get()  }   || 1      | null   | 1
     }
 }

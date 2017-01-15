@@ -25,7 +25,8 @@ import java.util.List;
 import java.util.function.*;
 
 /**
- * All methods are threadsafe.
+ * <p><span class="badge green">Entry Point</span> Provides decorators and combinators
+ * for common Java functional interfaces. All methods are threadsafe.</p>
  */
 public final class Functions {
     private Functions() {}
@@ -196,44 +197,45 @@ public final class Functions {
         }
         return new NamedBiFunction();
     }
-        /**
-         * <p>Tries multiple functions in the specified order and returns the first result that passes a predicate,
-         * optionally ignoring exceptions. Throws {@link DispatchException} if none of the fallback functions returned a
-         * good result, wrapping all fallback failures as {@link Throwable#getSuppressed() suppressed}.
-         * If {@code failFast} was specified and any of the fallbacks throws an exception, it is immediately rethrown.</p>
-         *
-         * <p><em><strong>Design notes:</strong> Ideally we would like this combinator to be a macro method, applicable to
-         * any functional interface that returns a value (non-void). We have decided to dispatch {@link Function Functions},
-         * as these show up as the most common functional interfaces in the wild.
-         *
-         * Alternative design is to dispatch {@link Supplier Suppliers}, and force the caller to tunnel the functional
-         * parameters using closures, but that makes the more common case uglier.
-         *
-         * Going to the other extreme, we could have dispatched {@link BiFunction BiFunctions}, and accommodated the
-         * {@code Function} use-case by requiring the client to adapt the result using partial application.</em></p>
-         *
-         * @param failFast if {@code true}, as soon as a function throws exception, we'll rethrow it and skip trying the
-         *                 remaining fallback functions. If {@code false}, when a function throws an exception we just
-         *                 continue with the remaining fallback functions. If we try all exceptions and didn't find a result
-         *                 all these exceptions will be rethrown as {@link Throwable#suppressedExceptions}
-         *
-         * @param approveResult a predicate that decides whether we shall return the result of a function or try the next
-         *                      one. If all functions are tried and none matched the predicate, this method will throw
-         *                      {@link DispatchException}
-         *
-         * @param functions a functions to be tried one after another until one returns a result that matches the
-         *                  {@code approveResult} predicate. Exceptions are swallowed if {@code failFast} is {@code true}
-         *                  and rethrown if {@code false}.
-         *
-         * @param <T> the function argument generic type
-         * @param <R> the function return generic type
-         *
-         * @return a function that dispatches through the {@code fallbacks}, based on the strategy determined by
-         *         {@code failFast} and {@code approveResult}
-         *
-         * @throws DispatchException if {@code failFast==false} or none of the results matched the predicate.
-         *         If {@code failFast==true} we would rethrow immediately if any of the {@code fallbacks} throws exception.
-         */
+
+    /**
+     * <p>Tries multiple functions in the specified order and returns the first result that passes a predicate,
+     * optionally ignoring exceptions. Throws {@link DispatchException} if none of the fallback functions returned a
+     * good result, wrapping all fallback failures as {@link Throwable#getSuppressed() suppressed}.
+     * If {@code failFast} was specified and any of the fallbacks throws an exception, it is immediately rethrown.</p>
+     *
+     * <p><em><strong>Design notes:</strong> Ideally we would like this combinator to be a macro method, applicable to
+     * any functional interface that returns a value (non-void). We have decided to dispatch {@link Function Functions},
+     * as these show up as the most common functional interfaces in the wild.
+     *
+     * Alternative design is to dispatch {@link Supplier Suppliers}, and force the caller to tunnel the functional
+     * parameters using closures, but that makes the more common case uglier.
+     *
+     * Going to the other extreme, we could have dispatched {@link BiFunction BiFunctions}, and accommodated the
+     * {@code Function} use-case by requiring the client to adapt the result using partial application.</em></p>
+     *
+     * @param failFast if {@code true}, as soon as a function throws exception, we'll rethrow it and skip trying the
+     *                 remaining fallback functions. If {@code false}, when a function throws an exception we just
+     *                 continue with the remaining fallback functions. If we try all exceptions and didn't find a result
+     *                 all these exceptions will be rethrown as {@link Throwable#suppressedExceptions}
+     *
+     * @param approveResult a predicate that decides whether we shall return the result of a function or try the next
+     *                      one. If all functions are tried and none matched the predicate, this method will throw
+     *                      {@link DispatchException}
+     *
+     * @param functions a functions to be tried one after another until one returns a result that matches the
+     *                  {@code approveResult} predicate. Exceptions are swallowed if {@code failFast} is {@code true}
+     *                  and rethrown if {@code false}.
+     *
+     * @param <T> the function argument generic type
+     * @param <R> the function return generic type
+     *
+     * @return a function that dispatches through the {@code fallbacks}, based on the strategy determined by
+     *         {@code failFast} and {@code approveResult}
+     *
+     * @throws DispatchException if {@code failFast==false} or none of the results matched the predicate.
+     *         If {@code failFast==true} we would rethrow immediately if any of the {@code fallbacks} throws exception.
+     */
     @SafeVarargs
     public static <T, R> @NotNull Function<T, R> fallback(boolean failFast, @Nullable Predicate<@Nullable R> approveResult, @NotNull Function<@Nullable T, @Nullable R>... functions) {
         if (functions.length==0) throw new IllegalArgumentException("Need to provide at least one function!");
@@ -267,5 +269,76 @@ public final class Functions {
 
             return Exceptions.rethrow(new DispatchException("failed to " + verb + " " + functions.length + " fallback fuctions!", suppressed));
         };
+    }
+
+    /**
+     * Creates an identity function, intercepting the function
+     * argument for inspection or manipulation. It can be used with
+     * {@link Function#compose(Function)} to intercept the argument
+     * of a function and with {@link Function#andThen(Function)} to
+     * intercept the result.
+     *
+     * @param c consumer operating on the function parameter
+     * @param <T> generic type for inferrence
+     * @return an identity function calling {@code c} on its argument/result
+     */
+    public static <T> @NotNull UnaryOperator<T> tap(@NotNull Consumer<T> c) {
+        return it -> { c.accept(it); return it; };
+    }
+
+    /**
+     * Creates a fixed value {@code true} predicate, intercepting
+     * the predicate argument for inspection or manipulation. It can
+     * be used with {@link Predicate#and(Predicate)} - as first in
+     * the chain if we care about all arguments or as second if we
+     * only care about the succeeded.
+     *
+     * @param c consumer operating on the predicate parameter
+     * @param <T> generic type for inferrence
+     * @return a {@code true} predicate calling {@code c} on its argument/result
+     */
+    public static <T> @NotNull Predicate<T> yes(@NotNull Consumer<T> c) {
+        return it -> { c.accept(it); return true; };
+    }
+
+    /**
+     * Creates a fixed value {@code false} predicate, intercepting
+     * the predicate argument for inspection or manipulation. It can
+     * be used with {@link Predicate#or(Predicate)} - as first in
+     * the chain if we care about all arguments or as second if we
+     * only care about the succeeded.
+     *
+     * @param c consumer operating on the predicate parameter
+     * @param <T> generic type for inferrence
+     * @return a {@code false} predicate calling {@code c} on its argument/result
+     */
+    public static <T> @NotNull Predicate<T> no(@NotNull Consumer<T> c) {
+        return it -> { c.accept(it); return false; };
+    }
+
+    /**
+     * Wraps a supplier, without changing its logic, intercepting
+     * the supplier result for inspection or manipulation.
+     *
+     * @param s wrapped supplier
+     * @param c consumer operating on the supplier results
+     * @param <T> generic type for inferrence
+     * @return a supplier delegating to {@code s}, calling {@code c} on its result
+     */
+    public static <T> @NotNull Supplier<T> snoop(@NotNull Supplier<T> s, @NotNull Consumer<T> c) {
+        return () -> { T val = s.get(); c.accept(val); return val; };
+    }
+
+    /**
+     * Wraps a predicate, without changing its logic, intercepting
+     * the predicate result for inspection.
+     *
+     * @param p wrapped predicate implementing some useful function
+     * @param c consumer operating on the predicate parameter
+     * @param <T> generic type for inferrence
+     * @return a predicate delegating to {@code p}, calling {@code c} on its result
+     */
+    public static <T> Predicate<T> snoop(Predicate<T> p, Consumer<Boolean> c) {
+        return it -> { boolean val = p.test(it); c.accept(val); return val; };
     }
 }
