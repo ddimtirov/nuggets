@@ -172,7 +172,7 @@ public class Extractors {
      * @return the extracted value of the requested field
      *
      * @see #getAccessibleField(Class, String, boolean)
-     * @see #peekField(Object, String, Class)
+     * @see #peekField(Object, Class, String, Class)
      */
     @Contract(pure=true)
     public static <T> T peekField(@NotNull Object target, @Identifier @NotNull String fieldName, @NotNull Class<T> fieldType) {
@@ -649,6 +649,7 @@ public class Extractors {
      * <p>Each member is made {@link AccessibleObject#setAccessible(boolean) accessible}
      * before being passed to the processor, so you can  invoke operations
      * on it directly.</p>
+     * <p>If the processor throws an exception, it will be rethrown, aborting the iteration.</p>
      * @param <T> the inferred type of the accessible member.
      * @param extractor a function extracting a list of accessible members
      *                  from a class. Typically one of
@@ -684,8 +685,17 @@ public class Extractors {
         }
     }
 
+    /**
+     * Used by traversal functions to iterate over {@code AccessibleObjects} (i.e. methods, fields, constructors)
+     * @param <T> generic type of the accessible object.
+     */
     @FunctionalInterface
     public interface AccessibleMemberProcessor<T extends AccessibleObject> {
+        /**
+         * The traversal function will call this for for each method, field, or constructor
+         * @param subject the current accessible object
+         * @throws Exception we can pass through any exceptions to abort the iteration.
+         */
         void process(T subject) throws Exception;
     }
 }
