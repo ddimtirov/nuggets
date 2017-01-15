@@ -180,7 +180,7 @@
 <span class="sourceLineNo">172</span>     * @return the extracted value of the requested field<a name="line.172"></a>
 <span class="sourceLineNo">173</span>     *<a name="line.173"></a>
 <span class="sourceLineNo">174</span>     * @see #getAccessibleField(Class, String, boolean)<a name="line.174"></a>
-<span class="sourceLineNo">175</span>     * @see #peekField(Object, String, Class)<a name="line.175"></a>
+<span class="sourceLineNo">175</span>     * @see #peekField(Object, Class, String, Class)<a name="line.175"></a>
 <span class="sourceLineNo">176</span>     */<a name="line.176"></a>
 <span class="sourceLineNo">177</span>    @Contract(pure=true)<a name="line.177"></a>
 <span class="sourceLineNo">178</span>    public static &lt;T&gt; T peekField(@NotNull Object target, @Identifier @NotNull String fieldName, @NotNull Class&lt;T&gt; fieldType) {<a name="line.178"></a>
@@ -657,46 +657,56 @@
 <span class="sourceLineNo">649</span>     * &lt;p&gt;Each member is made {@link AccessibleObject#setAccessible(boolean) accessible}<a name="line.649"></a>
 <span class="sourceLineNo">650</span>     * before being passed to the processor, so you can  invoke operations<a name="line.650"></a>
 <span class="sourceLineNo">651</span>     * on it directly.&lt;/p&gt;<a name="line.651"></a>
-<span class="sourceLineNo">652</span>     * @param &lt;T&gt; the inferred type of the accessible member.<a name="line.652"></a>
-<span class="sourceLineNo">653</span>     * @param extractor a function extracting a list of accessible members<a name="line.653"></a>
-<span class="sourceLineNo">654</span>     *                  from a class. Typically one of<a name="line.654"></a>
-<span class="sourceLineNo">655</span>     *                  {@link Class#getDeclaredConstructors()},<a name="line.655"></a>
-<span class="sourceLineNo">656</span>     *                  {@link Class#getDeclaredFields()},<a name="line.656"></a>
-<span class="sourceLineNo">657</span>     *                  {@link Class#getDeclaredMethods()}<a name="line.657"></a>
-<span class="sourceLineNo">658</span>     * @param startType the class from which we should start processing<a name="line.658"></a>
-<span class="sourceLineNo">659</span>     *                  working up the inheritance hierarchy towards<a name="line.659"></a>
-<span class="sourceLineNo">660</span>     *                  the {@code stopClass}<a name="line.660"></a>
-<span class="sourceLineNo">661</span>     * @param stopType the class where we should stop processing<a name="line.661"></a>
-<span class="sourceLineNo">662</span>     *                  (if {@code null}, we will stop at {@code Object})<a name="line.662"></a>
-<span class="sourceLineNo">663</span>     * @param processor typically lambda that will process each accessible<a name="line.663"></a>
-<span class="sourceLineNo">664</span>     *                  member. If needed to access {@code o} - do it through<a name="line.664"></a>
-<span class="sourceLineNo">665</span>     *                  the closure.<a name="line.665"></a>
-<span class="sourceLineNo">666</span>     */<a name="line.666"></a>
-<span class="sourceLineNo">667</span>    public static &lt;T extends AccessibleObject&gt; void eachAccessible(<a name="line.667"></a>
-<span class="sourceLineNo">668</span>            @NotNull Function&lt;Class&lt;?&gt;, T[]&gt; extractor,<a name="line.668"></a>
-<span class="sourceLineNo">669</span>            Class&lt;?&gt; startType, @Nullable Class&lt;Object&gt; stopType,<a name="line.669"></a>
-<span class="sourceLineNo">670</span>            @NotNull Extractors.AccessibleMemberProcessor&lt;@NotNull T&gt; processor<a name="line.670"></a>
-<span class="sourceLineNo">671</span>    ) {<a name="line.671"></a>
-<span class="sourceLineNo">672</span>        Class&lt;?&gt; type = startType;<a name="line.672"></a>
-<span class="sourceLineNo">673</span>        try {<a name="line.673"></a>
-<span class="sourceLineNo">674</span>            Class&lt;Object&gt; stop = stopType == null ? Object.class : stopType;<a name="line.674"></a>
-<span class="sourceLineNo">675</span>            while (type!=null &amp;&amp; type !=stop) {<a name="line.675"></a>
-<span class="sourceLineNo">676</span>                for (T it : extractor.apply(type)) {<a name="line.676"></a>
-<span class="sourceLineNo">677</span>                    it.setAccessible(true);<a name="line.677"></a>
-<span class="sourceLineNo">678</span>                    processor.process(it);<a name="line.678"></a>
-<span class="sourceLineNo">679</span>                }<a name="line.679"></a>
-<span class="sourceLineNo">680</span>                type = type.getSuperclass();<a name="line.680"></a>
-<span class="sourceLineNo">681</span>            }<a name="line.681"></a>
-<span class="sourceLineNo">682</span>        } catch (Exception e) {<a name="line.682"></a>
-<span class="sourceLineNo">683</span>            Exceptions.rethrow(e);<a name="line.683"></a>
-<span class="sourceLineNo">684</span>        }<a name="line.684"></a>
-<span class="sourceLineNo">685</span>    }<a name="line.685"></a>
-<span class="sourceLineNo">686</span><a name="line.686"></a>
-<span class="sourceLineNo">687</span>    @FunctionalInterface<a name="line.687"></a>
-<span class="sourceLineNo">688</span>    public interface AccessibleMemberProcessor&lt;T extends AccessibleObject&gt; {<a name="line.688"></a>
-<span class="sourceLineNo">689</span>        void process(T subject) throws Exception;<a name="line.689"></a>
-<span class="sourceLineNo">690</span>    }<a name="line.690"></a>
-<span class="sourceLineNo">691</span>}<a name="line.691"></a>
+<span class="sourceLineNo">652</span>     * &lt;p&gt;If the processor throws an exception, it will be rethrown, aborting the iteration.&lt;/p&gt;<a name="line.652"></a>
+<span class="sourceLineNo">653</span>     * @param &lt;T&gt; the inferred type of the accessible member.<a name="line.653"></a>
+<span class="sourceLineNo">654</span>     * @param extractor a function extracting a list of accessible members<a name="line.654"></a>
+<span class="sourceLineNo">655</span>     *                  from a class. Typically one of<a name="line.655"></a>
+<span class="sourceLineNo">656</span>     *                  {@link Class#getDeclaredConstructors()},<a name="line.656"></a>
+<span class="sourceLineNo">657</span>     *                  {@link Class#getDeclaredFields()},<a name="line.657"></a>
+<span class="sourceLineNo">658</span>     *                  {@link Class#getDeclaredMethods()}<a name="line.658"></a>
+<span class="sourceLineNo">659</span>     * @param startType the class from which we should start processing<a name="line.659"></a>
+<span class="sourceLineNo">660</span>     *                  working up the inheritance hierarchy towards<a name="line.660"></a>
+<span class="sourceLineNo">661</span>     *                  the {@code stopClass}<a name="line.661"></a>
+<span class="sourceLineNo">662</span>     * @param stopType the class where we should stop processing<a name="line.662"></a>
+<span class="sourceLineNo">663</span>     *                  (if {@code null}, we will stop at {@code Object})<a name="line.663"></a>
+<span class="sourceLineNo">664</span>     * @param processor typically lambda that will process each accessible<a name="line.664"></a>
+<span class="sourceLineNo">665</span>     *                  member. If needed to access {@code o} - do it through<a name="line.665"></a>
+<span class="sourceLineNo">666</span>     *                  the closure.<a name="line.666"></a>
+<span class="sourceLineNo">667</span>     */<a name="line.667"></a>
+<span class="sourceLineNo">668</span>    public static &lt;T extends AccessibleObject&gt; void eachAccessible(<a name="line.668"></a>
+<span class="sourceLineNo">669</span>            @NotNull Function&lt;Class&lt;?&gt;, T[]&gt; extractor,<a name="line.669"></a>
+<span class="sourceLineNo">670</span>            Class&lt;?&gt; startType, @Nullable Class&lt;Object&gt; stopType,<a name="line.670"></a>
+<span class="sourceLineNo">671</span>            @NotNull Extractors.AccessibleMemberProcessor&lt;@NotNull T&gt; processor<a name="line.671"></a>
+<span class="sourceLineNo">672</span>    ) {<a name="line.672"></a>
+<span class="sourceLineNo">673</span>        Class&lt;?&gt; type = startType;<a name="line.673"></a>
+<span class="sourceLineNo">674</span>        try {<a name="line.674"></a>
+<span class="sourceLineNo">675</span>            Class&lt;Object&gt; stop = stopType == null ? Object.class : stopType;<a name="line.675"></a>
+<span class="sourceLineNo">676</span>            while (type!=null &amp;&amp; type !=stop) {<a name="line.676"></a>
+<span class="sourceLineNo">677</span>                for (T it : extractor.apply(type)) {<a name="line.677"></a>
+<span class="sourceLineNo">678</span>                    it.setAccessible(true);<a name="line.678"></a>
+<span class="sourceLineNo">679</span>                    processor.process(it);<a name="line.679"></a>
+<span class="sourceLineNo">680</span>                }<a name="line.680"></a>
+<span class="sourceLineNo">681</span>                type = type.getSuperclass();<a name="line.681"></a>
+<span class="sourceLineNo">682</span>            }<a name="line.682"></a>
+<span class="sourceLineNo">683</span>        } catch (Exception e) {<a name="line.683"></a>
+<span class="sourceLineNo">684</span>            Exceptions.rethrow(e);<a name="line.684"></a>
+<span class="sourceLineNo">685</span>        }<a name="line.685"></a>
+<span class="sourceLineNo">686</span>    }<a name="line.686"></a>
+<span class="sourceLineNo">687</span><a name="line.687"></a>
+<span class="sourceLineNo">688</span>    /**<a name="line.688"></a>
+<span class="sourceLineNo">689</span>     * Used by traversal functions to iterate over {@code AccessibleObjects} (i.e. methods, fields, constructors)<a name="line.689"></a>
+<span class="sourceLineNo">690</span>     * @param &lt;T&gt; generic type of the accessible object.<a name="line.690"></a>
+<span class="sourceLineNo">691</span>     */<a name="line.691"></a>
+<span class="sourceLineNo">692</span>    @FunctionalInterface<a name="line.692"></a>
+<span class="sourceLineNo">693</span>    public interface AccessibleMemberProcessor&lt;T extends AccessibleObject&gt; {<a name="line.693"></a>
+<span class="sourceLineNo">694</span>        /**<a name="line.694"></a>
+<span class="sourceLineNo">695</span>         * The traversal function will call this for for each method, field, or constructor<a name="line.695"></a>
+<span class="sourceLineNo">696</span>         * @param subject the current accessible object<a name="line.696"></a>
+<span class="sourceLineNo">697</span>         * @throws Exception we can pass through any exceptions to abort the iteration.<a name="line.697"></a>
+<span class="sourceLineNo">698</span>         */<a name="line.698"></a>
+<span class="sourceLineNo">699</span>        void process(T subject) throws Exception;<a name="line.699"></a>
+<span class="sourceLineNo">700</span>    }<a name="line.700"></a>
+<span class="sourceLineNo">701</span>}<a name="line.701"></a>
 
 
 
