@@ -29,11 +29,21 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
   - create a default value for type (no-args constructor, zero, `false`, or `null`)
   - safely load potentially missing classes (useful for plugins and optional functionality)
   - dependency injection primitives (roll your custom DI injector in few lines)
+  - type linearization - walk the class inheritance tree in concrete first, then breadth 
+    first, `Object` last order
+  - iterator through all constructors, fields or methods (including private inherited)
 - `TextTable` - formats complex data in logs, stdout and file reports
   - rendering to any `Appendable` object (`StringBuilder`, `Writer`, etc.)
   - alignment, padding and custom formatting per column
   - default values for optional column
   - extensible visual styles
+- `Functions` - utilities for lambdas and `java.util.function` objects
+  - decorate lambdas and functional objects with human-readable `toString()`
+  - flexible `fallback()` combinator, trying multiple functions until the 
+    result matches a predicate and/or no exception is thrown. Nice error 
+    reporting.
+  - factory for utility function objects allowing to intercept function 
+    objects before/after call
 - Special Groovy API  
   - Use `Extractors` as Groovy [category](http://groovy-lang.org/metaprogramming.html#categories) 
     to decorate any object with `peekField()/pokeField()`, which can be used access private or 
@@ -42,6 +52,9 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
     [extension methods](http://groovy-lang.org/metaprogramming.html#_extension_modules)
     that can be used to access static private or final fields - i.e. 
     `SomeClass.pokeField('someFinalField', newValue)`
+  - Use `closure.named('name')` to decorate Closures with human-readable `toString()`
+  - Use `DelegatedClosure` when you want to write a decorator intercepting a 
+    method or two of a wrapped closure.
 - Special Kotlin API
   - Transform Exceptions in more natural way, by adding `throwable.transform {...}`
     extension method. Added few extension methods to the transform builder.
