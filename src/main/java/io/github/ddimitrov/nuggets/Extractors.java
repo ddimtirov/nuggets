@@ -282,28 +282,7 @@ public class Extractors {
     public static @NotNull Field getAccessibleField(@NotNull Class<?> type, @Identifier @NotNull String fieldName, boolean checkSuperclasses) {
         try {
             Field field = type.getDeclaredField(fieldName);
-            field.setAccessible(true);
-
-            int modifiers = field.getModifiers();
-            if (!Modifier.isStatic(modifiers) || !Modifier.isFinal(modifiers)) {
-                return field;
-            }
-
-            // the rest of the method deals with static final fields - should be a rare use case
-            // http://zarnekow.blogspot.jp/2013/01/java-hacks-changing-final-fields.html
-            // http://www.cliffc.org/blog/2011/10/17/writing-to-final-fields-via-reflection
-            // http://www.cliffc.org/blog/2011/10/27/final-fields-part-2
-            Field modifiersField = field.getClass().getDeclaredField("modifiers");
-            boolean modifiersWasAccessible = modifiersField.isAccessible();
-            try {
-                modifiersField.setAccessible(true);
-                modifiersField.setInt(field, modifiers & ~Modifier.FINAL);
-                field.set(null, field.get(null)); // force the creation of accessor
-            } finally {
-                modifiersField.setInt(field, modifiers);
-                modifiersField.setAccessible(modifiersWasAccessible);
-            }
-
+            forceAccessible(field);
             return field;
         } catch (NoSuchFieldException e) {
             Class<?> superclass = type.getSuperclass();
@@ -311,6 +290,35 @@ public class Extractors {
                     ? doSneakyThrow(e)
                     : getAccessibleField(superclass, fieldName, true);
         } catch (IllegalAccessException e) { return doSneakyThrow(e); }
+    }
+
+    /**
+     * Makes {@code field} accessible, even if it was static final.
+     * Use with care (that's why it's private).
+     * @param field to be made accessible.
+     * @return true if we had to hack the static-final case.
+     */
+    private static boolean forceAccessible(Field field) throws NoSuchFieldException, IllegalAccessException {
+        field.setAccessible(true);
+
+        int modifiers = field.getModifiers();
+        if (!Modifier.isStatic(modifiers) || !Modifier.isFinal(modifiers)) return false;
+
+        // the rest of the method deals with static final fields - should be a rare use case
+        // http://zarnekow.blogspot.jp/2013/01/java-hacks-changing-final-fields.html
+        // http://www.cliffc.org/blog/2011/10/17/writing-to-final-fields-via-reflection
+        // http://www.cliffc.org/blog/2011/10/27/final-fields-part-2
+        Field modifiersField = field.getClass().getDeclaredField("modifiers");
+        boolean modifiersWasAccessible = modifiersField.isAccessible();
+        try {
+            modifiersField.setAccessible(true);
+            modifiersField.setInt(field, modifiers & ~Modifier.FINAL);
+            field.set(null, field.get(null)); // force the creation of accessor
+        } finally {
+            modifiersField.setInt(field, modifiers);
+            modifiersField.setAccessible(modifiersWasAccessible);
+        }
+        return true;
     }
 
     /**
@@ -676,6 +684,9 @@ public class Extractors {
             while (type!=null && type !=stop) {
                 for (T it : extractor.apply(type)) {
                     it.setAccessible(true);
+                    if (it instanceof Field) {
+                        forceAccessible((Field) it);
+                    }
                     processor.process(it);
                 }
                 type = type.getSuperclass();
