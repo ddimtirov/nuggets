@@ -18,7 +18,7 @@ plugins {
     id 'com.gradle.build-scan' version '1.0'
     id "com.jfrog.artifactory" version "4.4.8" // update periodically
     id "com.jfrog.bintray" version "1.7.2"
-    id "net.ltgt.errorprone" version "0.0.8"
+    id "net.ltgt.errorprone" version "0.0.8" apply false // FIXME: coverity doesn't like it
     id "org.standardout.versioneye" version "1.4.0"
     id "com.zoltu.kotlin" version "1.0.6" // TODO: this is republished from org.jetbrains.kotlin:kotlin-gradle-plugin - replace with first party when available
 //    id "org.jetbrains.dokka" version "0.9.12-dev-1" TODO: update when works
