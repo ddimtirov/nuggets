@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "ddimtirov/nuggets" ] && [ "$TRAVIS_JDK_VERSION" == "oraclejdk8" ]; then
+if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "ddimtirov/nuggets" ] && [ "$TRAVIS_JDK_VERSION" == "oraclejdk8" ]; then
   echo -e "Publishing javadoc...\n"
 
   rm -rf $HOME/docs-latest
