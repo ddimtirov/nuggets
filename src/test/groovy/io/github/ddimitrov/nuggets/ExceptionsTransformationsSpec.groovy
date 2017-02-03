@@ -331,12 +331,17 @@ class ExceptionsTransformationsSpec extends Specification {
     }
 
     def "filter out useless stack frames inserted by the ConfigSlurper"() {
+        // difficulties to make it work reliably on Windows/Appveyor vs my laptop, so screw EOLs - they've been tested elsewhere
+        def normalizeEol = { String it -> it.replaceAll(~/[\n\r]+/, '\n').replace('\n', System.lineSeparator()) }
+
         setup: "Read this one from a file, as it is too big to quote"
-        def hairyStacktrace = getClass().getResource('ConfigSlurper-stacktrace.txt').text.replace('        ', '\t')
+        def hairyStacktrace = normalizeEol(getClass().getResource('ConfigSlurper-stacktrace.txt').text.replace('        ', '\t'))
         def hairyException = Exceptions.parseStackTrace(hairyStacktrace)
 
-        expect: "the exception onject is properly parsed"
-        Exceptions.toStackTraceString(hairyException)==hairyStacktrace
+        expect: "the exception object is properly parsed"
+        hairyStacktrace.split(System.lineSeparator()).length > 0
+        hairyException.stackTrace.length > 0
+        normalizeEol(Exceptions.toStackTraceString(hairyException))==normalizeEol(hairyStacktrace)
 
         when: "transformed with the default transformer"
         Exceptions.rethrowTransformed(hairyException, true)
@@ -345,10 +350,10 @@ class ExceptionsTransformationsSpec extends Specification {
                 .filterPresetGroovyInternals()
                 .filterPresetGroovyScripts()
                 .build()
-
+        
         then: "get rid of the pesky 'script14794455002432071560243.groovy' with no line number immediately followed by the one with line number"
         Exception e = thrown()
-        Exceptions.toStackTraceString(e)=='''\
+        assert normalizeEol(Exceptions.toStackTraceString(e)) == normalizeEol('''\
         groovy.lang.MissingMethodException: No signature of method: groovy.util.ConfigObject.recManager() is applicable for argument types: (script14794455002432071560243$_run_closure2$_closure4) values: [script14794455002432071560243$_run_closure2$_closure4@34f6515b]
         \tat script14794455002432071560243$_run_closure2.doCall(script14794455002432071560243.groovy:13)
         \tat groovy.util.ConfigSlurper$_parse_closure5.doCall(ConfigSlurper.groovy:256)
@@ -356,16 +361,16 @@ class ExceptionsTransformationsSpec extends Specification {
         \tat groovy.util.ConfigSlurper$_parse_closure5.doCall(ConfigSlurper.groovy:268)
         \tat groovy.util.ConfigSlurper.parse(ConfigSlurper.groovy:286)
         \tat groovy.util.ConfigSlurper.parse(ConfigSlurper.groovy:170)
-        '''.stripIndent().replace("\n", System.lineSeparator())
+        '''.stripIndent())
     }
-    def "suppressed exceptions are filtered as with the same settings nad can not be suppressed (bad idea IMHO)"() {
-        setup:
+    def "suppressed exceptions are filtered with the same settings as the top exception"() {
+        setup: 'a transformation unwrapping RuntimeException (RTE) and stripping the whole stack-trace'
         def transformer = new ExceptionTransformerBuilder()
                 .unwrapThese(RuntimeException)
                 .replaceStackTrace { new StackTraceElement[0] } // remove stacks to reduce verbosity
                 .build()
 
-        when:
+        when: 'we transform RTE(causedBy: suppressor); suppressor being RTE(suppressed: [ISE, ISE(causedBy: RTE(causedBy: ISE))])'
         def suppressor = new RuntimeException()
         suppressor.addSuppressed(new IllegalStateException())
         suppressor.addSuppressed(new IllegalStateException(
@@ -380,7 +385,7 @@ class ExceptionsTransformationsSpec extends Specification {
                 )
         ))
 
-        then:
+        then: 'we expect all RTEs bellow the top-one to be filtered out'
         Exceptions.toStackTraceString(transformed).replace(System.lineSeparator(), '\n') ==
                 '''java.lang.RuntimeException
                    \tSuppressed: java.lang.IllegalStateException

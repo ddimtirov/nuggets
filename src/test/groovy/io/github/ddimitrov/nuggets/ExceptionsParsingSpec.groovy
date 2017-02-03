@@ -82,6 +82,7 @@ class ExceptionsParsingSpec extends Specification {
 
         when: 'we parse an unknown exception class'
         def reversed = Exceptions.parseStackTrace(stacktrace)
+        reversed.stackTrace.length > 0
 
         then: 'we substitute with a surrogate exception'
         reversed.class == MissingClassSurrogateException
@@ -126,7 +127,7 @@ class ExceptionsParsingSpec extends Specification {
         '''.stripIndent().replace("\n", EOL)
 
         when: def reversed = Exceptions.parseStackTrace(hairyStack)
-        then: Exceptions.toStackTraceString(reversed) == hairyStack
+        then: Exceptions.toStackTraceString(reversed) == hairyStack & reversed.stackTrace.length > 0
     }
 
     @IgnoreIf({Extractors.getClassIfPresent('groovy.lang.MissingMethodException')==null})
@@ -141,6 +142,7 @@ class ExceptionsParsingSpec extends Specification {
 
         when:
         def reversed = Exceptions.parseStackTrace(hairyStack)
+        reversed.stackTrace.length > 0
 
         then:
         Exceptions.toStackTraceString(reversed) == hairyStack
