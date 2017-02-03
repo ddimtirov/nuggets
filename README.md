@@ -2,7 +2,8 @@
 only non-trivial features, especially ones that I find I have needed repeatedly,
 as well as features that make code easier to read and maintain. 
 
-[![Build Status](https://travis-ci.org/ddimtirov/nuggets.svg?branch=master)](https://travis-ci.org/ddimtirov/nuggets)
+[![Linux/OSX Build](https://travis-ci.org/ddimtirov/nuggets.svg?branch=master)](https://travis-ci.org/ddimtirov/nuggets)
+[![Windows Build](https://ci.appveyor.com/api/projects/status/uruwl3u6eynnpok9/branch/master?svg=true)](https://ci.appveyor.com/project/ddimtirov/nuggets/branch/master)
 [![Codacy Grade](https://api.codacy.com/project/badge/Grade/0951cb36db314ff1bf69646402f4b988)](https://www.codacy.com/app/dimitar-dimitrov/nuggets?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ddimtirov/nuggets&amp;utm_campaign=Badge_Grade)
 [![Codacy Coverage](https://api.codacy.com/project/badge/Coverage/0951cb36db314ff1bf69646402f4b988)](https://www.codacy.com/app/dimitar-dimitrov/nuggets?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ddimtirov/nuggets&amp;utm_campaign=Badge_Coverage)
 [![codecov](https://codecov.io/gh/ddimtirov/nuggets/branch/master/graph/badge.svg)](https://codecov.io/gh/ddimtirov/nuggets) 
