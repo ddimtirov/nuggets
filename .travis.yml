@@ -27,6 +27,16 @@ matrix:
         - os: osx
           osx_image: xcode8.2
           script: ./gradlew build javadoc --continue --stacktrace --no-daemon --profile -Dscan
+        - os: linux
+          sudo: required
+          jdk: oraclejdk9
+          dist: trusty
+          script:
+             - export GRADLE_OPTS=--add-opens java.base/java.lang=ALL-UNNAMED
+             - ./gradlew build javadoc --continue --stacktrace --no-daemon --profile -Dscan
+    allow_failures:
+        - jdk: oraclejdk9
+
 
 env:
   global:
