@@ -584,12 +584,15 @@ scan_loop:
                 i++;
                 String duplicateFramesStr = more.group(1);
                 int duplicateFrames = Integer.parseInt(duplicateFramesStr);
-                StackTraceElement[] causedStackTrace = caused.peekLast().getStackTrace();
-                stackTraceAccumulator.addAll(Arrays.asList(Arrays.copyOfRange(
-                        causedStackTrace,
-                        causedStackTrace.length-duplicateFrames,
-                        causedStackTrace.length
-                )));
+                Throwable lastCaused = caused.peekLast();
+                if (lastCaused!=null) {
+                    StackTraceElement[] causedStackTrace = lastCaused.getStackTrace();
+                    stackTraceAccumulator.addAll(Arrays.asList(Arrays.copyOfRange(
+                            causedStackTrace,
+                            causedStackTrace.length-duplicateFrames,
+                            causedStackTrace.length
+                    )));
+                }
             }
         }
 
