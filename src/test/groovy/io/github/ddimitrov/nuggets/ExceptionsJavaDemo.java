@@ -30,6 +30,19 @@ import static io.github.ddimitrov.nuggets.Exceptions.rethrow;
 
 public class ExceptionsJavaDemo {
     /**
+     * <p>The standard Java way of rethrowing checked exceptions.</p>
+     */
+    public static long quietFileSizeClassic(File f) {
+        // tag::rethrowClassic[]
+        try {
+            return Files.size(f.toPath()); // <1>
+        } catch (IOException e) {
+            throw new RuntimeException(e); // <2>
+        }
+        // end::rethrowClassic[]
+    }
+
+    /**
      * <p>Demonstrates how to rethrow a checked exception with minimum fuss,
      * without declaring or wrapping it.</p>
      *
@@ -37,11 +50,23 @@ public class ExceptionsJavaDemo {
      * of {@code rethrow()} as return value.</p>
      */
     public static long quietFileSize(File f) {
+        // tag::rethrowNoWrap[]
         try {
-            return Files.size(f.toPath()); // throws IOException
+            return Files.size(f.toPath()); // <1>
         } catch (IOException e) {
-            return rethrow(e);
+            return rethrow(e); // <2> <3>
         }
+        // end::rethrowNoWrap[]
+    }
+
+    /**
+     * <p>Demonstrates how to rethrow a checked exception with even less fuss,
+     * without declaring or wrapping it.</p>
+     */
+    public static long quietFileSizeClosure(File f) {
+        // tag::rethrowLambda[]
+        return rethrow(() -> Files.size(f.toPath()));
+        // end::rethrowLambda[]
     }
 
     /**
@@ -95,20 +120,25 @@ public class ExceptionsJavaDemo {
      * within a non-throwing lambda (i.e. {@link Stream#filter(Predicate)}.
      */
     public static Collection<File> findLongerThan(Collection<File> c, int scale) {
+        // tag::rethrowStream[]
         return c.stream()
-                .filter(it -> rethrow(() ->             // the rethrow decorator reinterprets the IOException as unchecked
-                        Files.size(it.toPath()) > scale // Files.size() and File.toPath() throw IOException
-                ))
+                .filter(it -> rethrow(() -> Files.size(it.toPath()) > scale)) // <1> <2>
                 .collect(Collectors.toList());
+        // end::rethrowStream[]
     }
 
     public static Collection<File> assureAllFresh(Collection<File> c) {
+        // tag::rethrowForEach[]
         c.forEach(it -> rethrow(() -> processFile(it)));
+        // end::rethrowForEach[]
         return c;
     }
 
+    // FIXME: use the new retval and retnul methods
     public static <T> T assureFresh(File f, T retval) {
-        return rethrow(() -> processFile(f), retval);
+        // tag::rethrowReturnFixed[]
+        return rethrow(() -> processFile(f), retval); // <1>
+        // end::rethrowReturnFixed[]
     }
     public static void processFile(File f) throws Exception {
         if (!f.createNewFile()) throw new IOException(f + " not created");

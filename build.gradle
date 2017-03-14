@@ -22,6 +22,7 @@ plugins {
     id "org.standardout.versioneye" version "1.4.0"
     id "org.jetbrains.kotlin.jvm" version "1.1.1"
 //    id "org.jetbrains.dokka" version "0.9.13" // TODO: update when works
+    id "org.asciidoctor.gradle.asciidoctor" version "1.5.1"
     id 'com.github.ben-manes.versions' version '0.14.0' // gradlew dependencyUpdates
     id "java-library"
     id "groovy"

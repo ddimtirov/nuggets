@@ -1,0 +1,33 @@
+Checked exceptions considered harmful::
+ Traditional wisdom is to use checked exceptions for scenarios that the library writer thinks the
+ clients ought to be able to recover from. In practice it turns out that their usefulness changes
+ with the size and the age of the project - in particular, checked exceptions inhibit the natural
+ evolution of your API by making both unwarranted guarantees and assumptions for the future. This
+ has been explored at length by Bruce Eckel, Anders Hejsberg and others (see
+ https://kotlinlang.org/docs/reference/exceptions.html#checked-exceptions[the Excepptions section
+ in Kotlin's documentation] for a sourced list of references).
+Wrapping exceptions at domain boundaries::
+ It is a standard Java idiom to catch all checked (and sometimes all unchecked) exceptions at a
+ layer boundary and rethrow them wrapped in another layer-specific exception, providing extra
+ context. While not a 100% bad practice (assuming you don't log before rethrowing each time), often
+ the wrapping is done just to convert the exception to unchecked and not providing any extra info.
+ On the other hand, reading these stack traces quickly becomes tedious, and the further away one is
+ from the source, the more the error condition is obscured and the less our chance to recover. I say
+ it is better to just let the original exception bubble up until a generic handler at the top of the
+ thread stack catches it (see also the https://www.google.com/search?q=let+it+crash[Let it Crash] model)
+Million little functions in a stacktrace::
+ As software we are thought that carving code into small functions and giving each one a name is a
+ Good Thing(TM). Only once our software is in production and we receive a stack trace spanning three
+ printed pages we may realize that benefits may not be so clear cut (actually that was _the bad_, and here
+ is http://250bpm.com/blog:86[_the ugly_]). In the end, depending on the context, when we throw an
+ exception it would make it easier if we could strip our internal stack-frames and just leave the
+ ones that help in troubleshooting. This is twice as important when one is writing a library.
+Nested catch blocks/fallbacks::
+ _"Try to calculate `foo` - if it fails, try to calculate `foo` in another way - if it fails, try to
+ calculate `foo` in another way..."_ This scenario is common in a typical application, yet there is
+ no good way to structure it without indentation getting out of hand, introducing mutable, nullable
+ variables or introducing a lot of unnecessary variables.
+Lambdas look good in code, but are totally opaque when printed::
+ Lambdas are one of the nice things to happen to Java - they look nice, feel nice and print
+ horribly, especially when there is more than one lambda defined within a method or when we pass
+ lambda values around.

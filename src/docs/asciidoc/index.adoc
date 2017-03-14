@@ -1,0 +1,265 @@
+= `nuggets` - just the way I like it (aha aha)
+Dimitar Dimitrov <dimitar.dimitrov@gmail.com>
+v0.3.0 - 2017.03.12
+:toc:
+:sectanchors:
+:sectlinks:
+:numbered:
+:source-highlighter: highlightjs
+:source-language: java
+:srcDir: ../../../src
+:testPkgDir: {srcDir}/test/groovy/io/github/ddimitrov/nuggets
+:icons: font
+
+
+The `nuggets` library implements some utilities that can help you write a more concise and readable
+Java code. It also helps making other people's crappy code work by cutting through the API, and
+reaching straight to their `privates` and `finals` and setting them straight.
+
+Finally, it contains `Ports` and `TextTable`, which are two larger utility classes that are still
+not large enough to set as projects on their own - feel free to rip them out - they are self
+contained and nothing depends on them.
+
+== Common Sense
+A lot of the `nuggets` functionality runs counter to the received wisdom of "Java best practices".
+Yes I know, I've also read Sun's "Java Code Conventions", Josh Bloch's writings, countless pattern,
+design and process books and in the end made a full circle to "use common sense and make your code
+as easy to understand as possible".
+
+When Parnas was talking about about modules and information hiding, he was concerned with clarity
+of design, not with enforcing some rules. When Knuth was laying out his thoughts on literate
+programming I am pretty sure he didn't mean mile-long variable names and
+`AbstractFactoryRegistryHandlerManager` classes. Somewhere along the way, while trying to formalize
+best practices, so we can make it (ostensibly) easier to stay the path, we managed to create a lot
+of unwarranted accidental complexity.
+
+== Use Cases
+Here are some itches that I am scratching with the `nuggets` library:
+
+include::use_cases.adoc[]
+
+== Exceptions
+
+=== Rethrowing as Unchecked
+The most frequently used facility of the Exceptions class is the
+`rethrow(...)` methods. They are used in cases when one would like
+to bubble up checked exception, but not expose it in th interface.
+The typical use case is as follows:
+
+[source,indent=0]
+.Wrapping and rethrowing
+----
+include::{testPkgDir}/ExceptionsJavaDemo.java[tags=rethrowClassic]
+----
+<1> This line throws a checked IOException
+<2> Here we wrap the exception for the sake of rethrowing it
+
+Using `rethrow()` we can rewrite the above method as follows:
+
+[source,indent=0]
+.Casting away "checkedness"
+----
+        import static io.github.ddimitrov.nuggets.Exceptions.rethrow;
+
+        ...
+
+include::{testPkgDir}/ExceptionsJavaDemo.java[tags=rethrowNoWrap]
+----
+<1> This line throws a checked IOException
+<2> This is how we rethrow the same checked exception without wrapping it,
+    in effect casting away the "checkedness".
+<3> Note that we can use the `rethrow()` method in `return` position,
+    appeasing the compiler definite-return checks.
+
+We can see that in comparison, the code is not too different, but the latter
+is more concise and communicates the rethrowing intent a bit better,
+creates less messier stacktraces, preserves the exception type making it easier
+to catch in top-level exception handler and performs better as it does not have to
+populate the stacktrace multiple times.
+
+By then we could do even more concise:
+
+[source,indent=0]
+.Using lambda to avoid try catch
+----
+include::{testPkgDir}/ExceptionsJavaDemo.java[tags=rethrowLambda]
+----
+
+This is especially useful when combined with the classes in `java.util.function` such as
+follows:
+
+[source,indent=0]
+.Iterating using `forEach` with `processFile()` throwing exception
+----
+include::{testPkgDir}/ExceptionsJavaDemo.java[tags=rethrowForEach]
+----
+
+[source,indent=0]
+.Using lambda rethrows with streams
+----
+include::{testPkgDir}/ExceptionsJavaDemo.java[tags=rethrowStream]
+----
+<1> `Files.size()` and `File.toPath()` throw IOException
+<2> Wrapping the throwing expression in `rethrow(()-> ... )` allows us to use it as stream filter
+
+=== Transforming Exceptions
+
+One reason quoted for wrapping exceptions at domain boundaries is that it allows us to capture
+extra domain context. As loudable as that
+
+// TODO: rethrow with message enrichment, transformers
+
+== Extractors
+
+The `Extractors` class provides utilities for <<encapsulation,circumventing Java encapsulation>>,
+as well as building blocks for <<di,custom dependency injection>>. It mainly centers around patterns
+for using the Java Reflection API.
+
+TIP: All functions provided by this class are threadsafe.
+
+TIP: Names of methods are chosen, so there is less chance to conflict if imported statically.
+
+[[encapsulation]]
+=== Breaking Encapsulation
+
+If you need to access non-public or final members of a class, you may use
+`Extractors.peekField(target, fieldName, valueType)` and `Extractors.pokeField(target, fieldName, value)`
+to bypass the Java encapsulation with minimal fuss.
+
+[source,java]
+-----
+// swap the date format of existing object
+SimpleDateFormat sdf = Extractors.peekField(service, "dateFormat", SimpleDateFormat.class);
+Extractors.pokeField(sdf, "pattern", "yyyy/MM/dd");
+-----
+
+
+To access static members, just pass `null` for the fist parameter.
+
+[source,java]
+-----
+// get access to Unsafe
+public static final Unsafe UNSAFE = Extractors.peekField(Unsafe.class, null, "theUnsafe", Unsafe.class); // <1>
+-----
+
+
+If the field you want to access is shadowed by a field with the same name in a subclass,
+you can pass an extra `targetType` argument immediately after the target.
+
+[source,java]
+-----
+class Foo             { public long qux=1; }
+class Bar extends Foo { public long qux=2; }
+
+Bar o = new Bar()
+assert peekField(o, 'qux', Long.class)==2;               // <1>
+assert peekField(o, Bar.class, 'qux', Long.class)==2;    // <2>
+assert peekField(o, Foo.class, 'qux', Long.class)==1;    // <3>
+-----
+
+1. Get the value of the default `qux` field that is visible from the `target` param (equivalent to `o.qux`)
+2. Explicitly get the value of `Bar.qux` (in this case it is the same as the previous)
+3. Explicitly get the shadowed value `Foo.qux` which is shadowed and not accessible externally by standard Java means.
+
+
+In case you need to access  shadowed fields (i.e., field with the same name defined multiple times in
+the inheritance hierarchy, make sure you specify `targetType` to be a class where the field is
+declared (or at least visible according to the Java rules).
+
+Both `peekField()`/`pokeField()` are going through the full reflection API to resolve the
+field and assert security permissions for breaking the encapsulation. If you are repeatedly accessing the
+same fields, you can improve the performance at the expense of slightly more verbose code by using
+{@link #getAccessibleField(Class, String, boolean) getAccessibleField(type, fieldName, checkSuperclasses)}
+directly as follows:
+
+[source,java]
+-----
+ // cache these
+ private static final Field dateFormatField = Extractors.getAccessibleField(MyService.class, "dateFormat", true);
+ private static final Field formatPatternField = Extractors.getAccessibleField(SimpleDateFormat.class, "pattern", true);
+
+ // swap the date format of existing object (fast)
+ try {
+     SimpleDateFormat sdf = (SimpleDateFormat) dateFormatField.get(service));
+     formatPatternField.set(sdf, "yyyy/MM/dd");
+ } catch (IllegalAccessException e) {
+     Exceptions.rethrow(e);
+ }
+-----
+
+===
+ * <h2 id="di">Instantiation and injection utils</h2>
+ * <p>Sometimes, especially when we write a library, we may need to provide some functionality
+ * if certain library is present and provide a fall-back or even omit it, if it isn't.
+ * This is easy to do by using {@link #getClassIfPresent(String) getClassIfPresent(className)}: </p>
+ *
+ * <pre><code>
+ * templateResolver = Extractors.getClassIfPresent("groovy.lang.GroovyObject")
+ *     ? new GroovyTemplateResolver()
+ *     : new SimpleResolver("${", "}");
+ * </code></pre>
+ *
+ * <p>At times we would like some kind of DI functionality, but without bringing in a full-blown
+ * DI container, such as Guice, Dagger or Pico. This is when {@link #findInjectableConstructor(boolean, Constructor...)}
+ * and {@link #findInjectableMethods(Method...)} come handy. Once you find the things you want to invoke,
+ * you may easily assemble a signature using {@link #autowireByType(Executable, Function)} as follows:</p>
+ *
+ * <pre><code>
+ * public class SimpleDi {
+ *     private Map&lt;Class, Object&gt; instances = new HashMap&lt;&gt;();
+ *
+ *     public &lt;T&gt; void bindSingleton(Class&lt;T&gt; type, T implementation)  {
+ *         instances.put(type, implementation);
+ *     }
+ *
+ *     public &lt;T&gt; Collection&lt;T&gt; instancesOf(Class&lt;T&gt; type) {
+ *         return instances.values().stream()
+ *                         .filter(it -&gt; type.isAssignableFrom(it.getClass()))
+ *                         .map(type::cast)
+ *                         .collect(Collectors.toSet());
+ *     }
+ *
+ *     public &lt;T&gt; T instantiate(Class&lt;T&gt; type) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+ *         if (instances.containsKey(type)) { //noinspection unchecked
+ *             return (T) instances.get(type);
+ *         } else {
+ *             instances.put(type, null); // prevent instantiation loops
+ *         }
+ *
+ *         Function&lt;Class&lt;?&gt;, Object&gt; paramResolver = t -&gt; Exceptions.rethrow(() -&gt; {
+ *             Object defaultValue = Extractors.defaultValue(t);
+ *             return defaultValue == null ? instantiate(t) : defaultValue;
+ *         });
+ *
+ *         if ((type.getModifiers() &amp; (Modifier.ABSTRACT | Modifier.INTERFACE)) != 0) {
+ *             throw new InstantiationException("Only concrete classes supported!");
+ *         }
+ *         // instantiate object
+ *         Constructor&lt;T&gt; constructor = Extractors.findInjectableConstructor(false, type.getConstructors());
+ *         Object[] args = Extractors.autowireByType(constructor, paramResolver);
+ *         T instance = constructor.newInstance(args);
+ *         instances.put(type, instance);
+ *
+ *         // call methods annotated with @Inject
+ *         for (Method method : Extractors.findInjectableMethods(type.getMethods())) {
+ *             method.invoke(instance, Extractors.autowireByType(method, paramResolver));
+ *         }
+ *
+ *         return instance; // fully constructed and initialized
+ *     }
+ * } *
+ * ...
+ * // usage to bootstrap an app with plugin strategies and lifecycle management
+ * di = new SimpleDi();
+ * xyzzy = new XyzzyServiceImpl();
+ * di.bindSingleton(IXyzzyService.class, xyzzy);
+ * di.bindSingleton(IFooBarStrategy.class, new FooBarLocalImpl());
+ * app = di.instantiate(Application.class);
+ * di.instancesOf(XyzzyListener.class).forEach(it -&gt; xyzzy.addListener(it))
+ * app.run();
+ * di.instancesOf(Closeable.class).forEach(Closeable::close);
+ * app.shutdown();
+ * </code></pre>
+
+== Functions
+== Text Table
