@@ -21,10 +21,12 @@ import groovy.lang.DelegatesTo;
 import io.github.ddimitrov.nuggets.ExceptionTransformerBuilder;
 import io.github.ddimitrov.nuggets.Extractors;
 import io.github.ddimitrov.nuggets.Functions;
+import io.github.ddimitrov.nuggets.Ports;
 import org.intellij.lang.annotations.Identifier;
 import org.intellij.lang.annotations.Pattern;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -38,7 +40,7 @@ public class NuggetsExtensions {
      * @param transformationSpec a spec closure that will be run on {@link ExceptionTransformerBuilder} delegate.
      * @return the transformed exception - typically we would throw or log that.
      */
-    public static Throwable transform(Throwable self, @DelegatesTo(ExceptionTransformerBuilder.class) Closure<?> transformationSpec) {
+    public static @NotNull Throwable transform(@NotNull Throwable self, @NotNull @DelegatesTo(ExceptionTransformerBuilder.class) Closure<?> transformationSpec) {
         ExceptionTransformerBuilder builder = new ExceptionTransformerBuilder();
         transformationSpec.setDelegate(builder);
         transformationSpec.call();
@@ -84,6 +86,16 @@ public class NuggetsExtensions {
     }
 
     private static final java.util.regex.Pattern validName = java.util.regex.Pattern.compile(Functions.VALID_NAME_PATTERN);
+    /**
+     * Decorates a closure with a static {@code toString()} implementation.
+     * Because the actual value is supplied statically, the closure description is fixed - if you
+     * need more control, check {@link #named(Closure, Supplier)}.
+     *
+     * @param self the {@code Closure} instance
+     * @param name the name or description of the closure
+     * @param <T> the closure return type
+     * @return the decorated closure
+     */
     public static <T> @NotNull Closure<T> named(
             @NotNull Closure<T> self,
             @NotNull @Pattern(Functions.VALID_NAME_PATTERN) String name
@@ -99,7 +111,17 @@ public class NuggetsExtensions {
         return new NamedClosure();
     }
 
-    public static <T> Closure<T> named(@NotNull Closure<T> self, Supplier<?> nameSupplier) {
+    /**
+     * Decorates a closure with a dynamic, user-controlled {@code toString()} implementation.
+     * Because the actual value is supplied by supplier, the closure description can reflect
+     * up-to-date status.
+     *
+     * @param self the {@code Closure} instance
+     * @param nameSupplier code to calculate the current name of the closure
+     * @param <T> the closure return type
+     * @return the decorated closure
+     */
+    public static <T> @NotNull Closure<T> named(@NotNull Closure<T> self, @NotNull Supplier<?> nameSupplier) {
         class DescribedClosure extends DelegatedClosure<T> {
             private static final long serialVersionUID = -3060677360371749062L;
             public DescribedClosure() { super(self); }
@@ -108,5 +130,44 @@ public class NuggetsExtensions {
         return new DescribedClosure();
     }
 
+    /**
+     * Array index notation for getting the ports corresponding to a registered ID.
+     * @param self the {@code Ports} instance
+     * @param id registered port ID
+     * @return the allocated port
+     */
+    public static int getAt(@NotNull Ports self, @NotNull String id) {
+        return self.port(id);
+    }
+
+    /**
+     * Similar to {@link Ports#withPorts(int, Consumer)}, except that you can use
+     * the closure delegate and avoid repeating {@code it} for every declaration.
+     *
+     * <pre><code>
+     * ports.withPortSpec(5000) {
+     *     id "foo"
+     *     id "bar" offset 1
+     *     id "baz"
+     * }
+     * </code></pre>
+     *
+     * @param self the {@code Ports} instance
+     * @param portBaseHint the desired starting port for the allocated port range
+     * @param spec a closure as shown in the example.
+     * @return the ports instance for chaining
+     */
+    public static @NotNull Ports withPortSpec(
+            @NotNull Ports self,
+            int portBaseHint,
+            @NotNull @DelegatesTo(value = Ports.PortsSpecBuilder.class, strategy = Closure.DELEGATE_FIRST) Closure<?> spec
+    ) {
+        Ports.PortsSpecBuilder delegate = self.new PortsSpecBuilder();
+        spec.setDelegate(delegate);
+        spec.setResolveStrategy(Closure.DELEGATE_FIRST);
+        spec.call(self);
+        delegate.flush();
+        return self.freeze(portBaseHint);
+    }
 }
 

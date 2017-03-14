@@ -18,7 +18,9 @@ package io.github.ddimitrov.nuggets.internal.kotlin
 
 import io.github.ddimitrov.nuggets.ExceptionTransformerBuilder
 import io.github.ddimitrov.nuggets.Extractors
+import io.github.ddimitrov.nuggets.Ports
 import io.github.ddimitrov.nuggets.TextTable
+import java.net.InetAddress
 import kotlin.reflect.KClass
 
 /**
@@ -179,3 +181,39 @@ inline fun <reified R: Any> R.pokeField(fieldName: String, value: Any?) =
  */
 fun TextTable.LayoutBuilder.col(columnName: String, config: TextTable.Column.()->Unit): TextTable.LayoutBuilder =
         column(columnName) { it.config() }
+
+/**
+ * A convenient factory method creates a ports allocator with block registrar and default dynamic port allocation strategy.
+ * This allocator will try to bind a port at `lockOffset` and if successful will assume that the whole block is available
+ * and use that block to allocate all ports based on specified offsets.
+ *
+ * @param portRangeSize the desired size of the allocated block. This determines at what offset will be the next block.
+ * @param lockOffset the offset of the port that we will bind in order to lock the range. Relative to the range base port.
+ *                   Valid values are `-1..portRangeSize`
+ * @param bindAddress the address which we would use for locking the range.
+ */
+fun portsBlock(portRangeSize: Int, lockOffset: Int = portRangeSize, bindAddress: InetAddress = InetAddress.getLocalHost())
+        = Ports(Ports.BlockRegistrar(bindAddress, portRangeSize, lockOffset))
+
+/**
+ * DSL alternative to `PortsSpecBuilder.id(String)` to be used as follows:
+ * ```
+ * ports.withPorts(5000) { reserve ->
+ *   reserve port "foo"
+ *   reserve port "baz"
+ * }
+ * ```
+ */
+infix fun Ports.SpecIdBuilder.port(id: String) = this.id(id)
+
+/**
+ * DSL alternative to `PortsSpecBuilder.offset(String)` to be used as follows:
+ * ```
+ * ports.withPorts(5000) { reserve ->
+ *   reserve port "foo" at 2
+ *   reserve port "bar" at 5
+ *   reserve port "baz"
+ * }
+ * ```
+ */
+infix fun Ports.SpecOffsetBuilder.at(portOffset: Int) = offset(portOffset)

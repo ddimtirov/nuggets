@@ -17,4 +17,4 @@
 moduleName = nuggets-module
 moduleVersion = 0.1.0
 extensionClasses=io.github.ddimitrov.nuggets.internal.groovy.NuggetsExtensions
-#staticExtensionClasses=io.github.ddimitrov.nuggets.internal.groovy.NuggetsStaticExtensions
+staticExtensionClasses=io.github.ddimitrov.nuggets.internal.groovy.NuggetsStaticExtensions

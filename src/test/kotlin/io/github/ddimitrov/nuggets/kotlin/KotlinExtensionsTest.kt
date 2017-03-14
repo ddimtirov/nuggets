@@ -50,7 +50,7 @@ class KotlinExtensionsTest {
         }
     }
 
-    @Test fun reflectionAccess() : Unit {
+    @Test fun reflectionAccess() {
         val d = Time(42)
 
         val dss1: Int = Date::class.java.peekStaticField("defaultCenturyStart")
@@ -89,5 +89,16 @@ class KotlinExtensionsTest {
                             |+-----+-----+-----+--------+----------+
 
                          """.trimMargin().replace("\n", System.lineSeparator()))
+    }
+
+    @Test fun ports() {
+        // typically one would keep the ports block open and close it only when its not needed anymore
+        portsBlock(10).withExporter { id, port ->
+            if (id!="") System.getProperty("ports.$id", "$port")
+        }.withPorts(5000) { reserve ->
+            reserve port "foo"
+            reserve port "bar" at 5
+            reserve port "baz"
+        }.close()
     }
 }
