@@ -48,6 +48,9 @@ ext.'versioneye.projectid'='57d2624987b0f6003c14ac1e'
 versioneye {
     dependencies = transitive
     includePlugins = false
-    exclude 'errorprone', 'findbugs', 'pmd', 'jacocoAgent', 'jacocoAnt' // tools
-    exclude 'testCompileOnly', 'testCompile', 'testCompileClasspath', 'testRuntime' // tests
+    exclude 'errorprone', 'findbugs', 'findbugsPlugins', 'pmd', 'jacocoAgent', 'jacocoAnt' // tools
+    exclude 'testCompileOnly', 'testCompile', 'testCompileClasspath', 'testRuntime', 'kaptTest', 'testRuntimeClasspath' // tests
+
+    // workaround for https://github.com/stempler/gradle-versioneye-plugin/issues/34
+    exclude configurations.findAll { !it.canBeResolved }*.name as String[]
 }

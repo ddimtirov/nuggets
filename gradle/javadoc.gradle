@@ -21,6 +21,15 @@ javadoc {
         linksOffline 'http://javadox.com/org.jetbrains/annotations/15.0/', 'gradle/javadocs/jetbrains-annotations'
         stylesheetFile file('gradle/javadocs/stylesheet.css')
         addStringOption('Xdoclint:all,-reference', '-quiet') // we report a few exceptions not declared on methods
+
+        // Workaround for Java standard Doclet all of a sudden starting to throw errors in 8u121
+        // if Javadocs header or footer contain scripts.
+        // see https://github.com/gradle/gradle/issues/1393, http://bugs.java.com/bugdatabase/view_bug.do?bug_id=JDK-8176089
+        def confImpl = Class.forName('com.sun.tools.doclets.formats.html.ConfigurationImpl').newInstance()
+        if (confImpl.optionLength('--allow-script-in-comments') > 0) {
+            addBooleanOption('-allow-script-in-comments').value = true
+        }
+
         windowTitle = "nuggets API"
         docTitle = "<b>nuggets</b> - loosely coupled utilities for Java 8"
         header = '<a href="https://github.com/ddimtirov/nuggets" target="_top" class="github-corner" aria-label="View source on Github">' +

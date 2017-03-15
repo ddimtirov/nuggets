@@ -23,10 +23,16 @@ configurations.all {
         }
 
         switch (requested.group) {
-            case 'org.spockframework':  return useVersion('1.1-groovy-2.4-rc-3')
-            case 'org.codehaus.groovy': return useVersion('2.4.7')
-            case 'org.jetbrains.kotlin': return useVersion('1.0.6')
-            case 'cglib': return useVersion('3.2.4')
+            case 'org.spockframework':   return useVersion('1.1-groovy-2.4-rc-3')
+            case 'org.codehaus.groovy':  return useVersion('2.4.9')
+            case 'javax.inject':         return useVersion('1')
+            case 'org.jetbrains.kotlin': return useVersion('1.1.1')
+            case 'cglib':                return useVersion('3.2.4')
+            case 'org.jetbrains':
+                switch (requested.name) {
+                    case 'annotations': return useVersion('15.0')
+                }
+                break
         }
     }
 }

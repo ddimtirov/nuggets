@@ -18,7 +18,7 @@ matrix:
             -PbuildInfo.build.number=$TRAVIS_BUILD_NUMBER
             -PbuildInfo.buildUrl=https://travis-ci.org/${TRAVIS_REPO_SLUG}/builds/${TRAVIS_JOB_ID}
             -PbuildInfo.principal=$USER
-            --continue --stacktrace --no-daemon --profile -Dscan ;
+            --continue --stacktrace --no-daemon --profile --scan ;
             fi
           after_success:
             - ./publish-docs-to-github.sh
@@ -39,14 +39,14 @@ matrix:
               branch_pattern: coverity_scan
         - os: osx
           osx_image: xcode8.2
-          script: ./gradlew build javadoc --continue --stacktrace --no-daemon --profile -Dscan
+          script: ./gradlew build javadoc --continue --stacktrace --no-daemon --profile --scan
         - os: linux
           sudo: required
           jdk: oraclejdk9
           dist: trusty
           script:
              - export GRADLE_OPTS=--add-opens java.base/java.lang=ALL-UNNAMED
-             - ./gradlew build javadoc --continue --stacktrace --no-daemon --profile -Dscan
+             - ./gradlew build javadoc --continue --stacktrace --no-daemon --profile --scan
     allow_failures:
         - jdk: oraclejdk9
 
