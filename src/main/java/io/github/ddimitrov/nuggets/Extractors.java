@@ -692,7 +692,7 @@ public class Extractors {
                 type = type.getSuperclass();
             }
         } catch (Exception e) {
-            Exceptions.rethrow(e);
+            doSneakyThrow(e);
         }
     }
 
