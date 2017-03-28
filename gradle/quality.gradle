@@ -19,8 +19,7 @@ buildScan {
     licenseAgree = 'yes'
 }
 
-if (!System.getenv('COVERITY_SCAN_BRANCH')) {
-    apply plugin:"net.ltgt.errorprone"
+if (pluginManager.hasPlugin("net.ltgt.errorprone")) {
     tasks.withType(JavaCompile) {
         // disable errorprone check - we use this trick in Exceptions
         it.options.compilerArgs << '-Xep:TypeParameterUnusedInFormals:OFF'

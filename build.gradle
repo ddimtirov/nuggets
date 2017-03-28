@@ -30,6 +30,9 @@ plugins {
     id "jacoco"
     id "maven-publish"
 }
+if (!System.getenv('COVERITY_SCAN_BRANCH')) {
+    apply plugin:"net.ltgt.errorprone"
+}
 
 group 'io.github.ddimtirov'
 description 'Loosely coupled utilities for Java 8'
