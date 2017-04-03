@@ -16,6 +16,8 @@
 
 package io.github.ddimitrov.nuggets;
 
+import java.util.Date;
+
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class EncapsulationDomain {
     public static final int inlineableConstantField = 42;
@@ -31,6 +33,8 @@ public class EncapsulationDomain {
         Extractors.pokeField(null, ed, "privateFinalStaticField",new Object());
         Extractors.pokeField(null, ed, "finalStaticField",new Object());
     }
+
+    private long foo(Date a, int b, String c) { return 64; }
 
     public final int finalField;
     private final int privateFinalField;
@@ -63,6 +67,10 @@ public class EncapsulationDomain {
             super(parentFinalField, parentPrivateFinalField);
             this.finalField = finalField;
             this.privateFinalField = privateFinalField;
+        }
+
+        public static int getPublicConstant() {
+            return -inlineableConstantField;
         }
     }
 }

@@ -28,6 +28,7 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 
 /**
@@ -62,7 +63,7 @@ import java.util.function.Predicate;
  * <p>Both {@code peek/pokeField()} are going through the full reflection API to resolve the
  * field and assert security permissions for breaking the encapsulation. If you are repeatedly accessing the
  * same fields, you can improve the performance at the expense of slightly more verbose code by using
- * {@link #getAccessibleField(Class, String, boolean) getAccessibleField(type, fieldName, checkSuperclasses)}
+ * {@link #getAccessibleField(Class, boolean, String) getAccessibleField(type, fieldName, checkSuperclasses)}
  * directly as follows:</p>
  *
  * <pre><code>
@@ -164,14 +165,15 @@ public class Extractors {
      * <p>If you are looking to extract a static field, or would like to get the value of a shadowed field, use the
      * overloaded {@link #peekField(Object, Class, String, Class)}</p>
      *
-     * @param target the object containing the data.
+     * @param target the object containing the data. If you are looking to access a static field
+     *               use the overloaded {@link #peekField(Object, Class, String, Class)}.
      * @param fieldName the name of the field to extract.
      * @param fieldType the expected type of the returned value.
      *
      * @param <T> inferring the return type.
      * @return the extracted value of the requested field
      *
-     * @see #getAccessibleField(Class, String, boolean)
+     * @see #getAccessibleField(Class, boolean, String)
      * @see #peekField(Object, Class, String, Class)
      */
     @Contract(pure=true)
@@ -193,7 +195,7 @@ public class Extractors {
      * @return the extracted value of the requested field.
      * @throws IllegalArgumentException if the {@code fieldType} is a primitive type.
      *
-     * @see #getAccessibleField(Class, String, boolean)
+     * @see #getAccessibleField(Class, boolean, String)
      * @see #peekField(Object, String, Class)
      */
     @Contract(pure=true)
@@ -208,7 +210,7 @@ public class Extractors {
             if (fieldType.isPrimitive()) {
                 throw new IllegalArgumentException("Due to limitations of the Java Reflection API, you need to always use boxed types");
             }
-            Field field = getAccessibleField(type, fieldName, true);
+            Field field = getAccessibleField(type, true, fieldName);
             return fieldType.cast(field.get(target));
         } catch (IllegalAccessException e) { return doSneakyThrow(e); }
     }
@@ -220,11 +222,12 @@ public class Extractors {
      * <p>If you are looking to set a static field, or would like to set the value of a shadowed field, use the
      * overloaded {@link #pokeField(Object, Class, String, Object)}</p>
      *
-     * @param target the object on which to set the field. {@code null} if we are looking to set a static field.
+     * @param target the object on which to set the field. If you are looking to set a static field
+     *               use the overloaded {@link #pokeField(Object, Class, String, Object)}.
      * @param fieldName the name of the field to set.
      * @param value the new value to set.
      *
-     * @see #getAccessibleField(Class, String, boolean)
+     * @see #getAccessibleField(Class, boolean, String)
      * @see #peekField(Object, String, Class)
      * @see #pokeField(Object, Class, String, Object)
      */
@@ -242,7 +245,7 @@ public class Extractors {
      * @param fieldName the name of the field to set.
      * @param value the new value to set.
      *
-     * @see #getAccessibleField(Class, String, boolean)
+     * @see #getAccessibleField(Class, boolean, String)
      * @see #peekField(Object, Class, String, Class)
      * @see #pokeField(Object, String, Object)
      */
@@ -253,11 +256,152 @@ public class Extractors {
             @Nullable Object value
     ) {
         try {
-            Field field = getAccessibleField(type, fieldName, true);
+            Field field = getAccessibleField(type, true, fieldName);
             field.set(target, value);
         } catch (IllegalAccessException e) { doSneakyThrow(e); }
     }
 
+    /**
+     * <p>Invoke an instance method regardless of its visibility, ignoring the return value.
+     * If there are multiple shadowed methods with the given name and signature, invoke the
+     * first found when traversing the inheritance hierarchy starting from the {@code target}'s class,
+     * until {@code Object}. </p>
+     *
+     * <p>NOTE: Due to complexity constraints, for the edge case where multiple overloaded methods
+     * match the {@code args} types and one of the {@code args} is {@code null}, we would invoke the
+     * first matching method, rather than the most specific. This may change in the future.</p>
+     *
+     * @param target the object on which to invoke the method. If you are looking to call a static
+     *               method, use the overloaded {@link #invokeMethod(Object, Class, String, Class, Object...)}.
+     * @param methodName the name of the method to invoke
+     * @param args the method arguments
+     *
+     * @see #getAccessibleField(Class, boolean, String)
+     * @see #peekField(Object, Class, String, Class)
+     * @see #pokeField(Object, String, Object)
+     */
+    public static void invokeMethod(Object target, @Identifier String methodName, Object... args) {
+        invokeMethod(target, target.getClass(), methodName, Void.class, args);
+    }
+
+    /**
+     * <p>Invoke an instance method regardless of its visibility.
+     * If there are multiple shadowed methods with the given name and signature, invoke the
+     * first found when traversing the inheritance hierarchy starting from the {@code target}'s class,
+     * until {@code Object}. </p>
+     *
+     * <p>NOTE: Due to complexity constraints, for the edge case where multiple overloaded methods
+     * match the {@code args} types and one of the {@code args} is {@code null}, we would invoke the
+     * first matching method, rather than the most specific. This may change in the future.</p>
+     *
+     * @param target the object on which to invoke the method. If you are looking to call a static
+     *               method, use the overloaded {@link #invokeMethod(Object, Class, String, Class, Object...)}.
+     * @param methodName the name of the method to invoke
+     * @param retType the type of the method return value
+     * @param args the method arguments
+     *
+     * @see #getAccessibleField(Class, boolean, String)
+     * @see #peekField(Object, Class, String, Class)
+     * @see #pokeField(Object, String, Object)
+     */
+    public static <T> T invokeMethod(Object target, @Identifier String methodName, Class<T> retType, Object... args) {
+        return invokeMethod(target, target.getClass(), methodName, retType, args);
+    }
+
+    /**
+     * <p>Invoke a method regardless of its visibility. If there are multiple shadowed methods with
+     * the given name and signature, invoke the first found when traversing the inheritance hierarchy
+     * starting from the {@code targetType}, until {@code Object}. </p>
+     *
+     * <p>NOTE: Due to complexity constraints, for the edge case where multiple overloaded methods
+     * match the {@code args} types and one of the {@code args} is {@code null}, we would invoke the
+     * first matching method, rather than the most specific. This may change in the future.</p>
+     *
+     * @param target the object on which to invoke the method. {@code null} if we are looking to call a static method.
+     * @param targetType the type from which to start the search for the method. See {@link #getAccessibleMethod(Class, boolean, String, Class[])} for the precise meaning.
+     * @param methodName the name of the method to invoke
+     * @param retType the type of the method return value. Pass {@code Void.class} if you want o ignore the return value and get null.
+     * @param args the method arguments
+     *
+     * @see #getAccessibleField(Class, boolean, String)
+     * @see #peekField(Object, Class, String, Class)
+     * @see #pokeField(Object, String, Object)
+     */
+    public static <T> T invokeMethod(@Nullable Object target, @NotNull Class<?> targetType, @NotNull @Identifier String methodName, @NotNull Class<T> retType, Object... args) {
+        Class<?>[] signature = Arrays.stream(args).map(it -> it != null ? it.getClass() : null).toArray(Class[]::new);
+        Method method = getAccessibleMethod(targetType, true, methodName, signature);
+        Object retVal;
+        try {
+            retVal = method.invoke(target, args);
+        } catch (InvocationTargetException e) {
+            return doSneakyThrow(e.getTargetException());
+        } catch (IllegalAccessException e) {
+            return doSneakyThrow(e);
+        }
+        return retType==Void.class ? null : retType.cast(retVal);
+    }
+
+    /**
+     * <p>Gets a {@link Method} instance that can be invoked, regardless of the method visibility.
+     * Subject to security policy restrictions (if you don't know what that is, don't worry - you are
+     * probably safe).</p>
+     * <p>Sometimes there would be multiple methods with the same name declared in parent and sub-classes.
+     * In such cases make sure you specify the type of the exact class you want to get the field from.</p>
+     *
+     * @param type the type or a subtype of the class that holds the method.
+     * @param checkSuperclasses if {@code false}, will check only {@code type}; if {@code true},
+     *                          will check {@code type} and it's super classes all the way up
+     *                          to {@code Object}.
+     * @param methodName the name of the method we want.
+     * @param signature pattern matching for the method parameters signature - use {@code null} to
+     *                  match any non-primitive type. NOTE: when using {@code null}, and there are
+     *                  multiple matching overloads, the method specificity rules will be ignored.
+     *
+     * @return the invocable method instance
+     * @throws NoSuchMethodException if the method could not be found in the searched classes.
+     *
+     * @see #peekField(Object, String, Class)
+     * @see #pokeField(Object, String, Object)
+     * @see Field#setAccessible(boolean)
+     */
+    @Contract(pure=true) @SuppressWarnings("JavaDoc")
+    public static Method getAccessibleMethod(@NotNull Class<?> type, boolean checkSuperclasses, @Identifier @NotNull String methodName, Class<?>... signature) {
+        try {
+            Method declaredMethod = type.getDeclaredMethod(methodName, signature);
+            declaredMethod.setAccessible(true);
+            return declaredMethod;
+        } catch (NoSuchMethodException ignored) { }
+
+        next_method:
+        for (Method method : type.getDeclaredMethods()) {
+            if (!method.getName().equals(methodName)) continue;
+            System.out.println(method);
+            Class<?>[] parameterTypes = method.getParameterTypes();
+            if (parameterTypes.length != signature.length) continue;
+
+            for (int i = 0; i < parameterTypes.length; i++) {
+                Class<?> p = parameterTypes[i];
+                if (signature[i] == null) {
+                    if (p.isPrimitive()) continue next_method;
+                } else {
+                    if (!coercibleByReflection(p, signature[i])) continue next_method;
+                }
+            }
+
+            method.setAccessible(true);
+            return method;
+        }
+
+        Class<?> superclass = type.getSuperclass();
+        if (checkSuperclasses && !Objects.equals(superclass, Object.class)) {
+            return getAccessibleMethod(superclass, true, methodName);
+        }
+
+        return doSneakyThrow(new NoSuchMethodException(
+                "No method named '" + methodName + "' could be found with signature matching: " +
+                Arrays.stream(signature).map(it -> it==null ? "<any-ref>" : it.getSimpleName()).collect(Collectors.joining(", "))
+        ));
+    }
 
     /**
      * <p>Gets a {@link Field} instance that can be used to get and set values, regardless of the field visibility, final or
@@ -267,10 +411,10 @@ public class Extractors {
      * make sure you specify the type of the exact class you want to get the field from.</p>
      *
      * @param type the type or a subtype of the class that holds the field.
-     * @param fieldName the name of the field we want.
      * @param checkSuperclasses if {@code false}, will check only {@code type}; if {@code true},
      *                          will check {@code type} and it's super classes all the way up
      *                          to {@code Object}.
+     * @param fieldName the name of the field we want.
      * @return the writable field instance
      * @throws NoSuchFieldException if the field could not be found in the searched classes.
      *
@@ -279,7 +423,7 @@ public class Extractors {
      * @see Field#setAccessible(boolean)
      */
     @Contract(pure=true) @SuppressWarnings("JavaDoc")
-    public static @NotNull Field getAccessibleField(@NotNull Class<?> type, @Identifier @NotNull String fieldName, boolean checkSuperclasses) {
+    public static Field getAccessibleField(@NotNull Class<?> type, boolean checkSuperclasses, @Identifier @NotNull String fieldName) {
         try {
             Field field = type.getDeclaredField(fieldName);
             forceAccessible(field);
@@ -288,7 +432,7 @@ public class Extractors {
             Class<?> superclass = type.getSuperclass();
             return !checkSuperclasses || Object.class.equals(superclass)
                     ? doSneakyThrow(e)
-                    : getAccessibleField(superclass, fieldName, true);
+                    : getAccessibleField(superclass, true, fieldName);
         } catch (IllegalAccessException e) { return doSneakyThrow(e); }
     }
 
@@ -340,6 +484,29 @@ public class Extractors {
         } catch (NoSuchFieldException|IllegalAccessException e) {
             return type; // unreachable - all primitives have TYPE
         }
+    }
+
+    /**
+     * Whether Java reflection can coerce ont type into another.
+     * @param from the type of the value which we want to coerce.
+     * @param to the type which we need to coerce the value to.
+     * @return whether we can pass a {@code from} type value into a {@code to} type argument.
+     */
+    @SuppressWarnings("SimplifiableIfStatement")
+    public static boolean coercibleByReflection(@NotNull Class<?> from, @NotNull Class<?> to) {
+        if (from==to || to.isAssignableFrom(from)) return true;
+        Class<?> pFrom = unboxClass(from);
+        Class<?> pTo = unboxClass(to);
+        if (pFrom!=from || pTo!=to) return coercibleByReflection(pFrom, pTo);
+
+        boolean fits = to==double.class; // double is the top of the numbers coercion hierarchy
+        if ( from==float.class                   ) return fits; else fits |= to==float.class ;
+        if ( from==long.class                    ) return fits; else fits |= to==long.class ;
+        if ( from==int.class || from==char.class ) return fits; else fits |= to==int.class ;
+        if ( from==short.class                   ) return fits; else fits |= to==short.class ;
+        if ( from==byte.class                    ) return fits;
+
+        return false;
     }
 
     /**

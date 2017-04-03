@@ -209,6 +209,16 @@ class ExtractorsEncapsulationSpec extends Specification {
         e.message==null
     }
 
+    def "use invoke to call any method"() {
+        setup:
+        def x = new EncapsulationDomain(-1, -2)
+
+        expect:
+        Extractors.invokeMethod(x, 'getPublicConstant')
+        Extractors.invokeMethod(x, 'foo', Long.class, null, 123, "ABC")
+    }
+
+
     def "use Extractors as Groovy Category"() {
         setup:
         def x = new EncapsulationDomain.ShadowingSubclass(666, 999, 6, 9)
