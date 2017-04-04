@@ -17,6 +17,7 @@
 package io.github.ddimitrov.nuggets;
 
 import org.intellij.lang.annotations.Pattern;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -340,5 +341,49 @@ public final class Functions {
      */
     public static <T> Predicate<T> snoop(Predicate<T> p, Consumer<Boolean> c) {
         return it -> { boolean val = p.test(it); c.accept(val); return val; };
+    }
+
+    /**
+     * <p>An expressive shortcut for using a void function in context that requires to return something.</p>
+     *
+     * <p>Example:</p>
+     *
+     * <pre><code>
+     * return retval(foo, foo::validate)
+     * </code></pre>
+     *
+     * <p>This is just an alias for {@link Exceptions#rethrow(ThrowingRunnable, Object)} that places
+     * semantic emphasis on the returned value.</p>
+     *
+     * @param retval the value to return.
+     * @param r the void operation to perform.
+     * @param <T> generic param used for local type inference.
+     * @return {@code retval} if {@code r} did not throw exception.
+     */
+    @Contract("null,_->null;!null,_->!null")
+    public static <T> @Nullable T ret(@Nullable T retval, @NotNull ThrowingRunnable r) {
+        return Exceptions.rethrow(r, retval);
+    }
+
+    /**
+     * <p>An expressive shortcut for using a void function in context that requires to return something.</p>
+     *
+     * <p>Example:</p>
+     *
+     * <pre><code>
+     * qwe = fallback(true, null, retnul(foo::bar), foo::baz, ret("boo", foo::qux))
+     * </code></pre>
+     *
+     * <p>This is just another alias for {@link Exceptions#rethrow(ThrowingRunnable, Object)}.
+     * Unlike {@link #ret(Object, ThrowingRunnable) ret()}, that places semantic emphasis on the
+     * returned value, {@code retnul()} signifies that the return value is unimportant and we are
+     * using it purely for syntactic needs.</p>
+     *
+     * @param r the void operation to perform.
+     * @return {@code null} if {@code r} did not throw exception.
+     */
+    @Contract("_->null")
+    public static <T> @Nullable T retnul(@NotNull ThrowingRunnable r) {
+        return Exceptions.rethrow(r, null);
     }
 }

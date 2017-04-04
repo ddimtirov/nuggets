@@ -46,4 +46,8 @@ class FullLineCoveragePadding {
         c.setDelegate             c.getDelegate()
         c.setDirective            c.getDirective()
     }
+    @Test void trivial() {
+        int foo = Functions.ret(100, System.&gc )
+        Functions.retnul(System.&gc)
+    }
 }
