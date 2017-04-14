@@ -25,331 +25,376 @@
 <span class="sourceLineNo">017</span>package io.github.ddimitrov.nuggets;<a name="line.17"></a>
 <span class="sourceLineNo">018</span><a name="line.18"></a>
 <span class="sourceLineNo">019</span>import org.intellij.lang.annotations.Pattern;<a name="line.19"></a>
-<span class="sourceLineNo">020</span>import org.jetbrains.annotations.NotNull;<a name="line.20"></a>
-<span class="sourceLineNo">021</span>import org.jetbrains.annotations.Nullable;<a name="line.21"></a>
-<span class="sourceLineNo">022</span><a name="line.22"></a>
-<span class="sourceLineNo">023</span>import java.util.ArrayList;<a name="line.23"></a>
-<span class="sourceLineNo">024</span>import java.util.List;<a name="line.24"></a>
-<span class="sourceLineNo">025</span>import java.util.function.*;<a name="line.25"></a>
-<span class="sourceLineNo">026</span><a name="line.26"></a>
-<span class="sourceLineNo">027</span>/**<a name="line.27"></a>
-<span class="sourceLineNo">028</span> * &lt;p&gt;&lt;span class="badge green"&gt;Entry Point&lt;/span&gt; Provides decorators and combinators<a name="line.28"></a>
-<span class="sourceLineNo">029</span> * for common Java functional interfaces. All methods are threadsafe.&lt;/p&gt;<a name="line.29"></a>
-<span class="sourceLineNo">030</span> */<a name="line.30"></a>
-<span class="sourceLineNo">031</span>public final class Functions {<a name="line.31"></a>
-<span class="sourceLineNo">032</span>    private Functions() {}<a name="line.32"></a>
-<span class="sourceLineNo">033</span><a name="line.33"></a>
-<span class="sourceLineNo">034</span>    public static final String VALID_NAME_PATTERN = "\\S(?:.*\\S)?";<a name="line.34"></a>
-<span class="sourceLineNo">035</span>    private static final java.util.regex.Pattern validName = java.util.regex.Pattern.compile(VALID_NAME_PATTERN);<a name="line.35"></a>
-<span class="sourceLineNo">036</span>    private static void checkName(@NotNull String name) {<a name="line.36"></a>
-<span class="sourceLineNo">037</span>        if (!validName.matcher(name).matches()) {<a name="line.37"></a>
-<span class="sourceLineNo">038</span>            throw new IllegalArgumentException("Name should be non-empty and cannot start or end with whitespace!");<a name="line.38"></a>
-<span class="sourceLineNo">039</span>        }<a name="line.39"></a>
-<span class="sourceLineNo">040</span>    }<a name="line.40"></a>
-<span class="sourceLineNo">041</span><a name="line.41"></a>
-<span class="sourceLineNo">042</span>    /**<a name="line.42"></a>
-<span class="sourceLineNo">043</span>     * Decorates a supplier with a {@code toString()}, so that it can be printed and logged.<a name="line.43"></a>
-<span class="sourceLineNo">044</span>     * The resulting supplier behaves in any other way like the {@code delegate}.<a name="line.44"></a>
-<span class="sourceLineNo">045</span>     *<a name="line.45"></a>
-<span class="sourceLineNo">046</span>     * @param name the string to be returned on {@code toString()}.<a name="line.46"></a>
-<span class="sourceLineNo">047</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.47"></a>
-<span class="sourceLineNo">048</span>     * @param delegate the supplier to decorate.<a name="line.48"></a>
-<span class="sourceLineNo">049</span>     * @param &lt;T&gt; the generic type of the decorated supplier return value.<a name="line.49"></a>
-<span class="sourceLineNo">050</span>     * @return a supplier that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.50"></a>
-<span class="sourceLineNo">051</span>     */<a name="line.51"></a>
-<span class="sourceLineNo">052</span>    public static &lt;T&gt; @NotNull Supplier&lt;T&gt; sup(<a name="line.52"></a>
-<span class="sourceLineNo">053</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.53"></a>
-<span class="sourceLineNo">054</span>            @NotNull Supplier&lt;T&gt; delegate<a name="line.54"></a>
-<span class="sourceLineNo">055</span>    ) {<a name="line.55"></a>
-<span class="sourceLineNo">056</span>        checkName(name);<a name="line.56"></a>
-<span class="sourceLineNo">057</span>        class NamedSupplier implements Supplier&lt;T&gt; {<a name="line.57"></a>
-<span class="sourceLineNo">058</span>            @Override public T get() { return delegate.get(); }<a name="line.58"></a>
-<span class="sourceLineNo">059</span>            @Override public String toString() { return name; }<a name="line.59"></a>
-<span class="sourceLineNo">060</span>        }<a name="line.60"></a>
-<span class="sourceLineNo">061</span>        return new NamedSupplier();<a name="line.61"></a>
-<span class="sourceLineNo">062</span>    }<a name="line.62"></a>
-<span class="sourceLineNo">063</span><a name="line.63"></a>
-<span class="sourceLineNo">064</span>    /**<a name="line.64"></a>
-<span class="sourceLineNo">065</span>     * Decorates a consumer with a {@code toString()}, so that it can be printed and logged.<a name="line.65"></a>
-<span class="sourceLineNo">066</span>     * The resulting consumer behaves in any other way like the {@code delegate}.<a name="line.66"></a>
-<span class="sourceLineNo">067</span>     *<a name="line.67"></a>
-<span class="sourceLineNo">068</span>     * @param name the string to be returned on {@code toString()}.<a name="line.68"></a>
-<span class="sourceLineNo">069</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.69"></a>
-<span class="sourceLineNo">070</span>     * @param delegate the consumer to decorate.<a name="line.70"></a>
-<span class="sourceLineNo">071</span>     * @param &lt;T&gt; the generic type of the decorated consumer parameter.<a name="line.71"></a>
-<span class="sourceLineNo">072</span>     * @return a consumer that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.72"></a>
-<span class="sourceLineNo">073</span>     */<a name="line.73"></a>
-<span class="sourceLineNo">074</span>    public static &lt;T&gt; @NotNull Consumer&lt;T&gt; con(<a name="line.74"></a>
-<span class="sourceLineNo">075</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.75"></a>
-<span class="sourceLineNo">076</span>            @NotNull Consumer&lt;T&gt; delegate<a name="line.76"></a>
-<span class="sourceLineNo">077</span>    ) {<a name="line.77"></a>
-<span class="sourceLineNo">078</span>        checkName(name);<a name="line.78"></a>
-<span class="sourceLineNo">079</span>        class NamedConsumer implements Consumer&lt;T&gt; {<a name="line.79"></a>
-<span class="sourceLineNo">080</span>            @Override public void accept(T t) { delegate.accept(t); }<a name="line.80"></a>
-<span class="sourceLineNo">081</span>            @Override public String toString() { return name; }<a name="line.81"></a>
-<span class="sourceLineNo">082</span>        }<a name="line.82"></a>
-<span class="sourceLineNo">083</span>        return new NamedConsumer();<a name="line.83"></a>
-<span class="sourceLineNo">084</span>    }<a name="line.84"></a>
-<span class="sourceLineNo">085</span><a name="line.85"></a>
-<span class="sourceLineNo">086</span>    /**<a name="line.86"></a>
-<span class="sourceLineNo">087</span>     * Decorates a consumer with a {@code toString()}, so that it can be printed and logged.<a name="line.87"></a>
-<span class="sourceLineNo">088</span>     * The resulting consumer behaves in any other way like the {@code delegate}.<a name="line.88"></a>
-<span class="sourceLineNo">089</span>     *<a name="line.89"></a>
-<span class="sourceLineNo">090</span>     * @param name the string to be returned on {@code toString()}.<a name="line.90"></a>
-<span class="sourceLineNo">091</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.91"></a>
-<span class="sourceLineNo">092</span>     * @param delegate the consumer to decorate.<a name="line.92"></a>
-<span class="sourceLineNo">093</span>     * @param &lt;T1&gt; the generic type of the decorated consumer left parameter.<a name="line.93"></a>
-<span class="sourceLineNo">094</span>     * @param &lt;T2&gt; the generic type of the decorated consumer right parameter.<a name="line.94"></a>
-<span class="sourceLineNo">095</span>     * @return a consumer that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.95"></a>
-<span class="sourceLineNo">096</span>     */<a name="line.96"></a>
-<span class="sourceLineNo">097</span>    public static &lt;T1, T2&gt; @NotNull BiConsumer&lt;T1, T2&gt; con(<a name="line.97"></a>
-<span class="sourceLineNo">098</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.98"></a>
-<span class="sourceLineNo">099</span>            @NotNull BiConsumer&lt;T1, T2&gt; delegate<a name="line.99"></a>
-<span class="sourceLineNo">100</span>    ) {<a name="line.100"></a>
-<span class="sourceLineNo">101</span>        checkName(name);<a name="line.101"></a>
-<span class="sourceLineNo">102</span>        class NamedBiConsumer implements BiConsumer&lt;T1, T2&gt; {<a name="line.102"></a>
-<span class="sourceLineNo">103</span>            @Override public void accept(T1 t1, T2 t2) { delegate.accept(t1, t2); }<a name="line.103"></a>
-<span class="sourceLineNo">104</span>            @Override public String toString() { return name; }<a name="line.104"></a>
-<span class="sourceLineNo">105</span>        }<a name="line.105"></a>
-<span class="sourceLineNo">106</span>        return new NamedBiConsumer();<a name="line.106"></a>
-<span class="sourceLineNo">107</span>    }<a name="line.107"></a>
-<span class="sourceLineNo">108</span><a name="line.108"></a>
-<span class="sourceLineNo">109</span>    /**<a name="line.109"></a>
-<span class="sourceLineNo">110</span>     * Decorates a predicate with a {@code toString()}, so that it can be printed and logged.<a name="line.110"></a>
-<span class="sourceLineNo">111</span>     * The resulting predicate behaves in any other way like the {@code delegate}.<a name="line.111"></a>
-<span class="sourceLineNo">112</span>     *<a name="line.112"></a>
-<span class="sourceLineNo">113</span>     * @param name the string to be returned on {@code toString()}.<a name="line.113"></a>
-<span class="sourceLineNo">114</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.114"></a>
-<span class="sourceLineNo">115</span>     * @param delegate the predicate to decorate.<a name="line.115"></a>
-<span class="sourceLineNo">116</span>     * @param &lt;T&gt; the generic type of the decorated predicate parameter.<a name="line.116"></a>
-<span class="sourceLineNo">117</span>     * @return a predicate that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.117"></a>
-<span class="sourceLineNo">118</span>     */<a name="line.118"></a>
-<span class="sourceLineNo">119</span>    public static &lt;T&gt; @NotNull Predicate&lt;T&gt; pre(<a name="line.119"></a>
-<span class="sourceLineNo">120</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.120"></a>
-<span class="sourceLineNo">121</span>            @NotNull Predicate&lt;T&gt; delegate<a name="line.121"></a>
-<span class="sourceLineNo">122</span>    ) {<a name="line.122"></a>
-<span class="sourceLineNo">123</span>        checkName(name);<a name="line.123"></a>
-<span class="sourceLineNo">124</span>        class NamedPredicate implements Predicate&lt;T&gt; {<a name="line.124"></a>
-<span class="sourceLineNo">125</span>            @Override public boolean test(T t) { return delegate.test(t); }<a name="line.125"></a>
-<span class="sourceLineNo">126</span>            @Override public String toString() { return name; }<a name="line.126"></a>
-<span class="sourceLineNo">127</span>        }<a name="line.127"></a>
-<span class="sourceLineNo">128</span>        return new NamedPredicate();<a name="line.128"></a>
-<span class="sourceLineNo">129</span>    }<a name="line.129"></a>
-<span class="sourceLineNo">130</span><a name="line.130"></a>
-<span class="sourceLineNo">131</span>    /**<a name="line.131"></a>
-<span class="sourceLineNo">132</span>     * Decorates a predicate with a {@code toString()}, so that it can be printed and logged.<a name="line.132"></a>
-<span class="sourceLineNo">133</span>     * The resulting predicate behaves in any other way like the {@code delegate}.<a name="line.133"></a>
-<span class="sourceLineNo">134</span>     *<a name="line.134"></a>
-<span class="sourceLineNo">135</span>     * @param name the string to be returned on {@code toString()}.<a name="line.135"></a>
-<span class="sourceLineNo">136</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.136"></a>
-<span class="sourceLineNo">137</span>     * @param delegate the predicate to decorate.<a name="line.137"></a>
-<span class="sourceLineNo">138</span>     * @param &lt;T1&gt; the generic type of the decorated predicate left parameter.<a name="line.138"></a>
-<span class="sourceLineNo">139</span>     * @param &lt;T2&gt; the generic type of the decorated predicate right parameter.<a name="line.139"></a>
-<span class="sourceLineNo">140</span>     * @return a predicate that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.140"></a>
-<span class="sourceLineNo">141</span>     */<a name="line.141"></a>
-<span class="sourceLineNo">142</span>    public static &lt;T1, T2&gt; @NotNull BiPredicate&lt;T1, T2&gt; pre(<a name="line.142"></a>
-<span class="sourceLineNo">143</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.143"></a>
-<span class="sourceLineNo">144</span>            @NotNull BiPredicate&lt;T1, T2&gt; delegate<a name="line.144"></a>
-<span class="sourceLineNo">145</span>    ) {<a name="line.145"></a>
-<span class="sourceLineNo">146</span>        checkName(name);<a name="line.146"></a>
-<span class="sourceLineNo">147</span>        class NamedBiPredicate implements BiPredicate&lt;T1, T2&gt; {<a name="line.147"></a>
-<span class="sourceLineNo">148</span>            @Override public boolean test(T1 t1, T2 t2) { return delegate.test(t1, t2); }<a name="line.148"></a>
-<span class="sourceLineNo">149</span>            @Override public String toString() { return name; }<a name="line.149"></a>
-<span class="sourceLineNo">150</span>        }<a name="line.150"></a>
-<span class="sourceLineNo">151</span>        return new NamedBiPredicate();<a name="line.151"></a>
-<span class="sourceLineNo">152</span>    }<a name="line.152"></a>
-<span class="sourceLineNo">153</span><a name="line.153"></a>
-<span class="sourceLineNo">154</span>    /**<a name="line.154"></a>
-<span class="sourceLineNo">155</span>     * Decorates a function with a {@code toString()}, so that it can be printed and logged.<a name="line.155"></a>
-<span class="sourceLineNo">156</span>     * The resulting function behaves in any other way like the {@code delegate}.<a name="line.156"></a>
-<span class="sourceLineNo">157</span>     *<a name="line.157"></a>
-<span class="sourceLineNo">158</span>     * @param name the string to be returned on {@code toString()}.<a name="line.158"></a>
-<span class="sourceLineNo">159</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.159"></a>
-<span class="sourceLineNo">160</span>     * @param delegate the function to decorate.<a name="line.160"></a>
-<span class="sourceLineNo">161</span>     * @param &lt;T&gt; the generic type of the decorated function parameter.<a name="line.161"></a>
-<span class="sourceLineNo">162</span>     * @param &lt;R&gt; the generic type of the decorated return value.<a name="line.162"></a>
-<span class="sourceLineNo">163</span>     * @return a function that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.163"></a>
-<span class="sourceLineNo">164</span>     */<a name="line.164"></a>
-<span class="sourceLineNo">165</span>    public static &lt;T, R&gt; @NotNull Function&lt;T, R&gt; fun(<a name="line.165"></a>
-<span class="sourceLineNo">166</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.166"></a>
-<span class="sourceLineNo">167</span>            @NotNull Function&lt;T, R&gt; delegate<a name="line.167"></a>
-<span class="sourceLineNo">168</span>    ) {<a name="line.168"></a>
-<span class="sourceLineNo">169</span>        checkName(name);<a name="line.169"></a>
-<span class="sourceLineNo">170</span>        class NamedFunction implements Function&lt;T, R&gt; {<a name="line.170"></a>
-<span class="sourceLineNo">171</span>            @Override public R apply(T t) { return delegate.apply(t); }<a name="line.171"></a>
-<span class="sourceLineNo">172</span>            @Override public String toString() { return name; }<a name="line.172"></a>
-<span class="sourceLineNo">173</span>        }<a name="line.173"></a>
-<span class="sourceLineNo">174</span>        return new NamedFunction();<a name="line.174"></a>
-<span class="sourceLineNo">175</span>    }<a name="line.175"></a>
-<span class="sourceLineNo">176</span><a name="line.176"></a>
-<span class="sourceLineNo">177</span>    /**<a name="line.177"></a>
-<span class="sourceLineNo">178</span>     * Decorates a function with a {@code toString()}, so that it can be printed and logged.<a name="line.178"></a>
-<span class="sourceLineNo">179</span>     * The resulting function behaves in any other way like the {@code delegate}.<a name="line.179"></a>
-<span class="sourceLineNo">180</span>     *<a name="line.180"></a>
-<span class="sourceLineNo">181</span>     * @param name the string to be returned on {@code toString()}.<a name="line.181"></a>
-<span class="sourceLineNo">182</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.182"></a>
-<span class="sourceLineNo">183</span>     * @param delegate the function to decorate.<a name="line.183"></a>
-<span class="sourceLineNo">184</span>     * @param &lt;T1&gt; the generic type of the decorated function left parameter.<a name="line.184"></a>
-<span class="sourceLineNo">185</span>     * @param &lt;T2&gt; the generic type of the decorated function right parameter.<a name="line.185"></a>
-<span class="sourceLineNo">186</span>     * @param &lt;R&gt; the generic type of the decorated return value.<a name="line.186"></a>
-<span class="sourceLineNo">187</span>     * @return a function that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.187"></a>
-<span class="sourceLineNo">188</span>     */<a name="line.188"></a>
-<span class="sourceLineNo">189</span>    public static &lt;T1, T2, R&gt; @NotNull BiFunction&lt;T1, T2, R&gt; fun(<a name="line.189"></a>
-<span class="sourceLineNo">190</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.190"></a>
-<span class="sourceLineNo">191</span>            @NotNull BiFunction&lt;T1, T2, R&gt; delegate<a name="line.191"></a>
-<span class="sourceLineNo">192</span>    ) {<a name="line.192"></a>
-<span class="sourceLineNo">193</span>        checkName(name);<a name="line.193"></a>
-<span class="sourceLineNo">194</span>        class NamedBiFunction implements BiFunction&lt;T1, T2, R&gt; {<a name="line.194"></a>
-<span class="sourceLineNo">195</span>            @Override public R apply(T1 t1, T2 t2) { return delegate.apply(t1, t2); }<a name="line.195"></a>
-<span class="sourceLineNo">196</span>            @Override public String toString() { return name; }<a name="line.196"></a>
-<span class="sourceLineNo">197</span>        }<a name="line.197"></a>
-<span class="sourceLineNo">198</span>        return new NamedBiFunction();<a name="line.198"></a>
-<span class="sourceLineNo">199</span>    }<a name="line.199"></a>
-<span class="sourceLineNo">200</span><a name="line.200"></a>
-<span class="sourceLineNo">201</span>    /**<a name="line.201"></a>
-<span class="sourceLineNo">202</span>     * &lt;p&gt;Tries multiple functions in the specified order and returns the first result that passes a predicate,<a name="line.202"></a>
-<span class="sourceLineNo">203</span>     * optionally ignoring exceptions. Throws {@link DispatchException} if none of the fallback functions returned a<a name="line.203"></a>
-<span class="sourceLineNo">204</span>     * good result, wrapping all fallback failures as {@link Throwable#getSuppressed() suppressed}.<a name="line.204"></a>
-<span class="sourceLineNo">205</span>     * If {@code failFast} was specified and any of the fallbacks throws an exception, it is immediately rethrown.&lt;/p&gt;<a name="line.205"></a>
-<span class="sourceLineNo">206</span>     *<a name="line.206"></a>
-<span class="sourceLineNo">207</span>     * &lt;p&gt;&lt;em&gt;&lt;strong&gt;Design notes:&lt;/strong&gt; Ideally we would like this combinator to be a macro method, applicable to<a name="line.207"></a>
-<span class="sourceLineNo">208</span>     * any functional interface that returns a value (non-void). We have decided to dispatch {@link Function Functions},<a name="line.208"></a>
-<span class="sourceLineNo">209</span>     * as these show up as the most common functional interfaces in the wild.<a name="line.209"></a>
-<span class="sourceLineNo">210</span>     *<a name="line.210"></a>
-<span class="sourceLineNo">211</span>     * Alternative design is to dispatch {@link Supplier Suppliers}, and force the caller to tunnel the functional<a name="line.211"></a>
-<span class="sourceLineNo">212</span>     * parameters using closures, but that makes the more common case uglier.<a name="line.212"></a>
-<span class="sourceLineNo">213</span>     *<a name="line.213"></a>
-<span class="sourceLineNo">214</span>     * Going to the other extreme, we could have dispatched {@link BiFunction BiFunctions}, and accommodated the<a name="line.214"></a>
-<span class="sourceLineNo">215</span>     * {@code Function} use-case by requiring the client to adapt the result using partial application.&lt;/em&gt;&lt;/p&gt;<a name="line.215"></a>
-<span class="sourceLineNo">216</span>     *<a name="line.216"></a>
-<span class="sourceLineNo">217</span>     * @param failFast if {@code true}, as soon as a function throws exception, we'll rethrow it and skip trying the<a name="line.217"></a>
-<span class="sourceLineNo">218</span>     *                 remaining fallback functions. If {@code false}, when a function throws an exception we just<a name="line.218"></a>
-<span class="sourceLineNo">219</span>     *                 continue with the remaining fallback functions. If we try all exceptions and didn't find a result<a name="line.219"></a>
-<span class="sourceLineNo">220</span>     *                 all these exceptions will be rethrown as {@link Throwable#suppressedExceptions}<a name="line.220"></a>
-<span class="sourceLineNo">221</span>     *<a name="line.221"></a>
-<span class="sourceLineNo">222</span>     * @param approveResult a predicate that decides whether we shall return the result of a function or try the next<a name="line.222"></a>
-<span class="sourceLineNo">223</span>     *                      one. If all functions are tried and none matched the predicate, this method will throw<a name="line.223"></a>
-<span class="sourceLineNo">224</span>     *                      {@link DispatchException}<a name="line.224"></a>
-<span class="sourceLineNo">225</span>     *<a name="line.225"></a>
-<span class="sourceLineNo">226</span>     * @param functions a functions to be tried one after another until one returns a result that matches the<a name="line.226"></a>
-<span class="sourceLineNo">227</span>     *                  {@code approveResult} predicate. Exceptions are swallowed if {@code failFast} is {@code true}<a name="line.227"></a>
-<span class="sourceLineNo">228</span>     *                  and rethrown if {@code false}.<a name="line.228"></a>
-<span class="sourceLineNo">229</span>     *<a name="line.229"></a>
-<span class="sourceLineNo">230</span>     * @param &lt;T&gt; the function argument generic type<a name="line.230"></a>
-<span class="sourceLineNo">231</span>     * @param &lt;R&gt; the function return generic type<a name="line.231"></a>
-<span class="sourceLineNo">232</span>     *<a name="line.232"></a>
-<span class="sourceLineNo">233</span>     * @return a function that dispatches through the {@code fallbacks}, based on the strategy determined by<a name="line.233"></a>
-<span class="sourceLineNo">234</span>     *         {@code failFast} and {@code approveResult}<a name="line.234"></a>
-<span class="sourceLineNo">235</span>     *<a name="line.235"></a>
-<span class="sourceLineNo">236</span>     * @throws DispatchException if {@code failFast==false} or none of the results matched the predicate.<a name="line.236"></a>
-<span class="sourceLineNo">237</span>     *         If {@code failFast==true} we would rethrow immediately if any of the {@code fallbacks} throws exception.<a name="line.237"></a>
-<span class="sourceLineNo">238</span>     */<a name="line.238"></a>
-<span class="sourceLineNo">239</span>    @SafeVarargs<a name="line.239"></a>
-<span class="sourceLineNo">240</span>    public static &lt;T, R&gt; @NotNull Function&lt;T, R&gt; fallback(boolean failFast, @Nullable Predicate&lt;@Nullable R&gt; approveResult, @NotNull Function&lt;@Nullable T, @Nullable R&gt;... functions) {<a name="line.240"></a>
-<span class="sourceLineNo">241</span>        if (functions.length==0) throw new IllegalArgumentException("Need to provide at least one function!");<a name="line.241"></a>
-<span class="sourceLineNo">242</span><a name="line.242"></a>
-<span class="sourceLineNo">243</span>        if ((failFast || functions.length==1) &amp;&amp; approveResult==null) {<a name="line.243"></a>
-<span class="sourceLineNo">244</span>            // same as just rinning the first function: if it succeeds - return the result; if it fails - rethrow<a name="line.244"></a>
-<span class="sourceLineNo">245</span>            return functions[0];<a name="line.245"></a>
-<span class="sourceLineNo">246</span>        }<a name="line.246"></a>
-<span class="sourceLineNo">247</span><a name="line.247"></a>
-<span class="sourceLineNo">248</span>        return t -&gt; {<a name="line.248"></a>
-<span class="sourceLineNo">249</span>            List&lt;Throwable&gt; suppressed = new ArrayList&lt;&gt;(functions.length);<a name="line.249"></a>
-<span class="sourceLineNo">250</span>            for (Function&lt;T, R&gt; function : functions) {<a name="line.250"></a>
-<span class="sourceLineNo">251</span>                try {<a name="line.251"></a>
-<span class="sourceLineNo">252</span>                    R result = function.apply(t);<a name="line.252"></a>
-<span class="sourceLineNo">253</span>                    if (approveResult != null &amp;&amp; !approveResult.test(result)) {<a name="line.253"></a>
-<span class="sourceLineNo">254</span>                        suppressed.add(new DispatchException.InvalidResult(result));<a name="line.254"></a>
-<span class="sourceLineNo">255</span>                    } else {<a name="line.255"></a>
-<span class="sourceLineNo">256</span>                        return result;<a name="line.256"></a>
-<span class="sourceLineNo">257</span>                    }<a name="line.257"></a>
-<span class="sourceLineNo">258</span>                } catch (Throwable e) {<a name="line.258"></a>
-<span class="sourceLineNo">259</span>                    if (failFast) {<a name="line.259"></a>
-<span class="sourceLineNo">260</span>                        return Exceptions.rethrow(e);<a name="line.260"></a>
-<span class="sourceLineNo">261</span>                    }<a name="line.261"></a>
-<span class="sourceLineNo">262</span>                    suppressed.add(e);<a name="line.262"></a>
-<span class="sourceLineNo">263</span>                }<a name="line.263"></a>
-<span class="sourceLineNo">264</span>            }<a name="line.264"></a>
-<span class="sourceLineNo">265</span><a name="line.265"></a>
-<span class="sourceLineNo">266</span>            String verb = approveResult == null<a name="line.266"></a>
-<span class="sourceLineNo">267</span>                    ? "successfully run any of"<a name="line.267"></a>
-<span class="sourceLineNo">268</span>                    : failFast ? "approve result" : "approve successful result of";<a name="line.268"></a>
-<span class="sourceLineNo">269</span><a name="line.269"></a>
-<span class="sourceLineNo">270</span>            return Exceptions.rethrow(new DispatchException("failed to " + verb + " " + functions.length + " fallback fuctions!", suppressed));<a name="line.270"></a>
-<span class="sourceLineNo">271</span>        };<a name="line.271"></a>
-<span class="sourceLineNo">272</span>    }<a name="line.272"></a>
-<span class="sourceLineNo">273</span><a name="line.273"></a>
-<span class="sourceLineNo">274</span>    /**<a name="line.274"></a>
-<span class="sourceLineNo">275</span>     * Creates an identity function, intercepting the function<a name="line.275"></a>
-<span class="sourceLineNo">276</span>     * argument for inspection or manipulation. It can be used with<a name="line.276"></a>
-<span class="sourceLineNo">277</span>     * {@link Function#compose(Function)} to intercept the argument<a name="line.277"></a>
-<span class="sourceLineNo">278</span>     * of a function and with {@link Function#andThen(Function)} to<a name="line.278"></a>
-<span class="sourceLineNo">279</span>     * intercept the result.<a name="line.279"></a>
-<span class="sourceLineNo">280</span>     *<a name="line.280"></a>
-<span class="sourceLineNo">281</span>     * @param c consumer operating on the function parameter<a name="line.281"></a>
-<span class="sourceLineNo">282</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.282"></a>
-<span class="sourceLineNo">283</span>     * @return an identity function calling {@code c} on its argument/result<a name="line.283"></a>
-<span class="sourceLineNo">284</span>     */<a name="line.284"></a>
-<span class="sourceLineNo">285</span>    public static &lt;T&gt; @NotNull UnaryOperator&lt;T&gt; tap(@NotNull Consumer&lt;T&gt; c) {<a name="line.285"></a>
-<span class="sourceLineNo">286</span>        return it -&gt; { c.accept(it); return it; };<a name="line.286"></a>
-<span class="sourceLineNo">287</span>    }<a name="line.287"></a>
-<span class="sourceLineNo">288</span><a name="line.288"></a>
-<span class="sourceLineNo">289</span>    /**<a name="line.289"></a>
-<span class="sourceLineNo">290</span>     * Creates a fixed value {@code true} predicate, intercepting<a name="line.290"></a>
-<span class="sourceLineNo">291</span>     * the predicate argument for inspection or manipulation. It can<a name="line.291"></a>
-<span class="sourceLineNo">292</span>     * be used with {@link Predicate#and(Predicate)} - as first in<a name="line.292"></a>
-<span class="sourceLineNo">293</span>     * the chain if we care about all arguments or as second if we<a name="line.293"></a>
-<span class="sourceLineNo">294</span>     * only care about the succeeded.<a name="line.294"></a>
-<span class="sourceLineNo">295</span>     *<a name="line.295"></a>
-<span class="sourceLineNo">296</span>     * @param c consumer operating on the predicate parameter<a name="line.296"></a>
-<span class="sourceLineNo">297</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.297"></a>
-<span class="sourceLineNo">298</span>     * @return a {@code true} predicate calling {@code c} on its argument/result<a name="line.298"></a>
-<span class="sourceLineNo">299</span>     */<a name="line.299"></a>
-<span class="sourceLineNo">300</span>    public static &lt;T&gt; @NotNull Predicate&lt;T&gt; yes(@NotNull Consumer&lt;T&gt; c) {<a name="line.300"></a>
-<span class="sourceLineNo">301</span>        return it -&gt; { c.accept(it); return true; };<a name="line.301"></a>
-<span class="sourceLineNo">302</span>    }<a name="line.302"></a>
-<span class="sourceLineNo">303</span><a name="line.303"></a>
-<span class="sourceLineNo">304</span>    /**<a name="line.304"></a>
-<span class="sourceLineNo">305</span>     * Creates a fixed value {@code false} predicate, intercepting<a name="line.305"></a>
-<span class="sourceLineNo">306</span>     * the predicate argument for inspection or manipulation. It can<a name="line.306"></a>
-<span class="sourceLineNo">307</span>     * be used with {@link Predicate#or(Predicate)} - as first in<a name="line.307"></a>
-<span class="sourceLineNo">308</span>     * the chain if we care about all arguments or as second if we<a name="line.308"></a>
-<span class="sourceLineNo">309</span>     * only care about the succeeded.<a name="line.309"></a>
-<span class="sourceLineNo">310</span>     *<a name="line.310"></a>
-<span class="sourceLineNo">311</span>     * @param c consumer operating on the predicate parameter<a name="line.311"></a>
-<span class="sourceLineNo">312</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.312"></a>
-<span class="sourceLineNo">313</span>     * @return a {@code false} predicate calling {@code c} on its argument/result<a name="line.313"></a>
-<span class="sourceLineNo">314</span>     */<a name="line.314"></a>
-<span class="sourceLineNo">315</span>    public static &lt;T&gt; @NotNull Predicate&lt;T&gt; no(@NotNull Consumer&lt;T&gt; c) {<a name="line.315"></a>
-<span class="sourceLineNo">316</span>        return it -&gt; { c.accept(it); return false; };<a name="line.316"></a>
-<span class="sourceLineNo">317</span>    }<a name="line.317"></a>
-<span class="sourceLineNo">318</span><a name="line.318"></a>
-<span class="sourceLineNo">319</span>    /**<a name="line.319"></a>
-<span class="sourceLineNo">320</span>     * Wraps a supplier, without changing its logic, intercepting<a name="line.320"></a>
-<span class="sourceLineNo">321</span>     * the supplier result for inspection or manipulation.<a name="line.321"></a>
-<span class="sourceLineNo">322</span>     *<a name="line.322"></a>
-<span class="sourceLineNo">323</span>     * @param s wrapped supplier<a name="line.323"></a>
-<span class="sourceLineNo">324</span>     * @param c consumer operating on the supplier results<a name="line.324"></a>
-<span class="sourceLineNo">325</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.325"></a>
-<span class="sourceLineNo">326</span>     * @return a supplier delegating to {@code s}, calling {@code c} on its result<a name="line.326"></a>
-<span class="sourceLineNo">327</span>     */<a name="line.327"></a>
-<span class="sourceLineNo">328</span>    public static &lt;T&gt; @NotNull Supplier&lt;T&gt; snoop(@NotNull Supplier&lt;T&gt; s, @NotNull Consumer&lt;T&gt; c) {<a name="line.328"></a>
-<span class="sourceLineNo">329</span>        return () -&gt; { T val = s.get(); c.accept(val); return val; };<a name="line.329"></a>
-<span class="sourceLineNo">330</span>    }<a name="line.330"></a>
-<span class="sourceLineNo">331</span><a name="line.331"></a>
-<span class="sourceLineNo">332</span>    /**<a name="line.332"></a>
-<span class="sourceLineNo">333</span>     * Wraps a predicate, without changing its logic, intercepting<a name="line.333"></a>
-<span class="sourceLineNo">334</span>     * the predicate result for inspection.<a name="line.334"></a>
-<span class="sourceLineNo">335</span>     *<a name="line.335"></a>
-<span class="sourceLineNo">336</span>     * @param p wrapped predicate implementing some useful function<a name="line.336"></a>
-<span class="sourceLineNo">337</span>     * @param c consumer operating on the predicate parameter<a name="line.337"></a>
-<span class="sourceLineNo">338</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.338"></a>
-<span class="sourceLineNo">339</span>     * @return a predicate delegating to {@code p}, calling {@code c} on its result<a name="line.339"></a>
-<span class="sourceLineNo">340</span>     */<a name="line.340"></a>
-<span class="sourceLineNo">341</span>    public static &lt;T&gt; Predicate&lt;T&gt; snoop(Predicate&lt;T&gt; p, Consumer&lt;Boolean&gt; c) {<a name="line.341"></a>
-<span class="sourceLineNo">342</span>        return it -&gt; { boolean val = p.test(it); c.accept(val); return val; };<a name="line.342"></a>
-<span class="sourceLineNo">343</span>    }<a name="line.343"></a>
-<span class="sourceLineNo">344</span>}<a name="line.344"></a>
+<span class="sourceLineNo">020</span>import org.jetbrains.annotations.Contract;<a name="line.20"></a>
+<span class="sourceLineNo">021</span>import org.jetbrains.annotations.NotNull;<a name="line.21"></a>
+<span class="sourceLineNo">022</span>import org.jetbrains.annotations.Nullable;<a name="line.22"></a>
+<span class="sourceLineNo">023</span><a name="line.23"></a>
+<span class="sourceLineNo">024</span>import java.util.ArrayList;<a name="line.24"></a>
+<span class="sourceLineNo">025</span>import java.util.List;<a name="line.25"></a>
+<span class="sourceLineNo">026</span>import java.util.function.*;<a name="line.26"></a>
+<span class="sourceLineNo">027</span><a name="line.27"></a>
+<span class="sourceLineNo">028</span>/**<a name="line.28"></a>
+<span class="sourceLineNo">029</span> * &lt;p&gt;&lt;span class="badge green"&gt;Entry Point&lt;/span&gt; Provides decorators and combinators<a name="line.29"></a>
+<span class="sourceLineNo">030</span> * for common Java functional interfaces. All methods are threadsafe.&lt;/p&gt;<a name="line.30"></a>
+<span class="sourceLineNo">031</span> */<a name="line.31"></a>
+<span class="sourceLineNo">032</span>public final class Functions {<a name="line.32"></a>
+<span class="sourceLineNo">033</span>    private Functions() {}<a name="line.33"></a>
+<span class="sourceLineNo">034</span><a name="line.34"></a>
+<span class="sourceLineNo">035</span>    public static final String VALID_NAME_PATTERN = "\\S(?:.*\\S)?";<a name="line.35"></a>
+<span class="sourceLineNo">036</span>    private static final java.util.regex.Pattern validName = java.util.regex.Pattern.compile(VALID_NAME_PATTERN);<a name="line.36"></a>
+<span class="sourceLineNo">037</span>    private static void checkName(@NotNull String name) {<a name="line.37"></a>
+<span class="sourceLineNo">038</span>        if (!validName.matcher(name).matches()) {<a name="line.38"></a>
+<span class="sourceLineNo">039</span>            throw new IllegalArgumentException("Name should be non-empty and cannot start or end with whitespace!");<a name="line.39"></a>
+<span class="sourceLineNo">040</span>        }<a name="line.40"></a>
+<span class="sourceLineNo">041</span>    }<a name="line.41"></a>
+<span class="sourceLineNo">042</span><a name="line.42"></a>
+<span class="sourceLineNo">043</span>    /**<a name="line.43"></a>
+<span class="sourceLineNo">044</span>     * Decorates a supplier with a {@code toString()}, so that it can be printed and logged.<a name="line.44"></a>
+<span class="sourceLineNo">045</span>     * The resulting supplier behaves in any other way like the {@code delegate}.<a name="line.45"></a>
+<span class="sourceLineNo">046</span>     *<a name="line.46"></a>
+<span class="sourceLineNo">047</span>     * @param name the string to be returned on {@code toString()}.<a name="line.47"></a>
+<span class="sourceLineNo">048</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.48"></a>
+<span class="sourceLineNo">049</span>     * @param delegate the supplier to decorate.<a name="line.49"></a>
+<span class="sourceLineNo">050</span>     * @param &lt;T&gt; the generic type of the decorated supplier return value.<a name="line.50"></a>
+<span class="sourceLineNo">051</span>     * @return a supplier that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.51"></a>
+<span class="sourceLineNo">052</span>     */<a name="line.52"></a>
+<span class="sourceLineNo">053</span>    public static &lt;T&gt; @NotNull Supplier&lt;T&gt; sup(<a name="line.53"></a>
+<span class="sourceLineNo">054</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.54"></a>
+<span class="sourceLineNo">055</span>            @NotNull Supplier&lt;T&gt; delegate<a name="line.55"></a>
+<span class="sourceLineNo">056</span>    ) {<a name="line.56"></a>
+<span class="sourceLineNo">057</span>        checkName(name);<a name="line.57"></a>
+<span class="sourceLineNo">058</span>        class NamedSupplier implements Supplier&lt;T&gt; {<a name="line.58"></a>
+<span class="sourceLineNo">059</span>            @Override public T get() { return delegate.get(); }<a name="line.59"></a>
+<span class="sourceLineNo">060</span>            @Override public String toString() { return name; }<a name="line.60"></a>
+<span class="sourceLineNo">061</span>        }<a name="line.61"></a>
+<span class="sourceLineNo">062</span>        return new NamedSupplier();<a name="line.62"></a>
+<span class="sourceLineNo">063</span>    }<a name="line.63"></a>
+<span class="sourceLineNo">064</span><a name="line.64"></a>
+<span class="sourceLineNo">065</span>    /**<a name="line.65"></a>
+<span class="sourceLineNo">066</span>     * Decorates a consumer with a {@code toString()}, so that it can be printed and logged.<a name="line.66"></a>
+<span class="sourceLineNo">067</span>     * The resulting consumer behaves in any other way like the {@code delegate}.<a name="line.67"></a>
+<span class="sourceLineNo">068</span>     *<a name="line.68"></a>
+<span class="sourceLineNo">069</span>     * @param name the string to be returned on {@code toString()}.<a name="line.69"></a>
+<span class="sourceLineNo">070</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.70"></a>
+<span class="sourceLineNo">071</span>     * @param delegate the consumer to decorate.<a name="line.71"></a>
+<span class="sourceLineNo">072</span>     * @param &lt;T&gt; the generic type of the decorated consumer parameter.<a name="line.72"></a>
+<span class="sourceLineNo">073</span>     * @return a consumer that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.73"></a>
+<span class="sourceLineNo">074</span>     */<a name="line.74"></a>
+<span class="sourceLineNo">075</span>    public static &lt;T&gt; @NotNull Consumer&lt;T&gt; con(<a name="line.75"></a>
+<span class="sourceLineNo">076</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.76"></a>
+<span class="sourceLineNo">077</span>            @NotNull Consumer&lt;T&gt; delegate<a name="line.77"></a>
+<span class="sourceLineNo">078</span>    ) {<a name="line.78"></a>
+<span class="sourceLineNo">079</span>        checkName(name);<a name="line.79"></a>
+<span class="sourceLineNo">080</span>        class NamedConsumer implements Consumer&lt;T&gt; {<a name="line.80"></a>
+<span class="sourceLineNo">081</span>            @Override public void accept(T t) { delegate.accept(t); }<a name="line.81"></a>
+<span class="sourceLineNo">082</span>            @Override public String toString() { return name; }<a name="line.82"></a>
+<span class="sourceLineNo">083</span>        }<a name="line.83"></a>
+<span class="sourceLineNo">084</span>        return new NamedConsumer();<a name="line.84"></a>
+<span class="sourceLineNo">085</span>    }<a name="line.85"></a>
+<span class="sourceLineNo">086</span><a name="line.86"></a>
+<span class="sourceLineNo">087</span>    /**<a name="line.87"></a>
+<span class="sourceLineNo">088</span>     * Decorates a consumer with a {@code toString()}, so that it can be printed and logged.<a name="line.88"></a>
+<span class="sourceLineNo">089</span>     * The resulting consumer behaves in any other way like the {@code delegate}.<a name="line.89"></a>
+<span class="sourceLineNo">090</span>     *<a name="line.90"></a>
+<span class="sourceLineNo">091</span>     * @param name the string to be returned on {@code toString()}.<a name="line.91"></a>
+<span class="sourceLineNo">092</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.92"></a>
+<span class="sourceLineNo">093</span>     * @param delegate the consumer to decorate.<a name="line.93"></a>
+<span class="sourceLineNo">094</span>     * @param &lt;T1&gt; the generic type of the decorated consumer left parameter.<a name="line.94"></a>
+<span class="sourceLineNo">095</span>     * @param &lt;T2&gt; the generic type of the decorated consumer right parameter.<a name="line.95"></a>
+<span class="sourceLineNo">096</span>     * @return a consumer that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.96"></a>
+<span class="sourceLineNo">097</span>     */<a name="line.97"></a>
+<span class="sourceLineNo">098</span>    public static &lt;T1, T2&gt; @NotNull BiConsumer&lt;T1, T2&gt; con(<a name="line.98"></a>
+<span class="sourceLineNo">099</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.99"></a>
+<span class="sourceLineNo">100</span>            @NotNull BiConsumer&lt;T1, T2&gt; delegate<a name="line.100"></a>
+<span class="sourceLineNo">101</span>    ) {<a name="line.101"></a>
+<span class="sourceLineNo">102</span>        checkName(name);<a name="line.102"></a>
+<span class="sourceLineNo">103</span>        class NamedBiConsumer implements BiConsumer&lt;T1, T2&gt; {<a name="line.103"></a>
+<span class="sourceLineNo">104</span>            @Override public void accept(T1 t1, T2 t2) { delegate.accept(t1, t2); }<a name="line.104"></a>
+<span class="sourceLineNo">105</span>            @Override public String toString() { return name; }<a name="line.105"></a>
+<span class="sourceLineNo">106</span>        }<a name="line.106"></a>
+<span class="sourceLineNo">107</span>        return new NamedBiConsumer();<a name="line.107"></a>
+<span class="sourceLineNo">108</span>    }<a name="line.108"></a>
+<span class="sourceLineNo">109</span><a name="line.109"></a>
+<span class="sourceLineNo">110</span>    /**<a name="line.110"></a>
+<span class="sourceLineNo">111</span>     * Decorates a predicate with a {@code toString()}, so that it can be printed and logged.<a name="line.111"></a>
+<span class="sourceLineNo">112</span>     * The resulting predicate behaves in any other way like the {@code delegate}.<a name="line.112"></a>
+<span class="sourceLineNo">113</span>     *<a name="line.113"></a>
+<span class="sourceLineNo">114</span>     * @param name the string to be returned on {@code toString()}.<a name="line.114"></a>
+<span class="sourceLineNo">115</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.115"></a>
+<span class="sourceLineNo">116</span>     * @param delegate the predicate to decorate.<a name="line.116"></a>
+<span class="sourceLineNo">117</span>     * @param &lt;T&gt; the generic type of the decorated predicate parameter.<a name="line.117"></a>
+<span class="sourceLineNo">118</span>     * @return a predicate that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.118"></a>
+<span class="sourceLineNo">119</span>     */<a name="line.119"></a>
+<span class="sourceLineNo">120</span>    public static &lt;T&gt; @NotNull Predicate&lt;T&gt; pre(<a name="line.120"></a>
+<span class="sourceLineNo">121</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.121"></a>
+<span class="sourceLineNo">122</span>            @NotNull Predicate&lt;T&gt; delegate<a name="line.122"></a>
+<span class="sourceLineNo">123</span>    ) {<a name="line.123"></a>
+<span class="sourceLineNo">124</span>        checkName(name);<a name="line.124"></a>
+<span class="sourceLineNo">125</span>        class NamedPredicate implements Predicate&lt;T&gt; {<a name="line.125"></a>
+<span class="sourceLineNo">126</span>            @Override public boolean test(T t) { return delegate.test(t); }<a name="line.126"></a>
+<span class="sourceLineNo">127</span>            @Override public String toString() { return name; }<a name="line.127"></a>
+<span class="sourceLineNo">128</span>        }<a name="line.128"></a>
+<span class="sourceLineNo">129</span>        return new NamedPredicate();<a name="line.129"></a>
+<span class="sourceLineNo">130</span>    }<a name="line.130"></a>
+<span class="sourceLineNo">131</span><a name="line.131"></a>
+<span class="sourceLineNo">132</span>    /**<a name="line.132"></a>
+<span class="sourceLineNo">133</span>     * Decorates a predicate with a {@code toString()}, so that it can be printed and logged.<a name="line.133"></a>
+<span class="sourceLineNo">134</span>     * The resulting predicate behaves in any other way like the {@code delegate}.<a name="line.134"></a>
+<span class="sourceLineNo">135</span>     *<a name="line.135"></a>
+<span class="sourceLineNo">136</span>     * @param name the string to be returned on {@code toString()}.<a name="line.136"></a>
+<span class="sourceLineNo">137</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.137"></a>
+<span class="sourceLineNo">138</span>     * @param delegate the predicate to decorate.<a name="line.138"></a>
+<span class="sourceLineNo">139</span>     * @param &lt;T1&gt; the generic type of the decorated predicate left parameter.<a name="line.139"></a>
+<span class="sourceLineNo">140</span>     * @param &lt;T2&gt; the generic type of the decorated predicate right parameter.<a name="line.140"></a>
+<span class="sourceLineNo">141</span>     * @return a predicate that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.141"></a>
+<span class="sourceLineNo">142</span>     */<a name="line.142"></a>
+<span class="sourceLineNo">143</span>    public static &lt;T1, T2&gt; @NotNull BiPredicate&lt;T1, T2&gt; pre(<a name="line.143"></a>
+<span class="sourceLineNo">144</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.144"></a>
+<span class="sourceLineNo">145</span>            @NotNull BiPredicate&lt;T1, T2&gt; delegate<a name="line.145"></a>
+<span class="sourceLineNo">146</span>    ) {<a name="line.146"></a>
+<span class="sourceLineNo">147</span>        checkName(name);<a name="line.147"></a>
+<span class="sourceLineNo">148</span>        class NamedBiPredicate implements BiPredicate&lt;T1, T2&gt; {<a name="line.148"></a>
+<span class="sourceLineNo">149</span>            @Override public boolean test(T1 t1, T2 t2) { return delegate.test(t1, t2); }<a name="line.149"></a>
+<span class="sourceLineNo">150</span>            @Override public String toString() { return name; }<a name="line.150"></a>
+<span class="sourceLineNo">151</span>        }<a name="line.151"></a>
+<span class="sourceLineNo">152</span>        return new NamedBiPredicate();<a name="line.152"></a>
+<span class="sourceLineNo">153</span>    }<a name="line.153"></a>
+<span class="sourceLineNo">154</span><a name="line.154"></a>
+<span class="sourceLineNo">155</span>    /**<a name="line.155"></a>
+<span class="sourceLineNo">156</span>     * Decorates a function with a {@code toString()}, so that it can be printed and logged.<a name="line.156"></a>
+<span class="sourceLineNo">157</span>     * The resulting function behaves in any other way like the {@code delegate}.<a name="line.157"></a>
+<span class="sourceLineNo">158</span>     *<a name="line.158"></a>
+<span class="sourceLineNo">159</span>     * @param name the string to be returned on {@code toString()}.<a name="line.159"></a>
+<span class="sourceLineNo">160</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.160"></a>
+<span class="sourceLineNo">161</span>     * @param delegate the function to decorate.<a name="line.161"></a>
+<span class="sourceLineNo">162</span>     * @param &lt;T&gt; the generic type of the decorated function parameter.<a name="line.162"></a>
+<span class="sourceLineNo">163</span>     * @param &lt;R&gt; the generic type of the decorated return value.<a name="line.163"></a>
+<span class="sourceLineNo">164</span>     * @return a function that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.164"></a>
+<span class="sourceLineNo">165</span>     */<a name="line.165"></a>
+<span class="sourceLineNo">166</span>    public static &lt;T, R&gt; @NotNull Function&lt;T, R&gt; fun(<a name="line.166"></a>
+<span class="sourceLineNo">167</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.167"></a>
+<span class="sourceLineNo">168</span>            @NotNull Function&lt;T, R&gt; delegate<a name="line.168"></a>
+<span class="sourceLineNo">169</span>    ) {<a name="line.169"></a>
+<span class="sourceLineNo">170</span>        checkName(name);<a name="line.170"></a>
+<span class="sourceLineNo">171</span>        class NamedFunction implements Function&lt;T, R&gt; {<a name="line.171"></a>
+<span class="sourceLineNo">172</span>            @Override public R apply(T t) { return delegate.apply(t); }<a name="line.172"></a>
+<span class="sourceLineNo">173</span>            @Override public String toString() { return name; }<a name="line.173"></a>
+<span class="sourceLineNo">174</span>        }<a name="line.174"></a>
+<span class="sourceLineNo">175</span>        return new NamedFunction();<a name="line.175"></a>
+<span class="sourceLineNo">176</span>    }<a name="line.176"></a>
+<span class="sourceLineNo">177</span><a name="line.177"></a>
+<span class="sourceLineNo">178</span>    /**<a name="line.178"></a>
+<span class="sourceLineNo">179</span>     * Decorates a function with a {@code toString()}, so that it can be printed and logged.<a name="line.179"></a>
+<span class="sourceLineNo">180</span>     * The resulting function behaves in any other way like the {@code delegate}.<a name="line.180"></a>
+<span class="sourceLineNo">181</span>     *<a name="line.181"></a>
+<span class="sourceLineNo">182</span>     * @param name the string to be returned on {@code toString()}.<a name="line.182"></a>
+<span class="sourceLineNo">183</span>     *             Needs to start and end with a letter, can not be empty.<a name="line.183"></a>
+<span class="sourceLineNo">184</span>     * @param delegate the function to decorate.<a name="line.184"></a>
+<span class="sourceLineNo">185</span>     * @param &lt;T1&gt; the generic type of the decorated function left parameter.<a name="line.185"></a>
+<span class="sourceLineNo">186</span>     * @param &lt;T2&gt; the generic type of the decorated function right parameter.<a name="line.186"></a>
+<span class="sourceLineNo">187</span>     * @param &lt;R&gt; the generic type of the decorated return value.<a name="line.187"></a>
+<span class="sourceLineNo">188</span>     * @return a function that behaves like {@code delegate}, but when printed prints as {@code name}<a name="line.188"></a>
+<span class="sourceLineNo">189</span>     */<a name="line.189"></a>
+<span class="sourceLineNo">190</span>    public static &lt;T1, T2, R&gt; @NotNull BiFunction&lt;T1, T2, R&gt; fun(<a name="line.190"></a>
+<span class="sourceLineNo">191</span>            @NotNull @Pattern(VALID_NAME_PATTERN) String name,<a name="line.191"></a>
+<span class="sourceLineNo">192</span>            @NotNull BiFunction&lt;T1, T2, R&gt; delegate<a name="line.192"></a>
+<span class="sourceLineNo">193</span>    ) {<a name="line.193"></a>
+<span class="sourceLineNo">194</span>        checkName(name);<a name="line.194"></a>
+<span class="sourceLineNo">195</span>        class NamedBiFunction implements BiFunction&lt;T1, T2, R&gt; {<a name="line.195"></a>
+<span class="sourceLineNo">196</span>            @Override public R apply(T1 t1, T2 t2) { return delegate.apply(t1, t2); }<a name="line.196"></a>
+<span class="sourceLineNo">197</span>            @Override public String toString() { return name; }<a name="line.197"></a>
+<span class="sourceLineNo">198</span>        }<a name="line.198"></a>
+<span class="sourceLineNo">199</span>        return new NamedBiFunction();<a name="line.199"></a>
+<span class="sourceLineNo">200</span>    }<a name="line.200"></a>
+<span class="sourceLineNo">201</span><a name="line.201"></a>
+<span class="sourceLineNo">202</span>    /**<a name="line.202"></a>
+<span class="sourceLineNo">203</span>     * &lt;p&gt;Tries multiple functions in the specified order and returns the first result that passes a predicate,<a name="line.203"></a>
+<span class="sourceLineNo">204</span>     * optionally ignoring exceptions. Throws {@link DispatchException} if none of the fallback functions returned a<a name="line.204"></a>
+<span class="sourceLineNo">205</span>     * good result, wrapping all fallback failures as {@link Throwable#getSuppressed() suppressed}.<a name="line.205"></a>
+<span class="sourceLineNo">206</span>     * If {@code failFast} was specified and any of the fallbacks throws an exception, it is immediately rethrown.&lt;/p&gt;<a name="line.206"></a>
+<span class="sourceLineNo">207</span>     *<a name="line.207"></a>
+<span class="sourceLineNo">208</span>     * &lt;p&gt;&lt;em&gt;&lt;strong&gt;Design notes:&lt;/strong&gt; Ideally we would like this combinator to be a macro method, applicable to<a name="line.208"></a>
+<span class="sourceLineNo">209</span>     * any functional interface that returns a value (non-void). We have decided to dispatch {@link Function Functions},<a name="line.209"></a>
+<span class="sourceLineNo">210</span>     * as these show up as the most common functional interfaces in the wild.<a name="line.210"></a>
+<span class="sourceLineNo">211</span>     *<a name="line.211"></a>
+<span class="sourceLineNo">212</span>     * Alternative design is to dispatch {@link Supplier Suppliers}, and force the caller to tunnel the functional<a name="line.212"></a>
+<span class="sourceLineNo">213</span>     * parameters using closures, but that makes the more common case uglier.<a name="line.213"></a>
+<span class="sourceLineNo">214</span>     *<a name="line.214"></a>
+<span class="sourceLineNo">215</span>     * Going to the other extreme, we could have dispatched {@link BiFunction BiFunctions}, and accommodated the<a name="line.215"></a>
+<span class="sourceLineNo">216</span>     * {@code Function} use-case by requiring the client to adapt the result using partial application.&lt;/em&gt;&lt;/p&gt;<a name="line.216"></a>
+<span class="sourceLineNo">217</span>     *<a name="line.217"></a>
+<span class="sourceLineNo">218</span>     * @param failFast if {@code true}, as soon as a function throws exception, we'll rethrow it and skip trying the<a name="line.218"></a>
+<span class="sourceLineNo">219</span>     *                 remaining fallback functions. If {@code false}, when a function throws an exception we just<a name="line.219"></a>
+<span class="sourceLineNo">220</span>     *                 continue with the remaining fallback functions. If we try all exceptions and didn't find a result<a name="line.220"></a>
+<span class="sourceLineNo">221</span>     *                 all these exceptions will be rethrown as {@link Throwable#suppressedExceptions}<a name="line.221"></a>
+<span class="sourceLineNo">222</span>     *<a name="line.222"></a>
+<span class="sourceLineNo">223</span>     * @param approveResult a predicate that decides whether we shall return the result of a function or try the next<a name="line.223"></a>
+<span class="sourceLineNo">224</span>     *                      one. If all functions are tried and none matched the predicate, this method will throw<a name="line.224"></a>
+<span class="sourceLineNo">225</span>     *                      {@link DispatchException}<a name="line.225"></a>
+<span class="sourceLineNo">226</span>     *<a name="line.226"></a>
+<span class="sourceLineNo">227</span>     * @param functions a functions to be tried one after another until one returns a result that matches the<a name="line.227"></a>
+<span class="sourceLineNo">228</span>     *                  {@code approveResult} predicate. Exceptions are swallowed if {@code failFast} is {@code true}<a name="line.228"></a>
+<span class="sourceLineNo">229</span>     *                  and rethrown if {@code false}.<a name="line.229"></a>
+<span class="sourceLineNo">230</span>     *<a name="line.230"></a>
+<span class="sourceLineNo">231</span>     * @param &lt;T&gt; the function argument generic type<a name="line.231"></a>
+<span class="sourceLineNo">232</span>     * @param &lt;R&gt; the function return generic type<a name="line.232"></a>
+<span class="sourceLineNo">233</span>     *<a name="line.233"></a>
+<span class="sourceLineNo">234</span>     * @return a function that dispatches through the {@code fallbacks}, based on the strategy determined by<a name="line.234"></a>
+<span class="sourceLineNo">235</span>     *         {@code failFast} and {@code approveResult}<a name="line.235"></a>
+<span class="sourceLineNo">236</span>     *<a name="line.236"></a>
+<span class="sourceLineNo">237</span>     * @throws DispatchException if {@code failFast==false} or none of the results matched the predicate.<a name="line.237"></a>
+<span class="sourceLineNo">238</span>     *         If {@code failFast==true} we would rethrow immediately if any of the {@code fallbacks} throws exception.<a name="line.238"></a>
+<span class="sourceLineNo">239</span>     */<a name="line.239"></a>
+<span class="sourceLineNo">240</span>    @SafeVarargs<a name="line.240"></a>
+<span class="sourceLineNo">241</span>    public static &lt;T, R&gt; @NotNull Function&lt;T, R&gt; fallback(boolean failFast, @Nullable Predicate&lt;@Nullable R&gt; approveResult, @NotNull Function&lt;@Nullable T, @Nullable R&gt;... functions) {<a name="line.241"></a>
+<span class="sourceLineNo">242</span>        if (functions.length==0) throw new IllegalArgumentException("Need to provide at least one function!");<a name="line.242"></a>
+<span class="sourceLineNo">243</span><a name="line.243"></a>
+<span class="sourceLineNo">244</span>        if ((failFast || functions.length==1) &amp;&amp; approveResult==null) {<a name="line.244"></a>
+<span class="sourceLineNo">245</span>            // same as just rinning the first function: if it succeeds - return the result; if it fails - rethrow<a name="line.245"></a>
+<span class="sourceLineNo">246</span>            return functions[0];<a name="line.246"></a>
+<span class="sourceLineNo">247</span>        }<a name="line.247"></a>
+<span class="sourceLineNo">248</span><a name="line.248"></a>
+<span class="sourceLineNo">249</span>        return t -&gt; {<a name="line.249"></a>
+<span class="sourceLineNo">250</span>            List&lt;Throwable&gt; suppressed = new ArrayList&lt;&gt;(functions.length);<a name="line.250"></a>
+<span class="sourceLineNo">251</span>            for (Function&lt;T, R&gt; function : functions) {<a name="line.251"></a>
+<span class="sourceLineNo">252</span>                try {<a name="line.252"></a>
+<span class="sourceLineNo">253</span>                    R result = function.apply(t);<a name="line.253"></a>
+<span class="sourceLineNo">254</span>                    if (approveResult != null &amp;&amp; !approveResult.test(result)) {<a name="line.254"></a>
+<span class="sourceLineNo">255</span>                        suppressed.add(new DispatchException.InvalidResult(result));<a name="line.255"></a>
+<span class="sourceLineNo">256</span>                    } else {<a name="line.256"></a>
+<span class="sourceLineNo">257</span>                        return result;<a name="line.257"></a>
+<span class="sourceLineNo">258</span>                    }<a name="line.258"></a>
+<span class="sourceLineNo">259</span>                } catch (Throwable e) {<a name="line.259"></a>
+<span class="sourceLineNo">260</span>                    if (failFast) {<a name="line.260"></a>
+<span class="sourceLineNo">261</span>                        return Exceptions.rethrow(e);<a name="line.261"></a>
+<span class="sourceLineNo">262</span>                    }<a name="line.262"></a>
+<span class="sourceLineNo">263</span>                    suppressed.add(e);<a name="line.263"></a>
+<span class="sourceLineNo">264</span>                }<a name="line.264"></a>
+<span class="sourceLineNo">265</span>            }<a name="line.265"></a>
+<span class="sourceLineNo">266</span><a name="line.266"></a>
+<span class="sourceLineNo">267</span>            String verb = approveResult == null<a name="line.267"></a>
+<span class="sourceLineNo">268</span>                    ? "successfully run any of"<a name="line.268"></a>
+<span class="sourceLineNo">269</span>                    : failFast ? "approve result" : "approve successful result of";<a name="line.269"></a>
+<span class="sourceLineNo">270</span><a name="line.270"></a>
+<span class="sourceLineNo">271</span>            return Exceptions.rethrow(new DispatchException("failed to " + verb + " " + functions.length + " fallback fuctions!", suppressed));<a name="line.271"></a>
+<span class="sourceLineNo">272</span>        };<a name="line.272"></a>
+<span class="sourceLineNo">273</span>    }<a name="line.273"></a>
+<span class="sourceLineNo">274</span><a name="line.274"></a>
+<span class="sourceLineNo">275</span>    /**<a name="line.275"></a>
+<span class="sourceLineNo">276</span>     * Creates an identity function, intercepting the function<a name="line.276"></a>
+<span class="sourceLineNo">277</span>     * argument for inspection or manipulation. It can be used with<a name="line.277"></a>
+<span class="sourceLineNo">278</span>     * {@link Function#compose(Function)} to intercept the argument<a name="line.278"></a>
+<span class="sourceLineNo">279</span>     * of a function and with {@link Function#andThen(Function)} to<a name="line.279"></a>
+<span class="sourceLineNo">280</span>     * intercept the result.<a name="line.280"></a>
+<span class="sourceLineNo">281</span>     *<a name="line.281"></a>
+<span class="sourceLineNo">282</span>     * @param c consumer operating on the function parameter<a name="line.282"></a>
+<span class="sourceLineNo">283</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.283"></a>
+<span class="sourceLineNo">284</span>     * @return an identity function calling {@code c} on its argument/result<a name="line.284"></a>
+<span class="sourceLineNo">285</span>     */<a name="line.285"></a>
+<span class="sourceLineNo">286</span>    public static &lt;T&gt; @NotNull UnaryOperator&lt;T&gt; tap(@NotNull Consumer&lt;T&gt; c) {<a name="line.286"></a>
+<span class="sourceLineNo">287</span>        return it -&gt; { c.accept(it); return it; };<a name="line.287"></a>
+<span class="sourceLineNo">288</span>    }<a name="line.288"></a>
+<span class="sourceLineNo">289</span><a name="line.289"></a>
+<span class="sourceLineNo">290</span>    /**<a name="line.290"></a>
+<span class="sourceLineNo">291</span>     * Creates a fixed value {@code true} predicate, intercepting<a name="line.291"></a>
+<span class="sourceLineNo">292</span>     * the predicate argument for inspection or manipulation. It can<a name="line.292"></a>
+<span class="sourceLineNo">293</span>     * be used with {@link Predicate#and(Predicate)} - as first in<a name="line.293"></a>
+<span class="sourceLineNo">294</span>     * the chain if we care about all arguments or as second if we<a name="line.294"></a>
+<span class="sourceLineNo">295</span>     * only care about the succeeded.<a name="line.295"></a>
+<span class="sourceLineNo">296</span>     *<a name="line.296"></a>
+<span class="sourceLineNo">297</span>     * @param c consumer operating on the predicate parameter<a name="line.297"></a>
+<span class="sourceLineNo">298</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.298"></a>
+<span class="sourceLineNo">299</span>     * @return a {@code true} predicate calling {@code c} on its argument/result<a name="line.299"></a>
+<span class="sourceLineNo">300</span>     */<a name="line.300"></a>
+<span class="sourceLineNo">301</span>    public static &lt;T&gt; @NotNull Predicate&lt;T&gt; yes(@NotNull Consumer&lt;T&gt; c) {<a name="line.301"></a>
+<span class="sourceLineNo">302</span>        return it -&gt; { c.accept(it); return true; };<a name="line.302"></a>
+<span class="sourceLineNo">303</span>    }<a name="line.303"></a>
+<span class="sourceLineNo">304</span><a name="line.304"></a>
+<span class="sourceLineNo">305</span>    /**<a name="line.305"></a>
+<span class="sourceLineNo">306</span>     * Creates a fixed value {@code false} predicate, intercepting<a name="line.306"></a>
+<span class="sourceLineNo">307</span>     * the predicate argument for inspection or manipulation. It can<a name="line.307"></a>
+<span class="sourceLineNo">308</span>     * be used with {@link Predicate#or(Predicate)} - as first in<a name="line.308"></a>
+<span class="sourceLineNo">309</span>     * the chain if we care about all arguments or as second if we<a name="line.309"></a>
+<span class="sourceLineNo">310</span>     * only care about the succeeded.<a name="line.310"></a>
+<span class="sourceLineNo">311</span>     *<a name="line.311"></a>
+<span class="sourceLineNo">312</span>     * @param c consumer operating on the predicate parameter<a name="line.312"></a>
+<span class="sourceLineNo">313</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.313"></a>
+<span class="sourceLineNo">314</span>     * @return a {@code false} predicate calling {@code c} on its argument/result<a name="line.314"></a>
+<span class="sourceLineNo">315</span>     */<a name="line.315"></a>
+<span class="sourceLineNo">316</span>    public static &lt;T&gt; @NotNull Predicate&lt;T&gt; no(@NotNull Consumer&lt;T&gt; c) {<a name="line.316"></a>
+<span class="sourceLineNo">317</span>        return it -&gt; { c.accept(it); return false; };<a name="line.317"></a>
+<span class="sourceLineNo">318</span>    }<a name="line.318"></a>
+<span class="sourceLineNo">319</span><a name="line.319"></a>
+<span class="sourceLineNo">320</span>    /**<a name="line.320"></a>
+<span class="sourceLineNo">321</span>     * Wraps a supplier, without changing its logic, intercepting<a name="line.321"></a>
+<span class="sourceLineNo">322</span>     * the supplier result for inspection or manipulation.<a name="line.322"></a>
+<span class="sourceLineNo">323</span>     *<a name="line.323"></a>
+<span class="sourceLineNo">324</span>     * @param s wrapped supplier<a name="line.324"></a>
+<span class="sourceLineNo">325</span>     * @param c consumer operating on the supplier results<a name="line.325"></a>
+<span class="sourceLineNo">326</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.326"></a>
+<span class="sourceLineNo">327</span>     * @return a supplier delegating to {@code s}, calling {@code c} on its result<a name="line.327"></a>
+<span class="sourceLineNo">328</span>     */<a name="line.328"></a>
+<span class="sourceLineNo">329</span>    public static &lt;T&gt; @NotNull Supplier&lt;T&gt; snoop(@NotNull Supplier&lt;T&gt; s, @NotNull Consumer&lt;T&gt; c) {<a name="line.329"></a>
+<span class="sourceLineNo">330</span>        return () -&gt; { T val = s.get(); c.accept(val); return val; };<a name="line.330"></a>
+<span class="sourceLineNo">331</span>    }<a name="line.331"></a>
+<span class="sourceLineNo">332</span><a name="line.332"></a>
+<span class="sourceLineNo">333</span>    /**<a name="line.333"></a>
+<span class="sourceLineNo">334</span>     * Wraps a predicate, without changing its logic, intercepting<a name="line.334"></a>
+<span class="sourceLineNo">335</span>     * the predicate result for inspection.<a name="line.335"></a>
+<span class="sourceLineNo">336</span>     *<a name="line.336"></a>
+<span class="sourceLineNo">337</span>     * @param p wrapped predicate implementing some useful function<a name="line.337"></a>
+<span class="sourceLineNo">338</span>     * @param c consumer operating on the predicate parameter<a name="line.338"></a>
+<span class="sourceLineNo">339</span>     * @param &lt;T&gt; generic type for inferrence<a name="line.339"></a>
+<span class="sourceLineNo">340</span>     * @return a predicate delegating to {@code p}, calling {@code c} on its result<a name="line.340"></a>
+<span class="sourceLineNo">341</span>     */<a name="line.341"></a>
+<span class="sourceLineNo">342</span>    public static &lt;T&gt; Predicate&lt;T&gt; snoop(Predicate&lt;T&gt; p, Consumer&lt;Boolean&gt; c) {<a name="line.342"></a>
+<span class="sourceLineNo">343</span>        return it -&gt; { boolean val = p.test(it); c.accept(val); return val; };<a name="line.343"></a>
+<span class="sourceLineNo">344</span>    }<a name="line.344"></a>
+<span class="sourceLineNo">345</span><a name="line.345"></a>
+<span class="sourceLineNo">346</span>    /**<a name="line.346"></a>
+<span class="sourceLineNo">347</span>     * &lt;p&gt;An expressive shortcut for using a void function in context that requires to return something.&lt;/p&gt;<a name="line.347"></a>
+<span class="sourceLineNo">348</span>     *<a name="line.348"></a>
+<span class="sourceLineNo">349</span>     * &lt;p&gt;Example:&lt;/p&gt;<a name="line.349"></a>
+<span class="sourceLineNo">350</span>     *<a name="line.350"></a>
+<span class="sourceLineNo">351</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.351"></a>
+<span class="sourceLineNo">352</span>     * return retval(foo, foo::validate)<a name="line.352"></a>
+<span class="sourceLineNo">353</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.353"></a>
+<span class="sourceLineNo">354</span>     *<a name="line.354"></a>
+<span class="sourceLineNo">355</span>     * &lt;p&gt;This is just an alias for {@link Exceptions#rethrow(ThrowingRunnable, Object)} that places<a name="line.355"></a>
+<span class="sourceLineNo">356</span>     * semantic emphasis on the returned value.&lt;/p&gt;<a name="line.356"></a>
+<span class="sourceLineNo">357</span>     *<a name="line.357"></a>
+<span class="sourceLineNo">358</span>     * @param retval the value to return.<a name="line.358"></a>
+<span class="sourceLineNo">359</span>     * @param r the void operation to perform.<a name="line.359"></a>
+<span class="sourceLineNo">360</span>     * @param &lt;T&gt; generic param used for local type inference.<a name="line.360"></a>
+<span class="sourceLineNo">361</span>     * @return {@code retval} if {@code r} did not throw exception.<a name="line.361"></a>
+<span class="sourceLineNo">362</span>     */<a name="line.362"></a>
+<span class="sourceLineNo">363</span>    @Contract("null,_-&gt;null;!null,_-&gt;!null")<a name="line.363"></a>
+<span class="sourceLineNo">364</span>    public static &lt;T&gt; @Nullable T ret(@Nullable T retval, @NotNull ThrowingRunnable r) {<a name="line.364"></a>
+<span class="sourceLineNo">365</span>        return Exceptions.rethrow(r, retval);<a name="line.365"></a>
+<span class="sourceLineNo">366</span>    }<a name="line.366"></a>
+<span class="sourceLineNo">367</span><a name="line.367"></a>
+<span class="sourceLineNo">368</span>    /**<a name="line.368"></a>
+<span class="sourceLineNo">369</span>     * &lt;p&gt;An expressive shortcut for using a void function in context that requires to return something.&lt;/p&gt;<a name="line.369"></a>
+<span class="sourceLineNo">370</span>     *<a name="line.370"></a>
+<span class="sourceLineNo">371</span>     * &lt;p&gt;Example:&lt;/p&gt;<a name="line.371"></a>
+<span class="sourceLineNo">372</span>     *<a name="line.372"></a>
+<span class="sourceLineNo">373</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.373"></a>
+<span class="sourceLineNo">374</span>     * qwe = fallback(true, null, retnul(foo::bar), foo::baz, ret("boo", foo::qux))<a name="line.374"></a>
+<span class="sourceLineNo">375</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.375"></a>
+<span class="sourceLineNo">376</span>     *<a name="line.376"></a>
+<span class="sourceLineNo">377</span>     * &lt;p&gt;This is just another alias for {@link Exceptions#rethrow(ThrowingRunnable, Object)}.<a name="line.377"></a>
+<span class="sourceLineNo">378</span>     * Unlike {@link #ret(Object, ThrowingRunnable) ret()}, that places semantic emphasis on the<a name="line.378"></a>
+<span class="sourceLineNo">379</span>     * returned value, {@code retnul()} signifies that the return value is unimportant and we are<a name="line.379"></a>
+<span class="sourceLineNo">380</span>     * using it purely for syntactic needs.&lt;/p&gt;<a name="line.380"></a>
+<span class="sourceLineNo">381</span>     *<a name="line.381"></a>
+<span class="sourceLineNo">382</span>     * @param r the void operation to perform.<a name="line.382"></a>
+<span class="sourceLineNo">383</span>     * @return {@code null} if {@code r} did not throw exception.<a name="line.383"></a>
+<span class="sourceLineNo">384</span>     */<a name="line.384"></a>
+<span class="sourceLineNo">385</span>    @Contract("_-&gt;null")<a name="line.385"></a>
+<span class="sourceLineNo">386</span>    public static &lt;T&gt; @Nullable T retnul(@NotNull ThrowingRunnable r) {<a name="line.386"></a>
+<span class="sourceLineNo">387</span>        return Exceptions.rethrow(r, null);<a name="line.387"></a>
+<span class="sourceLineNo">388</span>    }<a name="line.388"></a>
+<span class="sourceLineNo">389</span>}<a name="line.389"></a>
 
 
 
