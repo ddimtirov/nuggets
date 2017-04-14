@@ -8,13 +8,9 @@ matrix:
           before_install:
             # codecov.io
             - pip install --user codecov
-            # codacy.com
-            - curl -sL https://github.com/jpm4j/jpm4j.installers/raw/master/dist/biz.aQute.jpm.run.jar >jpm4j.jar
-            - java -jar jpm4j.jar -u init
-            - ~/jpm/bin/jpm install com.codacy:codacy-coverage-reporter:assembly
           script: >
             if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then
-            ./gradlew build jacocoTestReport javadoc versionEyeSecurityAndLicenseCheck artifactoryPublish
+            ./gradlew build jacocoTestReport javadoc versionEyeSecurityAndLicenseCheck artifactoryPublish codacyUpload
             -PbuildInfo.build.number=$TRAVIS_BUILD_NUMBER
             -PbuildInfo.buildUrl=https://travis-ci.org/${TRAVIS_REPO_SLUG}/builds/${TRAVIS_JOB_ID}
             -PbuildInfo.principal=$USER
@@ -76,4 +72,3 @@ cache:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
     - $HOME/.cache/pip
-    - $HOME/.jpm

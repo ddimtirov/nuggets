@@ -16,9 +16,10 @@
 
 plugins {
     id 'com.gradle.build-scan' version '1.6'
-    id "com.jfrog.artifactory" version "4.4.14"
+    id "com.jfrog.artifactory" version "4.4.15"
     id "com.jfrog.bintray" version "1.7.3"
-    id "net.ltgt.errorprone" version "0.0.9" apply false // coverity doesn't like it
+    id "net.ltgt.errorprone" version "0.0.10" apply false // coverity doesn't like it
+    id "io.github.ddimtirov.codacy" version "0.1.0"
     id "org.standardout.versioneye" version "1.4.0"
     id "org.jetbrains.kotlin.jvm" version "1.1.1"
 //    id "org.jetbrains.dokka" version "0.9.13" // TODO: update when works
@@ -30,6 +31,7 @@ plugins {
     id "jacoco"
     id "maven-publish"
 }
+repositories.maven { url "http://dl.bintray.com/typesafe/maven-releases" } // FIXME: codacy uploader needs this
 if (!System.getenv('COVERITY_SCAN_BRANCH')) {
     apply plugin:"net.ltgt.errorprone"
 }
