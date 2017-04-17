@@ -299,6 +299,8 @@ public class Extractors {
      * @param methodName the name of the method to invoke
      * @param retType the type of the method return value
      * @param args the method arguments
+     * @param <T> the type of the method return value
+     * @return the return value of the invoked medthod.
      *
      * @see #getAccessibleField(Class, boolean, String)
      * @see #peekField(Object, Class, String, Class)
@@ -322,6 +324,8 @@ public class Extractors {
      * @param methodName the name of the method to invoke
      * @param retType the type of the method return value. Pass {@code Void.class} if you want o ignore the return value and get null.
      * @param args the method arguments
+     * @param <T> the type of the method return value
+     * @return the return value of the invoked medthod.
      *
      * @see #getAccessibleField(Class, boolean, String)
      * @see #peekField(Object, Class, String, Class)

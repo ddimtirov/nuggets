@@ -380,6 +380,7 @@ public final class Functions {
      * using it purely for syntactic needs.</p>
      *
      * @param r the void operation to perform.
+     * @param <T> type inferrence helper - as we return null, any type would do
      * @return {@code null} if {@code r} did not throw exception.
      */
     @Contract("_->null")
