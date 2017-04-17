@@ -435,7 +435,7 @@
 <span class="sourceLineNo">427</span>     * @see Field#setAccessible(boolean)<a name="line.427"></a>
 <span class="sourceLineNo">428</span>     */<a name="line.428"></a>
 <span class="sourceLineNo">429</span>    @Contract(pure=true) @SuppressWarnings("JavaDoc")<a name="line.429"></a>
-<span class="sourceLineNo">430</span>    public static Field getAccessibleField(@NotNull Class&lt;?&gt; type, boolean checkSuperclasses, @Identifier @NotNull String fieldName) {<a name="line.430"></a>
+<span class="sourceLineNo">430</span>    public static @NotNull Field getAccessibleField(@NotNull Class&lt;?&gt; type, boolean checkSuperclasses, @Identifier @NotNull String fieldName) {<a name="line.430"></a>
 <span class="sourceLineNo">431</span>        try {<a name="line.431"></a>
 <span class="sourceLineNo">432</span>            Field field = type.getDeclaredField(fieldName);<a name="line.432"></a>
 <span class="sourceLineNo">433</span>            forceAccessible(field);<a name="line.433"></a>
