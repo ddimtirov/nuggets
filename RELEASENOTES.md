@@ -1,3 +1,25 @@
+# v0.3.0 Port allocator, Reflective invocation, Void to returning function adaptors 
+
+While the theme of this release was to improve the continuous integration infrastructure,
+ we also added a few minor features.
+ 
+The `Ports` class implements block-based port allocation, useful when one does integration
+testing and wants to test in parallel a service which binds ports, and/or needs a private 
+data directory.
+ 
+The `Extractors` utility got a brand new `invokeMethod()` and `getAccessibleMethod()`, 
+ allowing to break encapsulation with minimum fuss (similar to their _`xxxField()`_ 
+ counterparts). The parameter order of `getAccessibleField()` has been changed in order
+ to make it consistent with the other methods (should result in easy to fix compile error). 
+
+The `Functions` utility now provides the `ret()` and `retnul()`, which allow us to write 
+ more expressive one-liners when we need to use a void function in a position expecting 
+ a non-void expression. 
+
+From the non-functional side, now the tests are running on OS X, Windows and Linux under 
+both JDK8 and (currently failing) JDK9. We have also added a [Coverity scan](https://scan.coverity.com/projects/ddimtirov-nuggets) 
+on top of the existing Findbugs and Checkstyle checks.
+ 
 # v0.2.0 Functions and small improvements in Extractors 
 
 The theme for `v0.2.0` release is lambda utilities. This is not yet another 

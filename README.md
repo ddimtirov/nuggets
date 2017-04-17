@@ -8,7 +8,9 @@ as well as features that make code easier to read and maintain.
 [![Codacy Coverage](https://api.codacy.com/project/badge/Coverage/0951cb36db314ff1bf69646402f4b988)](https://www.codacy.com/app/dimitar-dimitrov/nuggets?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ddimtirov/nuggets&amp;utm_campaign=Badge_Coverage)
 [![codecov](https://codecov.io/gh/ddimtirov/nuggets/branch/master/graph/badge.svg)](https://codecov.io/gh/ddimtirov/nuggets) 
 [![Dependency Status](https://www.versioneye.com/user/projects/57d2624987b0f6003c14ac1e/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/57d2624987b0f6003c14ac1e)
-[ ![Latest Release](https://api.bintray.com/packages/ddimitrov/oss/nuggets/images/download.svg) ](https://bintray.com/ddimitrov/oss/nuggets/_latestVersion)
+[![Latest Release](https://api.bintray.com/packages/ddimitrov/oss/nuggets/images/download.svg) ](https://bintray.com/ddimitrov/oss/nuggets/_latestVersion)
+[![Coverity Scan](https://scan.coverity.com/projects/10133/badge.svg)](https://scan.coverity.com/projects/ddimtirov-nuggets)
+
 ### Functionality:
 
 Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nuggets/javadoc/io/github/ddimitrov/nuggets/package-summary.html) for detailed documentation. 
@@ -25,7 +27,8 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
     - stack transformer to get rid of some parasitic stackframes in Groovy
   - dump an exception stacktrace to multi-line string and parse it back 
 - `Extractors` - reflection utils  
-  - `peek` and `poke` to a private or final field  
+  - `peek` and `poke` to a private or final field
+  - `invokeMethod` to invoke any method with minimum ceremony  
   - convert between wrapper and primitive classes
   - create a default value for type (no-args constructor, zero, `false`, or `null`)
   - safely load potentially missing classes (useful for plugins and optional functionality)
@@ -45,6 +48,12 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
     reporting.
   - factory for utility function objects allowing to intercept function 
     objects before/after call
+  - adaptors allowing to use `void` functions in non-void context
+- `Ports` implement a block-based port allocation pattern, useful for integration tests
+  - clean, simple and extensible API
+  - hook to customize the actual allocation algorithm.  
+  - hooks to validate and export the allocated ports to custom config mechanism 
+    (i.e. generate config files, or update `System.getProperties()`)
 - Special Groovy API  
   - Use `Extractors` as Groovy [category](http://groovy-lang.org/metaprogramming.html#categories) 
     to decorate any object with `peekField()/pokeField()`, which can be used access private or 
@@ -56,6 +65,17 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
   - Use `closure.named('name')` to decorate Closures with human-readable `toString()`
   - Use `DelegatedClosure` when you want to write a decorator intercepting a 
     method or two of a wrapped closure.
+  - `Ports` supports array-like indexing to get ports by ID (i.e. one can write 
+    `ports['http']`), as well as DSL configuration such as: 
+    ```
+     def ports = Ports.continuousBlock(10) // easy config for default setup
+     ports.withPortSpec(5000) { // easy registration
+        id "foo"
+        id "bar" offset 1
+        id "baz"
+     }
+    ```
+      
 - Special Kotlin API
   - Transform Exceptions in more natural way, by adding `throwable.transform {...}`
     extension method. Added few extension methods to the transform builder.
@@ -63,6 +83,16 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
     and `instance.peek/pokeField(...)`
   - Added `col(name) { ... }` extension method for more natural config 
     of a table column.    
+  - `Ports` supports array-like indexing to get ports by ID (i.e. one can write 
+    `ports['http']`), as well as DSL configuration such as: 
+    ```
+     def ports = portsBlock(10) // easy config for default setup
+     ports.withPorts(5000) { reserve -> // easy registration
+        reserve port "foo"
+        reserve port "bar" at 5
+        reserve port "baz"
+     }
+    ```
     
 ### Non-functional Features:
 - Fat-jar friendly (don't add yet another jar to your distribution)
@@ -72,6 +102,10 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
   - all components are designed with dependencies in mind, making it trivial 
     to strip the parts you don't use with something like `ProGuard`. 
 - high quality testing and javadoc
+  - tested on OS X, Windows and Linux
+  - code quality checked by Findbugs, Checkstyle and Coverity
+  - test coverage tracked by Codecov
+  - Codacy dashboard tracks multiple metrics over time
 - annotated with the JetBrains annotations (helps if you use IntelliJ IDEA)
 - the naming of static methods is chosen to be easily recognizable, 
   yet reduce the chance of clashing when imported statically.

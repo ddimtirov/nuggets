@@ -427,7 +427,7 @@ public class Extractors {
      * @see Field#setAccessible(boolean)
      */
     @Contract(pure=true) @SuppressWarnings("JavaDoc")
-    public static Field getAccessibleField(@NotNull Class<?> type, boolean checkSuperclasses, @Identifier @NotNull String fieldName) {
+    public static @NotNull Field getAccessibleField(@NotNull Class<?> type, boolean checkSuperclasses, @Identifier @NotNull String fieldName) {
         try {
             Field field = type.getDeclaredField(fieldName);
             forceAccessible(field);
