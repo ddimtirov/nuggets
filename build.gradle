@@ -16,13 +16,13 @@
 
 plugins {
     id 'com.gradle.build-scan' version '1.6'
-    id "com.jfrog.artifactory" version "4.4.15"
+    id "com.jfrog.artifactory" version "4.4.17"
     id "com.jfrog.bintray" version "1.7.3"
     id "net.ltgt.errorprone" version "0.0.10" apply false // coverity doesn't like it
     id "io.github.ddimtirov.codacy" version "0.1.0"
     id "org.standardout.versioneye" version "1.4.0"
-    id "org.jetbrains.kotlin.jvm" version "1.1.1"
-//    id "org.jetbrains.dokka" version "0.9.13" // TODO: update when works
+    id "org.jetbrains.kotlin.jvm" version "1.1.2-2"
+    id "org.jetbrains.dokka" version "0.9.14-eap-2" // TODO: update when works
     id 'com.github.ben-manes.versions' version '0.14.0' // gradlew dependencyUpdates
     id "java-library"
     id "groovy"
@@ -31,7 +31,6 @@ plugins {
     id "jacoco"
     id "maven-publish"
 }
-repositories.maven { url "http://dl.bintray.com/typesafe/maven-releases" } // FIXME: codacy uploader needs this
 if (!System.getenv('COVERITY_SCAN_BRANCH')) {
     apply plugin:"net.ltgt.errorprone"
 }
@@ -51,7 +50,7 @@ apply from: file('gradle/quality.gradle')
 
 dependencies {
     compileOnly 'org.jetbrains:annotations:',
-                'org.jetbrains.kotlin:kotlin-stdlib:',
+                'org.jetbrains.kotlin:kotlin-stdlib-jre8:',
                 'org.codehaus.groovy:groovy:'
 
     testCompileOnly 'org.jetbrains:annotations:' // so that the Groovy compiler won't complain
@@ -67,4 +66,7 @@ dependencies {
 test {
     // for predictable stack traces we disable the reflection bytecode generation
     systemProperties 'sun.reflect.inflationThreshold': Integer.MAX_VALUE
+
+    // used by Groovy extension methods, such as `File().text` or `new URL().text`
+    systemProperties 'file.encoding': 'UTF-8'
 }
