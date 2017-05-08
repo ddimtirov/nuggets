@@ -18,6 +18,7 @@ package io.github.ddimitrov.nuggets
 
 import io.github.ddimitrov.nuggets.internal.groovy.DelegatedClosure
 import io.github.ddimitrov.nuggets.internal.groovy.NuggetsExtensions
+import io.github.ddimitrov.nuggets.internal.groovy.NuggetsStaticExtensions
 import org.junit.Test
 
 @SuppressWarnings(["GroovyResultOfObjectAllocationIgnored", "GroovyAccessibility"])
@@ -25,6 +26,8 @@ class FullLineCoveragePadding {
     @Test void constructors() {
         new Functions()
         new NuggetsExtensions()
+        new NuggetsStaticExtensions()
+        new UrlStreamHandlers()
         new Exceptions()
         new Extractors()
         new Functions()
