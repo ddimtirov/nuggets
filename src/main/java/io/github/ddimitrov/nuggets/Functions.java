@@ -21,8 +21,9 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeoutException;
 import java.util.function.*;
 
 /**
@@ -30,8 +31,49 @@ import java.util.function.*;
  * for common Java functional interfaces. All methods are threadsafe.</p>
  */
 public final class Functions {
+    /**
+     * This is used by function applicators using polling to detect unnatural deviation between the
+     * actual time slept/waited and the expected (an indication that the program is probably running
+     * under debugger). The value is used as in <em>"how many times longer should be the detected sleep
+     * time, compared to the expected in order to assume debugger"</em>
+     */
+    public static final long POLL_SLEEP_DEBUG_DETECTION_FACTOR = Long.getLong("nuggets.retry.pollSleep.debugDetectionFactor", 5);
+
+    /**
+     * When retrying, determines for how long to check in a busy loop before starting to sleep
+     * between checks.
+     * @see #POLL_SLEEP_MS
+     * @see #retry(String, long, Callable)
+     */
+    public static volatile long spinWaitMs = Long.getLong("nuggets.retry.spinMs", 20);
+
+    /**
+     * When retrying, determines for how long to sleep between checks.
+     * @see #POLL_SLEEP_MS
+     * @see #retry(String, long, Callable)
+     */
+    public static final long POLL_SLEEP_MS = Long.getLong("nuggets.retry.pollSleepMs", 100); // set to at least 5 times the timer resolution
+
+    /**
+     * Check to see if you are already in retry loop - a well behaved function should not block
+     * in a retry loop, but throw an error and let it try again.
+     */
+    public static final ThreadLocal<Boolean> inRetry = ThreadLocal.withInitial(() -> false);
+
+    private static final Map<String, RetryListener> spinListeners = Collections.synchronizedMap(new LinkedHashMap<>());
+
     private Functions() {}
 
+    /**
+     * A pattern to which each named closure name should conform.
+     * @see #sup
+     * @see #con(String, Consumer)
+     * @see #con(String, BiConsumer)
+     * @see #fun(String, Function)
+     * @see #fun(String, BiFunction)
+     * @see #pre(String, Predicate)
+     * @see #pre(String, BiPredicate)
+     */
     public static final String VALID_NAME_PATTERN = "\\S(?:.*\\S)?";
     private static final java.util.regex.Pattern validName = java.util.regex.Pattern.compile(VALID_NAME_PATTERN);
     private static void checkName(@NotNull String name) {
@@ -386,5 +428,122 @@ public final class Functions {
     @Contract("_->null")
     public static <T> @Nullable T retnul(@NotNull ThrowingRunnable r) {
         return Exceptions.rethrow(r, null);
+    }
+
+
+    /**
+     * <p>Retry the callable {@code assertion} until it finishes without throwing exception or
+     * timeout elapses. The retry policy first busy-waits for {@link #spinWaitMs} and then starts
+     * sleeping for {@link #POLL_SLEEP_MS} between checks.</p>
+     *
+     * <p>When the callees of the {@code assertion} call {@code retry()}, the nested calls are
+     * ignored i.e. they will not loop, but fail straight to the top-level retry. This may look
+     * strange, but is found to be the useful in practice, as often a low-level check gets stuck
+     * on a condition that is supposed to be evaluated somewhere higher up the stack, causing
+     * a condition similar to "priority inversion".
+     * </p>
+     *
+     * @param description human readable description of what are wwe doing - useful for error reporting.
+     * @param timeoutMs how long do we want to wait for it (the actual wait may be a bit longer)
+     * @param assertion a callable that would either return the result or throw an error to indicate
+     *                  we should retry.
+     * @param <T> the type of the expected result.
+     * @return the result of the calculation.
+     * @throws TimeoutException to indicate that no result has been produced within the allotted time.
+     *
+     * @see #inRetry
+     * @see #snoopRetries(String, RetryListener)
+     */
+    @SuppressWarnings("BusyWait")
+    public static <T> @Nullable T retry(@Nullable String description, long timeoutMs, @NotNull Callable<T> assertion) throws TimeoutException {
+        boolean topLevel = !inRetry.get();
+
+        try {
+            if (topLevel) {
+                inRetry.set(true);
+            }
+
+            long startingTimestamp = System.currentTimeMillis();
+            long timeLeft = timeoutMs;
+            Throwable last = null;
+            while (timeLeft > 0) {
+                try {
+                    T result = assertion.call();
+                    if (topLevel) {
+                        for (RetryListener spinListener :  spinListeners.values()) {
+                            spinListener.onRetry(description, result, null);
+                        }
+                    }
+                    return result;
+                } catch (Throwable e) {
+                    last = e;
+                }
+                try {
+                    long beforeSleep = System.currentTimeMillis();
+                    boolean timeToStartSleeping = beforeSleep > startingTimestamp+spinWaitMs;
+                    if (topLevel && timeToStartSleeping) {
+                        // only top-level sleep, so we can compose functions that use retry
+                        Thread.yield();
+                        Thread.sleep(POLL_SLEEP_MS);
+                    }
+                    long timeSleptMs = System.currentTimeMillis() - beforeSleep;
+                    boolean debuggerDetected = timeSleptMs > POLL_SLEEP_MS * POLL_SLEEP_DEBUG_DETECTION_FACTOR;
+                    timeLeft -= debuggerDetected ?  POLL_SLEEP_MS : timeSleptMs ;
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            long durationMs = System.currentTimeMillis() - startingTimestamp;
+
+            TimeoutException timeout = new TimeoutException("Timeout of " + timeoutMs + " ms exceeded (actual " + durationMs + " ms): " + description);
+            if (last!=null) {
+                timeout.addSuppressed(last);
+            }
+            for (RetryListener spinListener :  spinListeners.values()) {
+                spinListener.onRetry(description, null, timeout);
+            }
+            return Exceptions.rethrow(timeout);
+        } finally {
+            if (topLevel) inRetry.remove();
+        }
+    }
+
+    /**
+     * Allows to register a listener to be notified at the end of every {@link #retry(String, long, Callable)}
+     * call, with the description and outcome.
+     *
+     * @param listenerId an unique ID to register listener under. If another listener is registered
+     *                   with the same ID it replaces the previous.
+     * @param listener the actual listener to register. If {@code null} it would remove the lister
+     *                 for the specified {@code listenerId}.
+     * @return the previously registered listener for the {@code listenerId}, or {@code null}
+     *         if none exists.
+     */
+    public static @Nullable RetryListener snoopRetries(@NotNull String listenerId, @Nullable RetryListener listener) {
+        if (listener==null) {
+            return spinListeners.remove(listenerId);
+        } else {
+            return spinListeners.put(listenerId, listener);
+        }
+    }
+
+    /**
+     * Listener interface notified on success or failure of  {@link #retry(String, long, Callable)}.
+     * @see #snoopRetries(String, RetryListener)
+     */
+    @FunctionalInterface
+    public interface RetryListener {
+        /**
+         * Called when a {@link #retry(String, long, Callable)} call succeeds or fails.
+         *
+         * @param description the description passed to the {@code retry()} call
+         * @param resultOnSuccess the result of the {@code retry()} call if it succeeded,
+         *                        {@code null} otherwise.
+         * @param error {@code null} if the {@code retry()} call succeeded,
+         *              the exception if it failed. If not {@code null}, then the
+         *              {@code resultOnSuccess} must be {@code null}.
+         */
+        void onRetry(@Nullable String description, @Nullable Object resultOnSuccess, @Nullable Throwable error);
     }
 }
