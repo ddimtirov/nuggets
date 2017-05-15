@@ -26,6 +26,11 @@ if (pluginManager.hasPlugin("net.ltgt.errorprone")) {
     }
 }
 
+pmd {
+    ruleSets.clear()
+    ruleSetFiles = files('gradle/quality/pmd-rules.xml')
+}
+
 tasks.withType(FindBugs) {
     excludeFilter = file('gradle/quality/findbugs-suppressed.xml', PathValidation.FILE)
     it.reports {
