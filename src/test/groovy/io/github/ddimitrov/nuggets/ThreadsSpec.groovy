@@ -38,7 +38,7 @@ class ThreadsSpec extends Specification {
 
         expect:
         Threads.siblingThreads.containedGroups(false).contains(testThreadGroup)
-        Threads.siblingThreads.containedGroups(false).contains(testThreadGroup)
+        Threads.siblingThreads.containedGroups(true).contains(testThreadGroup)
 
         when: def testThreads = new Threads(testThreadGroup)
         then: testThreads.all.size()==0
@@ -58,6 +58,41 @@ class ThreadsSpec extends Specification {
             keySet()==(0..9).collect { "test-thread-$it" } as Set
             values().every { it instanceof Runnable }
         }
+
+        when:
+        sync.countDown()
+        testThreads.containedThreads(false)*.join()
+        then: testThreads.all.empty
+
+        cleanup:
+        sync.countDown()
+    }
+    @Timeout(5)
+    def "groovy functionality demo"() {
+        given: "a new test group"
+        def testThreadGroup = new ThreadGroup("test")
+        testThreadGroup.daemon = true
+        def sync = new CountDownLatch(1)
+
+        expect:
+        testThreadGroup in Threads.siblingThreads.containedGroups(false)
+
+        when: def testThreads = new Threads(testThreadGroup)
+        then: testThreads.all.empty
+
+        when: 0.upto(9) { new Thread(testThreadGroup, { sync.await() }, "test-thread-$it").start()}
+         and: new Thread(testThreadGroup, { sync.await() }, "test-thread-9").start()
+        then: 0.upto(8) {
+            assert testThreads.byName["test-thread-$it"].size()==1
+            assert testThreads.byName["test-thread-$it"][0] instanceof Closure
+            assert testThreads.withUniqueName["test-thread-$it"] == testThreads.byName["test-thread-$it"][0]
+            assert testThreads.byName["test-thread-$it"].size()==1
+            assert testThreads.byName["test-thread-$it"][0] instanceof Closure
+            assert testThreads["test-thread-$it"] == testThreads.byName["test-thread-$it"][0]
+        }
+        testThreads.byName["test-thread-9"].size()==2
+        testThreads.withUniqueName["test-thread-9"] == null
+        testThreads["test-thread-9"] == null
 
         when:
         sync.countDown()

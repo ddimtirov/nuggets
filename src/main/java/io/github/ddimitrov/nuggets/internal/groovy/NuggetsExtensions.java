@@ -18,13 +18,11 @@ package io.github.ddimitrov.nuggets.internal.groovy;
 
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
-import io.github.ddimitrov.nuggets.ExceptionTransformerBuilder;
-import io.github.ddimitrov.nuggets.Extractors;
-import io.github.ddimitrov.nuggets.Functions;
-import io.github.ddimitrov.nuggets.Ports;
+import io.github.ddimitrov.nuggets.*;
 import org.intellij.lang.annotations.Identifier;
 import org.intellij.lang.annotations.Pattern;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -168,6 +166,17 @@ public class NuggetsExtensions {
         spec.call(self);
         delegate.flush();
         return self.freeze(portBaseHint);
+    }
+
+    /**
+     * A shorthand to refer to uniquely named threads using square bracket notation.
+     * @param self the {@code Threads} instance.
+     * @param threadName the name of uniquely named thread
+     * @return the runnable associated witht he said thread, or {@code null}
+     *         if the thread does not exist or more htan one exist.
+     */
+    public static @Nullable Runnable getAt(@NotNull Threads self, @NotNull String threadName) {
+        return self.getWithUniqueName().get(threadName);
     }
 }
 
