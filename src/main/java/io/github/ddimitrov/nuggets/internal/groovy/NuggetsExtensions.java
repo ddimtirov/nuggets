@@ -178,5 +178,52 @@ public class NuggetsExtensions {
     public static @Nullable Runnable getAt(@NotNull Threads self, @NotNull String threadName) {
         return self.getWithUniqueName().get(threadName);
     }
+
+    /**
+     * {@link ReflectionProxy#unwrap(Class) Unwraps} an reflection proxy
+     * @param self the reflection proxy instance
+     * @param type the desired result type
+     * @param <T> generic parameter for type inference
+     * @return the unwrapped reflection proxy value
+     */
+    public static <T> T asType(@NotNull ReflectionProxy self, @NotNull Class<T> type) {
+        return self.unwrap(type);
+    }
+
+    /**
+     * Adapts the reflection proxy to use resolution type (used to resolve shadowed members).
+     * @param self the reflection proxy instance
+     * @param resolutionType the desired type to use for member resoolution
+     * @return an adapted reflection proxy instance
+     */
+    public static @NotNull ReflectionProxy getAt(@NotNull ReflectionProxy self, @NotNull Class<?> resolutionType) {
+        return self.resolvingAtType(resolutionType);
+    }
+
+    /**
+     * Gets the value of a field and wraps it in reflection proxy
+     * @param self the reflection proxy instance
+     * @param field the field name
+     * @return the {@link ReflectionProxy#wrap(Object) wrapped} field value
+     */
+    public static @NotNull ReflectionProxy getAt(@NotNull ReflectionProxy self, @NotNull @Identifier String field) {
+        return self.get(field);
+    }
+
+    /**
+     * Sets the value of a field
+     * @param self the reflection proxy instance
+     * @param field the name of the field to set
+     * @param value the value to set
+     */
+    public static void putAt(@NotNull ReflectionProxy self, @NotNull @Identifier String field, Object value) {
+        self.set(field, value);
+    }
+
+
+    public static @NotNull ReflectionDslProxy reflectionDsl(@NotNull Object self) {
+        return new ReflectionDslProxy(ReflectionProxy.wrap(self));
+    }
+
 }
 

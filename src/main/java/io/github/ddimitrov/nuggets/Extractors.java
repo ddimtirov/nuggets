@@ -379,7 +379,6 @@ public class Extractors {
         next_method:
         for (Method method : type.getDeclaredMethods()) {
             if (!method.getName().equals(methodName)) continue;
-            System.out.println(method);
             Class<?>[] parameterTypes = method.getParameterTypes();
             if (parameterTypes.length != signature.length) continue;
 
@@ -397,7 +396,7 @@ public class Extractors {
         }
 
         Class<?> superclass = type.getSuperclass();
-        if (checkSuperclasses && !Objects.equals(superclass, Object.class)) {
+        if (checkSuperclasses && !Objects.isNull(superclass) && !Objects.equals(superclass, Object.class)) {
             return getAccessibleMethod(superclass, true, methodName);
         }
 
