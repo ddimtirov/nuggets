@@ -22,4 +22,9 @@
         <Class name="io.github.ddimitrov.nuggets.internal.groovy.NuggetsExtensions$1DescribedClosure" />
         <Bug pattern="SE_BAD_FIELD" />
     </Match>
+    <Match>
+        <Class name="io.github.ddimitrov.nuggets.internal.groovy.ReflectionDslProxy" />
+        <Method name="equals" params="java.lang.Object" returns="boolean"/>
+        <Bug pattern="EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS" />
+    </Match>
 </FindBugsFilter>

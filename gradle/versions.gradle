@@ -26,7 +26,7 @@ configurations.all {
             case 'org.spockframework':   return useVersion('1.1-groovy-2.4')
             case 'org.codehaus.groovy':  return useVersion('2.4.11')
             case 'javax.inject':         return useVersion('1')
-            case 'org.jetbrains.kotlin': return useVersion('1.1.2-3')
+            case 'org.jetbrains.kotlin': return useVersion('1.1.2-4')
             case 'cglib':                return useVersion('3.2.4')
             case 'org.jetbrains':
                 switch (requested.name) {
