@@ -387,508 +387,507 @@
 <span class="sourceLineNo">379</span>        next_method:<a name="line.379"></a>
 <span class="sourceLineNo">380</span>        for (Method method : type.getDeclaredMethods()) {<a name="line.380"></a>
 <span class="sourceLineNo">381</span>            if (!method.getName().equals(methodName)) continue;<a name="line.381"></a>
-<span class="sourceLineNo">382</span>            System.out.println(method);<a name="line.382"></a>
-<span class="sourceLineNo">383</span>            Class&lt;?&gt;[] parameterTypes = method.getParameterTypes();<a name="line.383"></a>
-<span class="sourceLineNo">384</span>            if (parameterTypes.length != signature.length) continue;<a name="line.384"></a>
-<span class="sourceLineNo">385</span><a name="line.385"></a>
-<span class="sourceLineNo">386</span>            for (int i = 0; i &lt; parameterTypes.length; i++) {<a name="line.386"></a>
-<span class="sourceLineNo">387</span>                Class&lt;?&gt; p = parameterTypes[i];<a name="line.387"></a>
-<span class="sourceLineNo">388</span>                if (signature[i] == null) {<a name="line.388"></a>
-<span class="sourceLineNo">389</span>                    if (p.isPrimitive()) continue next_method;<a name="line.389"></a>
-<span class="sourceLineNo">390</span>                } else {<a name="line.390"></a>
-<span class="sourceLineNo">391</span>                    if (!coercibleByReflection(p, signature[i])) continue next_method;<a name="line.391"></a>
-<span class="sourceLineNo">392</span>                }<a name="line.392"></a>
-<span class="sourceLineNo">393</span>            }<a name="line.393"></a>
-<span class="sourceLineNo">394</span><a name="line.394"></a>
-<span class="sourceLineNo">395</span>            method.setAccessible(true);<a name="line.395"></a>
-<span class="sourceLineNo">396</span>            return method;<a name="line.396"></a>
-<span class="sourceLineNo">397</span>        }<a name="line.397"></a>
-<span class="sourceLineNo">398</span><a name="line.398"></a>
-<span class="sourceLineNo">399</span>        Class&lt;?&gt; superclass = type.getSuperclass();<a name="line.399"></a>
-<span class="sourceLineNo">400</span>        if (checkSuperclasses &amp;&amp; !Objects.equals(superclass, Object.class)) {<a name="line.400"></a>
-<span class="sourceLineNo">401</span>            return getAccessibleMethod(superclass, true, methodName);<a name="line.401"></a>
-<span class="sourceLineNo">402</span>        }<a name="line.402"></a>
-<span class="sourceLineNo">403</span><a name="line.403"></a>
-<span class="sourceLineNo">404</span>        return doSneakyThrow(new NoSuchMethodException(<a name="line.404"></a>
-<span class="sourceLineNo">405</span>                "No method named '" + methodName + "' could be found with signature matching: " +<a name="line.405"></a>
-<span class="sourceLineNo">406</span>                Arrays.stream(signature).map(it -&gt; it==null ? "&lt;any-ref&gt;" : it.getSimpleName()).collect(Collectors.joining(", "))<a name="line.406"></a>
-<span class="sourceLineNo">407</span>        ));<a name="line.407"></a>
-<span class="sourceLineNo">408</span>    }<a name="line.408"></a>
-<span class="sourceLineNo">409</span><a name="line.409"></a>
-<span class="sourceLineNo">410</span>    /**<a name="line.410"></a>
-<span class="sourceLineNo">411</span>     * &lt;p&gt;Gets a {@link Field} instance that can be used to get and set values, regardless of the field visibility, final or<a name="line.411"></a>
-<span class="sourceLineNo">412</span>     * static modifiers. Subject to security policy restrictions (if you don't know what that is, don't worry - you are<a name="line.412"></a>
-<span class="sourceLineNo">413</span>     * probably safe).&lt;/p&gt;<a name="line.413"></a>
-<span class="sourceLineNo">414</span>     * &lt;p&gt;Sometimes there would be multiple fields with the same name declared in parent and sub-classes. In such cases<a name="line.414"></a>
-<span class="sourceLineNo">415</span>     * make sure you specify the type of the exact class you want to get the field from.&lt;/p&gt;<a name="line.415"></a>
-<span class="sourceLineNo">416</span>     *<a name="line.416"></a>
-<span class="sourceLineNo">417</span>     * @param type the type or a subtype of the class that holds the field.<a name="line.417"></a>
-<span class="sourceLineNo">418</span>     * @param checkSuperclasses if {@code false}, will check only {@code type}; if {@code true},<a name="line.418"></a>
-<span class="sourceLineNo">419</span>     *                          will check {@code type} and it's super classes all the way up<a name="line.419"></a>
-<span class="sourceLineNo">420</span>     *                          to {@code Object}.<a name="line.420"></a>
-<span class="sourceLineNo">421</span>     * @param fieldName the name of the field we want.<a name="line.421"></a>
-<span class="sourceLineNo">422</span>     * @return the writable field instance<a name="line.422"></a>
-<span class="sourceLineNo">423</span>     * @throws NoSuchFieldException if the field could not be found in the searched classes.<a name="line.423"></a>
-<span class="sourceLineNo">424</span>     *<a name="line.424"></a>
-<span class="sourceLineNo">425</span>     * @see #peekField(Object, String, Class)<a name="line.425"></a>
-<span class="sourceLineNo">426</span>     * @see #pokeField(Object, String, Object)<a name="line.426"></a>
-<span class="sourceLineNo">427</span>     * @see Field#setAccessible(boolean)<a name="line.427"></a>
-<span class="sourceLineNo">428</span>     */<a name="line.428"></a>
-<span class="sourceLineNo">429</span>    @Contract(pure=true) @SuppressWarnings("JavaDoc")<a name="line.429"></a>
-<span class="sourceLineNo">430</span>    public static @NotNull Field getAccessibleField(@NotNull Class&lt;?&gt; type, boolean checkSuperclasses, @Identifier @NotNull String fieldName) {<a name="line.430"></a>
-<span class="sourceLineNo">431</span>        try {<a name="line.431"></a>
-<span class="sourceLineNo">432</span>            Field field = type.getDeclaredField(fieldName);<a name="line.432"></a>
-<span class="sourceLineNo">433</span>            forceAccessible(field);<a name="line.433"></a>
-<span class="sourceLineNo">434</span>            return field;<a name="line.434"></a>
-<span class="sourceLineNo">435</span>        } catch (NoSuchFieldException e) {<a name="line.435"></a>
-<span class="sourceLineNo">436</span>            Class&lt;?&gt; superclass = type.getSuperclass();<a name="line.436"></a>
-<span class="sourceLineNo">437</span>            return !checkSuperclasses || Object.class.equals(superclass)<a name="line.437"></a>
-<span class="sourceLineNo">438</span>                    ? doSneakyThrow(e)<a name="line.438"></a>
-<span class="sourceLineNo">439</span>                    : getAccessibleField(superclass, true, fieldName);<a name="line.439"></a>
-<span class="sourceLineNo">440</span>        } catch (IllegalAccessException e) { return doSneakyThrow(e); }<a name="line.440"></a>
-<span class="sourceLineNo">441</span>    }<a name="line.441"></a>
-<span class="sourceLineNo">442</span><a name="line.442"></a>
-<span class="sourceLineNo">443</span>    /**<a name="line.443"></a>
-<span class="sourceLineNo">444</span>     * Makes {@code field} accessible, even if it was static final.<a name="line.444"></a>
-<span class="sourceLineNo">445</span>     * Use with care (that's why it's private).<a name="line.445"></a>
-<span class="sourceLineNo">446</span>     * @param field to be made accessible.<a name="line.446"></a>
-<span class="sourceLineNo">447</span>     * @return true if we had to hack the static-final case.<a name="line.447"></a>
-<span class="sourceLineNo">448</span>     */<a name="line.448"></a>
-<span class="sourceLineNo">449</span>    private static boolean forceAccessible(Field field) throws NoSuchFieldException, IllegalAccessException {<a name="line.449"></a>
-<span class="sourceLineNo">450</span>        field.setAccessible(true);<a name="line.450"></a>
-<span class="sourceLineNo">451</span><a name="line.451"></a>
-<span class="sourceLineNo">452</span>        int modifiers = field.getModifiers();<a name="line.452"></a>
-<span class="sourceLineNo">453</span>        if (!Modifier.isStatic(modifiers) || !Modifier.isFinal(modifiers)) return false;<a name="line.453"></a>
-<span class="sourceLineNo">454</span><a name="line.454"></a>
-<span class="sourceLineNo">455</span>        // the rest of the method deals with static final fields - should be a rare use case<a name="line.455"></a>
-<span class="sourceLineNo">456</span>        // http://zarnekow.blogspot.jp/2013/01/java-hacks-changing-final-fields.html<a name="line.456"></a>
-<span class="sourceLineNo">457</span>        // http://www.cliffc.org/blog/2011/10/17/writing-to-final-fields-via-reflection<a name="line.457"></a>
-<span class="sourceLineNo">458</span>        // http://www.cliffc.org/blog/2011/10/27/final-fields-part-2<a name="line.458"></a>
-<span class="sourceLineNo">459</span>        Field modifiersField = field.getClass().getDeclaredField("modifiers");<a name="line.459"></a>
-<span class="sourceLineNo">460</span>        boolean modifiersWasAccessible = modifiersField.isAccessible();<a name="line.460"></a>
-<span class="sourceLineNo">461</span>        try {<a name="line.461"></a>
-<span class="sourceLineNo">462</span>            modifiersField.setAccessible(true);<a name="line.462"></a>
-<span class="sourceLineNo">463</span>            modifiersField.setInt(field, modifiers &amp; ~Modifier.FINAL);<a name="line.463"></a>
-<span class="sourceLineNo">464</span>            field.set(null, field.get(null)); // force the creation of accessor<a name="line.464"></a>
-<span class="sourceLineNo">465</span>        } finally {<a name="line.465"></a>
-<span class="sourceLineNo">466</span>            modifiersField.setInt(field, modifiers);<a name="line.466"></a>
-<span class="sourceLineNo">467</span>            modifiersField.setAccessible(modifiersWasAccessible);<a name="line.467"></a>
-<span class="sourceLineNo">468</span>        }<a name="line.468"></a>
-<span class="sourceLineNo">469</span>        return true;<a name="line.469"></a>
-<span class="sourceLineNo">470</span>    }<a name="line.470"></a>
-<span class="sourceLineNo">471</span><a name="line.471"></a>
-<span class="sourceLineNo">472</span>    /**<a name="line.472"></a>
-<span class="sourceLineNo">473</span>     * Converts Java boxed classes ({@code java.lang.Void}, {@code java.lang.Integer},<a name="line.473"></a>
-<span class="sourceLineNo">474</span>     * {@code java.lang.Character}, etc.) to their primitive peers.<a name="line.474"></a>
-<span class="sourceLineNo">475</span>     * If the {@code type} is already primitive, it is returned as is.<a name="line.475"></a>
-<span class="sourceLineNo">476</span>     * Array classes are returned as-is (that may change in the future).<a name="line.476"></a>
-<span class="sourceLineNo">477</span>     *<a name="line.477"></a>
-<span class="sourceLineNo">478</span>     * @param type a class to convert<a name="line.478"></a>
-<span class="sourceLineNo">479</span>     * @return the corresponding primitive class<a name="line.479"></a>
-<span class="sourceLineNo">480</span>     */<a name="line.480"></a>
-<span class="sourceLineNo">481</span>    @Contract(pure=true)<a name="line.481"></a>
-<span class="sourceLineNo">482</span>    public static @NotNull Class&lt;?&gt; unboxClass(@NotNull Class&lt;?&gt; type) {<a name="line.482"></a>
-<span class="sourceLineNo">483</span>        if (type.isPrimitive()) return type;<a name="line.483"></a>
-<span class="sourceLineNo">484</span>        try {<a name="line.484"></a>
-<span class="sourceLineNo">485</span>            // How to find the primitive type<a name="line.485"></a>
-<span class="sourceLineNo">486</span>            // http://stackoverflow.com/questions/180097/dynamically-find-the-class-that-represents-a-primitive-java-type<a name="line.486"></a>
-<span class="sourceLineNo">487</span>            return (Class) type.getField("TYPE").get(null);<a name="line.487"></a>
-<span class="sourceLineNo">488</span>        } catch (NoSuchFieldException|IllegalAccessException e) {<a name="line.488"></a>
-<span class="sourceLineNo">489</span>            return type; // unreachable - all primitives have TYPE<a name="line.489"></a>
-<span class="sourceLineNo">490</span>        }<a name="line.490"></a>
-<span class="sourceLineNo">491</span>    }<a name="line.491"></a>
-<span class="sourceLineNo">492</span><a name="line.492"></a>
-<span class="sourceLineNo">493</span>    /**<a name="line.493"></a>
-<span class="sourceLineNo">494</span>     * Whether Java reflection can coerce ont type into another.<a name="line.494"></a>
-<span class="sourceLineNo">495</span>     * @param from the type of the value which we want to coerce.<a name="line.495"></a>
-<span class="sourceLineNo">496</span>     * @param to the type which we need to coerce the value to.<a name="line.496"></a>
-<span class="sourceLineNo">497</span>     * @return whether we can pass a {@code from} type value into a {@code to} type argument.<a name="line.497"></a>
-<span class="sourceLineNo">498</span>     */<a name="line.498"></a>
-<span class="sourceLineNo">499</span>    @SuppressWarnings("SimplifiableIfStatement")<a name="line.499"></a>
-<span class="sourceLineNo">500</span>    public static boolean coercibleByReflection(@NotNull Class&lt;?&gt; from, @NotNull Class&lt;?&gt; to) {<a name="line.500"></a>
-<span class="sourceLineNo">501</span>        if (from==to || to.isAssignableFrom(from)) return true;<a name="line.501"></a>
-<span class="sourceLineNo">502</span>        Class&lt;?&gt; pFrom = unboxClass(from);<a name="line.502"></a>
-<span class="sourceLineNo">503</span>        Class&lt;?&gt; pTo = unboxClass(to);<a name="line.503"></a>
-<span class="sourceLineNo">504</span>        if (pFrom!=from || pTo!=to) return coercibleByReflection(pFrom, pTo);<a name="line.504"></a>
-<span class="sourceLineNo">505</span><a name="line.505"></a>
-<span class="sourceLineNo">506</span>        boolean fits = to==double.class; // double is the top of the numbers coercion hierarchy<a name="line.506"></a>
-<span class="sourceLineNo">507</span>        if ( from==float.class                   ) return fits; else fits |= to==float.class ;<a name="line.507"></a>
-<span class="sourceLineNo">508</span>        if ( from==long.class                    ) return fits; else fits |= to==long.class ;<a name="line.508"></a>
-<span class="sourceLineNo">509</span>        if ( from==int.class || from==char.class ) return fits; else fits |= to==int.class ;<a name="line.509"></a>
-<span class="sourceLineNo">510</span>        if ( from==short.class                   ) return fits; else fits |= to==short.class ;<a name="line.510"></a>
-<span class="sourceLineNo">511</span>        if ( from==byte.class                    ) return fits;<a name="line.511"></a>
-<span class="sourceLineNo">512</span><a name="line.512"></a>
-<span class="sourceLineNo">513</span>        return false;<a name="line.513"></a>
-<span class="sourceLineNo">514</span>    }<a name="line.514"></a>
-<span class="sourceLineNo">515</span><a name="line.515"></a>
-<span class="sourceLineNo">516</span>    /**<a name="line.516"></a>
-<span class="sourceLineNo">517</span>     * Converts primitive Java classes ({@code void.class}, {@code char.class},<a name="line.517"></a>
-<span class="sourceLineNo">518</span>     * {@code int.class}) to their boxed ({@code java.lang.Void}, {@code java.lang.Character},<a name="line.518"></a>
-<span class="sourceLineNo">519</span>     * {@code java.lang.Integer}, etc.)<a name="line.519"></a>
-<span class="sourceLineNo">520</span>     * If the {@code type} is not a primitive primitive, it will be returned as is.<a name="line.520"></a>
-<span class="sourceLineNo">521</span>     * Array classes are returned as-is (that may change in the future).<a name="line.521"></a>
-<span class="sourceLineNo">522</span>     *<a name="line.522"></a>
-<span class="sourceLineNo">523</span>     * @param type a class to convert<a name="line.523"></a>
-<span class="sourceLineNo">524</span>     * @return the corresponding primitive class<a name="line.524"></a>
-<span class="sourceLineNo">525</span>     */<a name="line.525"></a>
-<span class="sourceLineNo">526</span>    @Contract(pure=true)<a name="line.526"></a>
-<span class="sourceLineNo">527</span>    public static @NotNull Class&lt;?&gt; boxClass(@NotNull Class&lt;?&gt; type) {<a name="line.527"></a>
-<span class="sourceLineNo">528</span>        if (!type.isPrimitive()) return type;<a name="line.528"></a>
-<span class="sourceLineNo">529</span><a name="line.529"></a>
-<span class="sourceLineNo">530</span>        if (boolean.class.equals(type)) return Boolean.class;<a name="line.530"></a>
-<span class="sourceLineNo">531</span>        if (byte.class.equals(type)) return Byte.class;<a name="line.531"></a>
-<span class="sourceLineNo">532</span>        if (char.class.equals(type)) return Character.class;<a name="line.532"></a>
-<span class="sourceLineNo">533</span>        if (double.class.equals(type)) return Double.class;<a name="line.533"></a>
-<span class="sourceLineNo">534</span>        if (float.class.equals(type)) return Float.class;<a name="line.534"></a>
-<span class="sourceLineNo">535</span>        if (int.class.equals(type)) return Integer.class;<a name="line.535"></a>
-<span class="sourceLineNo">536</span>        if (long.class.equals(type)) return Long.class;<a name="line.536"></a>
-<span class="sourceLineNo">537</span>        if (short.class.equals(type)) return Short.class;<a name="line.537"></a>
-<span class="sourceLineNo">538</span>        if (void.class.equals(type)) return Void.class;<a name="line.538"></a>
-<span class="sourceLineNo">539</span><a name="line.539"></a>
-<span class="sourceLineNo">540</span>        return type; // unreachable - all primitives are enumerated above<a name="line.540"></a>
-<span class="sourceLineNo">541</span>    }<a name="line.541"></a>
-<span class="sourceLineNo">542</span><a name="line.542"></a>
-<span class="sourceLineNo">543</span>    /**<a name="line.543"></a>
-<span class="sourceLineNo">544</span>     * Loads a class if it is available on classpath or returns {@code null} if not.<a name="line.544"></a>
-<span class="sourceLineNo">545</span>     * Useful for providing optional functionality if certain library is in classpath.<a name="line.545"></a>
-<span class="sourceLineNo">546</span>     *<a name="line.546"></a>
-<span class="sourceLineNo">547</span>     * @param className the name of the class to load<a name="line.547"></a>
-<span class="sourceLineNo">548</span>     *<a name="line.548"></a>
-<span class="sourceLineNo">549</span>     * @param &lt;T&gt; inferring the return type.<a name="line.549"></a>
-<span class="sourceLineNo">550</span>     * @return the class if present on classpath, {@code null} otherwise.<a name="line.550"></a>
-<span class="sourceLineNo">551</span>     *<a name="line.551"></a>
-<span class="sourceLineNo">552</span>     * @see Class#forName(String)<a name="line.552"></a>
-<span class="sourceLineNo">553</span>     */<a name="line.553"></a>
-<span class="sourceLineNo">554</span>    @Contract(pure=true) @SuppressWarnings("unchecked")<a name="line.554"></a>
-<span class="sourceLineNo">555</span>    public static &lt;T&gt; @Nullable Class&lt;T&gt; getClassIfPresent(@NotNull String className) {<a name="line.555"></a>
-<span class="sourceLineNo">556</span>        try {<a name="line.556"></a>
-<span class="sourceLineNo">557</span>            return (Class&lt;T&gt;) Class.forName(className);<a name="line.557"></a>
-<span class="sourceLineNo">558</span>        } catch (ClassNotFoundException e) {<a name="line.558"></a>
-<span class="sourceLineNo">559</span>            return null;<a name="line.559"></a>
-<span class="sourceLineNo">560</span>        }<a name="line.560"></a>
-<span class="sourceLineNo">561</span>    }<a name="line.561"></a>
-<span class="sourceLineNo">562</span><a name="line.562"></a>
-<span class="sourceLineNo">563</span>    /**<a name="line.563"></a>
-<span class="sourceLineNo">564</span>     * Provides default value for each type, such as {@code false}, zero, empty array,<a name="line.564"></a>
-<span class="sourceLineNo">565</span>     * no-args constructed instance, or {@code null} if there is no no-arg constructor<a name="line.565"></a>
-<span class="sourceLineNo">566</span>     * or it threw exception.<a name="line.566"></a>
-<span class="sourceLineNo">567</span>     *<a name="line.567"></a>
-<span class="sourceLineNo">568</span>     * @param c type<a name="line.568"></a>
-<span class="sourceLineNo">569</span>     * @param &lt;T&gt; inferring the return type.<a name="line.569"></a>
-<span class="sourceLineNo">570</span>     * @return default value<a name="line.570"></a>
-<span class="sourceLineNo">571</span>     */<a name="line.571"></a>
-<span class="sourceLineNo">572</span>    @Contract(pure=true)<a name="line.572"></a>
-<span class="sourceLineNo">573</span>    public static &lt;T&gt; @Nullable T defaultValue(@NotNull Class&lt;T&gt; c) {<a name="line.573"></a>
-<span class="sourceLineNo">574</span>        try {<a name="line.574"></a>
-<span class="sourceLineNo">575</span>            Constructor&lt;?&gt; constructor = c.getConstructor();<a name="line.575"></a>
-<span class="sourceLineNo">576</span>            if (constructor !=null) return c.cast(constructor.newInstance());<a name="line.576"></a>
-<span class="sourceLineNo">577</span>        } catch (Exception ignored) { }<a name="line.577"></a>
-<span class="sourceLineNo">578</span><a name="line.578"></a>
-<span class="sourceLineNo">579</span>        if (c.isPrimitive()) {<a name="line.579"></a>
-<span class="sourceLineNo">580</span>            @SuppressWarnings("unchecked")<a name="line.580"></a>
-<span class="sourceLineNo">581</span>            Class&lt;T&gt; boxedEquivalent = (Class&lt;T&gt;) boxClass(c);<a name="line.581"></a>
-<span class="sourceLineNo">582</span>            c = boxedEquivalent;<a name="line.582"></a>
-<span class="sourceLineNo">583</span>        }<a name="line.583"></a>
-<span class="sourceLineNo">584</span><a name="line.584"></a>
-<span class="sourceLineNo">585</span>        if (c.isArray())                            return c.cast(Array.newInstance(c.getComponentType(), 0));<a name="line.585"></a>
-<span class="sourceLineNo">586</span>        if (BigDecimal.class.isAssignableFrom(c))   return c.cast(BigDecimal.ZERO);<a name="line.586"></a>
-<span class="sourceLineNo">587</span>        if (BigInteger.class.isAssignableFrom(c))   return c.cast(BigInteger.ZERO);<a name="line.587"></a>
-<span class="sourceLineNo">588</span>        if (Boolean.class.equals(c))                return c.cast(Boolean.FALSE);<a name="line.588"></a>
-<span class="sourceLineNo">589</span>        if (Byte.class.equals(c))                   return c.cast((byte) 0);<a name="line.589"></a>
-<span class="sourceLineNo">590</span>        if (Character.class.equals(c))              return c.cast('\0');<a name="line.590"></a>
-<span class="sourceLineNo">591</span>        if (Double.class.equals(c))                 return c.cast(0d);<a name="line.591"></a>
-<span class="sourceLineNo">592</span>        if (Float.class.equals(c))                  return c.cast(0f);<a name="line.592"></a>
-<span class="sourceLineNo">593</span>        if (Integer.class.equals(c))                return c.cast(0);<a name="line.593"></a>
-<span class="sourceLineNo">594</span>        if (Long.class.equals(c))                   return c.cast(0L);<a name="line.594"></a>
-<span class="sourceLineNo">595</span>        if (Short.class.equals(c))                  return c.cast((short) 0);<a name="line.595"></a>
-<span class="sourceLineNo">596</span><a name="line.596"></a>
-<span class="sourceLineNo">597</span>        if (Map.class.isAssignableFrom(c))          return c.cast(new LinkedHashMap&lt;&gt;());<a name="line.597"></a>
-<span class="sourceLineNo">598</span>        if (Set.class.isAssignableFrom(c))          return c.cast(new LinkedHashSet&lt;&gt;());<a name="line.598"></a>
-<span class="sourceLineNo">599</span>        if (List.class.isAssignableFrom(c))         return c.cast(new ArrayList&lt;&gt;());<a name="line.599"></a>
-<span class="sourceLineNo">600</span>        if (Collection.class.isAssignableFrom(c))   return c.cast(new ArrayList&lt;&gt;());<a name="line.600"></a>
-<span class="sourceLineNo">601</span><a name="line.601"></a>
-<span class="sourceLineNo">602</span>        return null; // void, classes without default constructor, etc.<a name="line.602"></a>
-<span class="sourceLineNo">603</span>    }<a name="line.603"></a>
-<span class="sourceLineNo">604</span><a name="line.604"></a>
-<span class="sourceLineNo">605</span>    /**<a name="line.605"></a>
-<span class="sourceLineNo">606</span>     * &lt;p&gt;Finds the best constructor for dependency injection instantiation, based on number of arguments<a name="line.606"></a>
-<span class="sourceLineNo">607</span>     * and {@code @Injected} annotation. If at least one candidate is annotated with {@code Injected}<a name="line.607"></a>
-<span class="sourceLineNo">608</span>     * or the {@code requireAnnotation==true}, then only annotated candidates will be considered.<a name="line.608"></a>
-<span class="sourceLineNo">609</span>     * Otherwise, return the candidates with largest number of formal arguments.&lt;/p&gt;<a name="line.609"></a>
-<span class="sourceLineNo">610</span>     * &lt;br&gt;<a name="line.610"></a>
-<span class="sourceLineNo">611</span>     * &lt;p&gt;Example: find the most suitable constructor for DI (annotated with {@code Inject}, or largest number of params):&lt;/p&gt;<a name="line.611"></a>
-<span class="sourceLineNo">612</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.612"></a>
-<span class="sourceLineNo">613</span>     * Constructor&amp;lt;FooBar&amp;gt; fbc = Extractors.findInjectableConstructor(false, FooBar.class.getConstructors());<a name="line.613"></a>
-<span class="sourceLineNo">614</span>     * FooBar foobar = fbc.newInstance(Extractors.autowireByType(fbc, Extractors::defaultValue));<a name="line.614"></a>
-<span class="sourceLineNo">615</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.615"></a>
-<span class="sourceLineNo">616</span>     *<a name="line.616"></a>
-<span class="sourceLineNo">617</span>     * @param requireAnnotation if {@code true}, consider only candidates annotated with {@code @Inject}<a name="line.617"></a>
-<span class="sourceLineNo">618</span>     * @param candidates list of constructors to consider. In practice we expect an array of {@code Constructor&lt;T&gt;},<a name="line.618"></a>
-<span class="sourceLineNo">619</span>     *                   though the actual arg is declared as {@code Constructor&lt;T&gt;} so it can be used without<a name="line.619"></a>
-<span class="sourceLineNo">620</span>     *                   warnings with the return value of {@link Class#getConstructors()}.<a name="line.620"></a>
-<span class="sourceLineNo">621</span>     *<a name="line.621"></a>
-<span class="sourceLineNo">622</span>     * @param &lt;T&gt; inferring the return type.<a name="line.622"></a>
-<span class="sourceLineNo">623</span>     * @return the most suitable constructor (most params, or annotated with {@code @Inject})<a name="line.623"></a>
-<span class="sourceLineNo">624</span>     *<a name="line.624"></a>
-<span class="sourceLineNo">625</span>     * @see #autowireByType(Executable, Function)<a name="line.625"></a>
-<span class="sourceLineNo">626</span>     * @see #findInjectableMethods(Method...)<a name="line.626"></a>
-<span class="sourceLineNo">627</span>     */<a name="line.627"></a>
-<span class="sourceLineNo">628</span>    @Contract(pure=true)<a name="line.628"></a>
-<span class="sourceLineNo">629</span>    public static &lt;T&gt; @NotNull Constructor&lt;T&gt; findInjectableConstructor(boolean requireAnnotation, @NotNull Constructor&lt;?&gt;... candidates) {<a name="line.629"></a>
-<span class="sourceLineNo">630</span>        if (candidates.length==0) {<a name="line.630"></a>
-<span class="sourceLineNo">631</span>            return doSneakyThrow(new NoSuchMethodException("Need at least one candidate for injectable constructor!"));<a name="line.631"></a>
-<span class="sourceLineNo">632</span>        }<a name="line.632"></a>
-<span class="sourceLineNo">633</span><a name="line.633"></a>
-<span class="sourceLineNo">634</span>        Constructor&lt;?&gt;[] injectable = findInjectableCandidates(requireAnnotation, null, candidates);<a name="line.634"></a>
-<span class="sourceLineNo">635</span>        if (injectable.length&gt;1) {<a name="line.635"></a>
-<span class="sourceLineNo">636</span>            return doSneakyThrow(new NoSuchMethodException("Ambiguous injectable constructor: " + Arrays.toString(injectable)));<a name="line.636"></a>
-<span class="sourceLineNo">637</span>        }<a name="line.637"></a>
-<span class="sourceLineNo">638</span><a name="line.638"></a>
-<span class="sourceLineNo">639</span>        if (injectable.length&lt;1) {<a name="line.639"></a>
-<span class="sourceLineNo">640</span>            return doSneakyThrow(new NoSuchMethodException("No injectable constructor found in: " + Arrays.toString(candidates)));<a name="line.640"></a>
-<span class="sourceLineNo">641</span>        }<a name="line.641"></a>
-<span class="sourceLineNo">642</span><a name="line.642"></a>
-<span class="sourceLineNo">643</span>        @SuppressWarnings("unchecked")  // cast Constructor&lt;?&gt; to Constructor&lt;T&gt;<a name="line.643"></a>
-<span class="sourceLineNo">644</span>        Constructor&lt;T&gt; injectableConstructor = (Constructor&lt;T&gt;) injectable[0];<a name="line.644"></a>
-<span class="sourceLineNo">645</span>        return injectableConstructor;<a name="line.645"></a>
-<span class="sourceLineNo">646</span>    }<a name="line.646"></a>
-<span class="sourceLineNo">647</span><a name="line.647"></a>
-<span class="sourceLineNo">648</span>    /**<a name="line.648"></a>
-<span class="sourceLineNo">649</span>     * &lt;p&gt;Finds candidates for method dependency injection, based on {@code @Injected} annotation.&lt;/p&gt;<a name="line.649"></a>
-<span class="sourceLineNo">650</span>     *<a name="line.650"></a>
-<span class="sourceLineNo">651</span>     * &lt;p&gt;Example: Find all methods annotated with {@code Inject} and invoke them:&lt;/p&gt;<a name="line.651"></a>
-<span class="sourceLineNo">652</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.652"></a>
-<span class="sourceLineNo">653</span>     * for (Executable m : Extractors.findInjectableCandidates(foobar.getClass().geMethods())) {<a name="line.653"></a>
-<span class="sourceLineNo">654</span>     *      m.invoke(foobar, Extractors.autowireByType(m, Extractors::defaultValue))<a name="line.654"></a>
-<span class="sourceLineNo">655</span>     * }<a name="line.655"></a>
-<span class="sourceLineNo">656</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.656"></a>
-<span class="sourceLineNo">657</span>     *<a name="line.657"></a>
-<span class="sourceLineNo">658</span>     * @param candidates list of methods to consider.<a name="line.658"></a>
-<span class="sourceLineNo">659</span>     * @return all candidates annotated with {@code @Inject})<a name="line.659"></a>
-<span class="sourceLineNo">660</span>     *<a name="line.660"></a>
-<span class="sourceLineNo">661</span>     * @see #findInjectableConstructor<a name="line.661"></a>
-<span class="sourceLineNo">662</span>     * @see #findInjectableCandidates(boolean, Predicate, Executable[])<a name="line.662"></a>
-<span class="sourceLineNo">663</span>     * @see #autowireByType(Executable, Function)<a name="line.663"></a>
-<span class="sourceLineNo">664</span>     */<a name="line.664"></a>
-<span class="sourceLineNo">665</span>    @Contract(pure=true)<a name="line.665"></a>
-<span class="sourceLineNo">666</span>    public static @NotNull Method[] findInjectableMethods(@NotNull Method... candidates) {<a name="line.666"></a>
-<span class="sourceLineNo">667</span>        return findInjectableCandidates(true, it -&gt; it.getParameterCount()&gt;0, candidates);<a name="line.667"></a>
-<span class="sourceLineNo">668</span>    }<a name="line.668"></a>
+<span class="sourceLineNo">382</span>            Class&lt;?&gt;[] parameterTypes = method.getParameterTypes();<a name="line.382"></a>
+<span class="sourceLineNo">383</span>            if (parameterTypes.length != signature.length) continue;<a name="line.383"></a>
+<span class="sourceLineNo">384</span><a name="line.384"></a>
+<span class="sourceLineNo">385</span>            for (int i = 0; i &lt; parameterTypes.length; i++) {<a name="line.385"></a>
+<span class="sourceLineNo">386</span>                Class&lt;?&gt; p = parameterTypes[i];<a name="line.386"></a>
+<span class="sourceLineNo">387</span>                if (signature[i] == null) {<a name="line.387"></a>
+<span class="sourceLineNo">388</span>                    if (p.isPrimitive()) continue next_method;<a name="line.388"></a>
+<span class="sourceLineNo">389</span>                } else {<a name="line.389"></a>
+<span class="sourceLineNo">390</span>                    if (!coercibleByReflection(p, signature[i])) continue next_method;<a name="line.390"></a>
+<span class="sourceLineNo">391</span>                }<a name="line.391"></a>
+<span class="sourceLineNo">392</span>            }<a name="line.392"></a>
+<span class="sourceLineNo">393</span><a name="line.393"></a>
+<span class="sourceLineNo">394</span>            method.setAccessible(true);<a name="line.394"></a>
+<span class="sourceLineNo">395</span>            return method;<a name="line.395"></a>
+<span class="sourceLineNo">396</span>        }<a name="line.396"></a>
+<span class="sourceLineNo">397</span><a name="line.397"></a>
+<span class="sourceLineNo">398</span>        Class&lt;?&gt; superclass = type.getSuperclass();<a name="line.398"></a>
+<span class="sourceLineNo">399</span>        if (checkSuperclasses &amp;&amp; !Objects.isNull(superclass) &amp;&amp; !Objects.equals(superclass, Object.class)) {<a name="line.399"></a>
+<span class="sourceLineNo">400</span>            return getAccessibleMethod(superclass, true, methodName);<a name="line.400"></a>
+<span class="sourceLineNo">401</span>        }<a name="line.401"></a>
+<span class="sourceLineNo">402</span><a name="line.402"></a>
+<span class="sourceLineNo">403</span>        return doSneakyThrow(new NoSuchMethodException(<a name="line.403"></a>
+<span class="sourceLineNo">404</span>                "No method named '" + methodName + "' could be found with signature matching: " +<a name="line.404"></a>
+<span class="sourceLineNo">405</span>                Arrays.stream(signature).map(it -&gt; it==null ? "&lt;any-ref&gt;" : it.getSimpleName()).collect(Collectors.joining(", "))<a name="line.405"></a>
+<span class="sourceLineNo">406</span>        ));<a name="line.406"></a>
+<span class="sourceLineNo">407</span>    }<a name="line.407"></a>
+<span class="sourceLineNo">408</span><a name="line.408"></a>
+<span class="sourceLineNo">409</span>    /**<a name="line.409"></a>
+<span class="sourceLineNo">410</span>     * &lt;p&gt;Gets a {@link Field} instance that can be used to get and set values, regardless of the field visibility, final or<a name="line.410"></a>
+<span class="sourceLineNo">411</span>     * static modifiers. Subject to security policy restrictions (if you don't know what that is, don't worry - you are<a name="line.411"></a>
+<span class="sourceLineNo">412</span>     * probably safe).&lt;/p&gt;<a name="line.412"></a>
+<span class="sourceLineNo">413</span>     * &lt;p&gt;Sometimes there would be multiple fields with the same name declared in parent and sub-classes. In such cases<a name="line.413"></a>
+<span class="sourceLineNo">414</span>     * make sure you specify the type of the exact class you want to get the field from.&lt;/p&gt;<a name="line.414"></a>
+<span class="sourceLineNo">415</span>     *<a name="line.415"></a>
+<span class="sourceLineNo">416</span>     * @param type the type or a subtype of the class that holds the field.<a name="line.416"></a>
+<span class="sourceLineNo">417</span>     * @param checkSuperclasses if {@code false}, will check only {@code type}; if {@code true},<a name="line.417"></a>
+<span class="sourceLineNo">418</span>     *                          will check {@code type} and it's super classes all the way up<a name="line.418"></a>
+<span class="sourceLineNo">419</span>     *                          to {@code Object}.<a name="line.419"></a>
+<span class="sourceLineNo">420</span>     * @param fieldName the name of the field we want.<a name="line.420"></a>
+<span class="sourceLineNo">421</span>     * @return the writable field instance<a name="line.421"></a>
+<span class="sourceLineNo">422</span>     * @throws NoSuchFieldException if the field could not be found in the searched classes.<a name="line.422"></a>
+<span class="sourceLineNo">423</span>     *<a name="line.423"></a>
+<span class="sourceLineNo">424</span>     * @see #peekField(Object, String, Class)<a name="line.424"></a>
+<span class="sourceLineNo">425</span>     * @see #pokeField(Object, String, Object)<a name="line.425"></a>
+<span class="sourceLineNo">426</span>     * @see Field#setAccessible(boolean)<a name="line.426"></a>
+<span class="sourceLineNo">427</span>     */<a name="line.427"></a>
+<span class="sourceLineNo">428</span>    @Contract(pure=true) @SuppressWarnings("JavaDoc")<a name="line.428"></a>
+<span class="sourceLineNo">429</span>    public static @NotNull Field getAccessibleField(@NotNull Class&lt;?&gt; type, boolean checkSuperclasses, @Identifier @NotNull String fieldName) {<a name="line.429"></a>
+<span class="sourceLineNo">430</span>        try {<a name="line.430"></a>
+<span class="sourceLineNo">431</span>            Field field = type.getDeclaredField(fieldName);<a name="line.431"></a>
+<span class="sourceLineNo">432</span>            forceAccessible(field);<a name="line.432"></a>
+<span class="sourceLineNo">433</span>            return field;<a name="line.433"></a>
+<span class="sourceLineNo">434</span>        } catch (NoSuchFieldException e) {<a name="line.434"></a>
+<span class="sourceLineNo">435</span>            Class&lt;?&gt; superclass = type.getSuperclass();<a name="line.435"></a>
+<span class="sourceLineNo">436</span>            return !checkSuperclasses || Object.class.equals(superclass)<a name="line.436"></a>
+<span class="sourceLineNo">437</span>                    ? doSneakyThrow(e)<a name="line.437"></a>
+<span class="sourceLineNo">438</span>                    : getAccessibleField(superclass, true, fieldName);<a name="line.438"></a>
+<span class="sourceLineNo">439</span>        } catch (IllegalAccessException e) { return doSneakyThrow(e); }<a name="line.439"></a>
+<span class="sourceLineNo">440</span>    }<a name="line.440"></a>
+<span class="sourceLineNo">441</span><a name="line.441"></a>
+<span class="sourceLineNo">442</span>    /**<a name="line.442"></a>
+<span class="sourceLineNo">443</span>     * Makes {@code field} accessible, even if it was static final.<a name="line.443"></a>
+<span class="sourceLineNo">444</span>     * Use with care (that's why it's private).<a name="line.444"></a>
+<span class="sourceLineNo">445</span>     * @param field to be made accessible.<a name="line.445"></a>
+<span class="sourceLineNo">446</span>     * @return true if we had to hack the static-final case.<a name="line.446"></a>
+<span class="sourceLineNo">447</span>     */<a name="line.447"></a>
+<span class="sourceLineNo">448</span>    private static boolean forceAccessible(Field field) throws NoSuchFieldException, IllegalAccessException {<a name="line.448"></a>
+<span class="sourceLineNo">449</span>        field.setAccessible(true);<a name="line.449"></a>
+<span class="sourceLineNo">450</span><a name="line.450"></a>
+<span class="sourceLineNo">451</span>        int modifiers = field.getModifiers();<a name="line.451"></a>
+<span class="sourceLineNo">452</span>        if (!Modifier.isStatic(modifiers) || !Modifier.isFinal(modifiers)) return false;<a name="line.452"></a>
+<span class="sourceLineNo">453</span><a name="line.453"></a>
+<span class="sourceLineNo">454</span>        // the rest of the method deals with static final fields - should be a rare use case<a name="line.454"></a>
+<span class="sourceLineNo">455</span>        // http://zarnekow.blogspot.jp/2013/01/java-hacks-changing-final-fields.html<a name="line.455"></a>
+<span class="sourceLineNo">456</span>        // http://www.cliffc.org/blog/2011/10/17/writing-to-final-fields-via-reflection<a name="line.456"></a>
+<span class="sourceLineNo">457</span>        // http://www.cliffc.org/blog/2011/10/27/final-fields-part-2<a name="line.457"></a>
+<span class="sourceLineNo">458</span>        Field modifiersField = field.getClass().getDeclaredField("modifiers");<a name="line.458"></a>
+<span class="sourceLineNo">459</span>        boolean modifiersWasAccessible = modifiersField.isAccessible();<a name="line.459"></a>
+<span class="sourceLineNo">460</span>        try {<a name="line.460"></a>
+<span class="sourceLineNo">461</span>            modifiersField.setAccessible(true);<a name="line.461"></a>
+<span class="sourceLineNo">462</span>            modifiersField.setInt(field, modifiers &amp; ~Modifier.FINAL);<a name="line.462"></a>
+<span class="sourceLineNo">463</span>            field.set(null, field.get(null)); // force the creation of accessor<a name="line.463"></a>
+<span class="sourceLineNo">464</span>        } finally {<a name="line.464"></a>
+<span class="sourceLineNo">465</span>            modifiersField.setInt(field, modifiers);<a name="line.465"></a>
+<span class="sourceLineNo">466</span>            modifiersField.setAccessible(modifiersWasAccessible);<a name="line.466"></a>
+<span class="sourceLineNo">467</span>        }<a name="line.467"></a>
+<span class="sourceLineNo">468</span>        return true;<a name="line.468"></a>
+<span class="sourceLineNo">469</span>    }<a name="line.469"></a>
+<span class="sourceLineNo">470</span><a name="line.470"></a>
+<span class="sourceLineNo">471</span>    /**<a name="line.471"></a>
+<span class="sourceLineNo">472</span>     * Converts Java boxed classes ({@code java.lang.Void}, {@code java.lang.Integer},<a name="line.472"></a>
+<span class="sourceLineNo">473</span>     * {@code java.lang.Character}, etc.) to their primitive peers.<a name="line.473"></a>
+<span class="sourceLineNo">474</span>     * If the {@code type} is already primitive, it is returned as is.<a name="line.474"></a>
+<span class="sourceLineNo">475</span>     * Array classes are returned as-is (that may change in the future).<a name="line.475"></a>
+<span class="sourceLineNo">476</span>     *<a name="line.476"></a>
+<span class="sourceLineNo">477</span>     * @param type a class to convert<a name="line.477"></a>
+<span class="sourceLineNo">478</span>     * @return the corresponding primitive class<a name="line.478"></a>
+<span class="sourceLineNo">479</span>     */<a name="line.479"></a>
+<span class="sourceLineNo">480</span>    @Contract(pure=true)<a name="line.480"></a>
+<span class="sourceLineNo">481</span>    public static @NotNull Class&lt;?&gt; unboxClass(@NotNull Class&lt;?&gt; type) {<a name="line.481"></a>
+<span class="sourceLineNo">482</span>        if (type.isPrimitive()) return type;<a name="line.482"></a>
+<span class="sourceLineNo">483</span>        try {<a name="line.483"></a>
+<span class="sourceLineNo">484</span>            // How to find the primitive type<a name="line.484"></a>
+<span class="sourceLineNo">485</span>            // http://stackoverflow.com/questions/180097/dynamically-find-the-class-that-represents-a-primitive-java-type<a name="line.485"></a>
+<span class="sourceLineNo">486</span>            return (Class) type.getField("TYPE").get(null);<a name="line.486"></a>
+<span class="sourceLineNo">487</span>        } catch (NoSuchFieldException|IllegalAccessException e) {<a name="line.487"></a>
+<span class="sourceLineNo">488</span>            return type; // unreachable - all primitives have TYPE<a name="line.488"></a>
+<span class="sourceLineNo">489</span>        }<a name="line.489"></a>
+<span class="sourceLineNo">490</span>    }<a name="line.490"></a>
+<span class="sourceLineNo">491</span><a name="line.491"></a>
+<span class="sourceLineNo">492</span>    /**<a name="line.492"></a>
+<span class="sourceLineNo">493</span>     * Whether Java reflection can coerce ont type into another.<a name="line.493"></a>
+<span class="sourceLineNo">494</span>     * @param from the type of the value which we want to coerce.<a name="line.494"></a>
+<span class="sourceLineNo">495</span>     * @param to the type which we need to coerce the value to.<a name="line.495"></a>
+<span class="sourceLineNo">496</span>     * @return whether we can pass a {@code from} type value into a {@code to} type argument.<a name="line.496"></a>
+<span class="sourceLineNo">497</span>     */<a name="line.497"></a>
+<span class="sourceLineNo">498</span>    @SuppressWarnings("SimplifiableIfStatement")<a name="line.498"></a>
+<span class="sourceLineNo">499</span>    public static boolean coercibleByReflection(@NotNull Class&lt;?&gt; from, @NotNull Class&lt;?&gt; to) {<a name="line.499"></a>
+<span class="sourceLineNo">500</span>        if (from==to || to.isAssignableFrom(from)) return true;<a name="line.500"></a>
+<span class="sourceLineNo">501</span>        Class&lt;?&gt; pFrom = unboxClass(from);<a name="line.501"></a>
+<span class="sourceLineNo">502</span>        Class&lt;?&gt; pTo = unboxClass(to);<a name="line.502"></a>
+<span class="sourceLineNo">503</span>        if (pFrom!=from || pTo!=to) return coercibleByReflection(pFrom, pTo);<a name="line.503"></a>
+<span class="sourceLineNo">504</span><a name="line.504"></a>
+<span class="sourceLineNo">505</span>        boolean fits = to==double.class; // double is the top of the numbers coercion hierarchy<a name="line.505"></a>
+<span class="sourceLineNo">506</span>        if ( from==float.class                   ) return fits; else fits |= to==float.class ;<a name="line.506"></a>
+<span class="sourceLineNo">507</span>        if ( from==long.class                    ) return fits; else fits |= to==long.class ;<a name="line.507"></a>
+<span class="sourceLineNo">508</span>        if ( from==int.class || from==char.class ) return fits; else fits |= to==int.class ;<a name="line.508"></a>
+<span class="sourceLineNo">509</span>        if ( from==short.class                   ) return fits; else fits |= to==short.class ;<a name="line.509"></a>
+<span class="sourceLineNo">510</span>        if ( from==byte.class                    ) return fits;<a name="line.510"></a>
+<span class="sourceLineNo">511</span><a name="line.511"></a>
+<span class="sourceLineNo">512</span>        return false;<a name="line.512"></a>
+<span class="sourceLineNo">513</span>    }<a name="line.513"></a>
+<span class="sourceLineNo">514</span><a name="line.514"></a>
+<span class="sourceLineNo">515</span>    /**<a name="line.515"></a>
+<span class="sourceLineNo">516</span>     * Converts primitive Java classes ({@code void.class}, {@code char.class},<a name="line.516"></a>
+<span class="sourceLineNo">517</span>     * {@code int.class}) to their boxed ({@code java.lang.Void}, {@code java.lang.Character},<a name="line.517"></a>
+<span class="sourceLineNo">518</span>     * {@code java.lang.Integer}, etc.)<a name="line.518"></a>
+<span class="sourceLineNo">519</span>     * If the {@code type} is not a primitive primitive, it will be returned as is.<a name="line.519"></a>
+<span class="sourceLineNo">520</span>     * Array classes are returned as-is (that may change in the future).<a name="line.520"></a>
+<span class="sourceLineNo">521</span>     *<a name="line.521"></a>
+<span class="sourceLineNo">522</span>     * @param type a class to convert<a name="line.522"></a>
+<span class="sourceLineNo">523</span>     * @return the corresponding primitive class<a name="line.523"></a>
+<span class="sourceLineNo">524</span>     */<a name="line.524"></a>
+<span class="sourceLineNo">525</span>    @Contract(pure=true)<a name="line.525"></a>
+<span class="sourceLineNo">526</span>    public static @NotNull Class&lt;?&gt; boxClass(@NotNull Class&lt;?&gt; type) {<a name="line.526"></a>
+<span class="sourceLineNo">527</span>        if (!type.isPrimitive()) return type;<a name="line.527"></a>
+<span class="sourceLineNo">528</span><a name="line.528"></a>
+<span class="sourceLineNo">529</span>        if (boolean.class.equals(type)) return Boolean.class;<a name="line.529"></a>
+<span class="sourceLineNo">530</span>        if (byte.class.equals(type)) return Byte.class;<a name="line.530"></a>
+<span class="sourceLineNo">531</span>        if (char.class.equals(type)) return Character.class;<a name="line.531"></a>
+<span class="sourceLineNo">532</span>        if (double.class.equals(type)) return Double.class;<a name="line.532"></a>
+<span class="sourceLineNo">533</span>        if (float.class.equals(type)) return Float.class;<a name="line.533"></a>
+<span class="sourceLineNo">534</span>        if (int.class.equals(type)) return Integer.class;<a name="line.534"></a>
+<span class="sourceLineNo">535</span>        if (long.class.equals(type)) return Long.class;<a name="line.535"></a>
+<span class="sourceLineNo">536</span>        if (short.class.equals(type)) return Short.class;<a name="line.536"></a>
+<span class="sourceLineNo">537</span>        if (void.class.equals(type)) return Void.class;<a name="line.537"></a>
+<span class="sourceLineNo">538</span><a name="line.538"></a>
+<span class="sourceLineNo">539</span>        return type; // unreachable - all primitives are enumerated above<a name="line.539"></a>
+<span class="sourceLineNo">540</span>    }<a name="line.540"></a>
+<span class="sourceLineNo">541</span><a name="line.541"></a>
+<span class="sourceLineNo">542</span>    /**<a name="line.542"></a>
+<span class="sourceLineNo">543</span>     * Loads a class if it is available on classpath or returns {@code null} if not.<a name="line.543"></a>
+<span class="sourceLineNo">544</span>     * Useful for providing optional functionality if certain library is in classpath.<a name="line.544"></a>
+<span class="sourceLineNo">545</span>     *<a name="line.545"></a>
+<span class="sourceLineNo">546</span>     * @param className the name of the class to load<a name="line.546"></a>
+<span class="sourceLineNo">547</span>     *<a name="line.547"></a>
+<span class="sourceLineNo">548</span>     * @param &lt;T&gt; inferring the return type.<a name="line.548"></a>
+<span class="sourceLineNo">549</span>     * @return the class if present on classpath, {@code null} otherwise.<a name="line.549"></a>
+<span class="sourceLineNo">550</span>     *<a name="line.550"></a>
+<span class="sourceLineNo">551</span>     * @see Class#forName(String)<a name="line.551"></a>
+<span class="sourceLineNo">552</span>     */<a name="line.552"></a>
+<span class="sourceLineNo">553</span>    @Contract(pure=true) @SuppressWarnings("unchecked")<a name="line.553"></a>
+<span class="sourceLineNo">554</span>    public static &lt;T&gt; @Nullable Class&lt;T&gt; getClassIfPresent(@NotNull String className) {<a name="line.554"></a>
+<span class="sourceLineNo">555</span>        try {<a name="line.555"></a>
+<span class="sourceLineNo">556</span>            return (Class&lt;T&gt;) Class.forName(className);<a name="line.556"></a>
+<span class="sourceLineNo">557</span>        } catch (ClassNotFoundException e) {<a name="line.557"></a>
+<span class="sourceLineNo">558</span>            return null;<a name="line.558"></a>
+<span class="sourceLineNo">559</span>        }<a name="line.559"></a>
+<span class="sourceLineNo">560</span>    }<a name="line.560"></a>
+<span class="sourceLineNo">561</span><a name="line.561"></a>
+<span class="sourceLineNo">562</span>    /**<a name="line.562"></a>
+<span class="sourceLineNo">563</span>     * Provides default value for each type, such as {@code false}, zero, empty array,<a name="line.563"></a>
+<span class="sourceLineNo">564</span>     * no-args constructed instance, or {@code null} if there is no no-arg constructor<a name="line.564"></a>
+<span class="sourceLineNo">565</span>     * or it threw exception.<a name="line.565"></a>
+<span class="sourceLineNo">566</span>     *<a name="line.566"></a>
+<span class="sourceLineNo">567</span>     * @param c type<a name="line.567"></a>
+<span class="sourceLineNo">568</span>     * @param &lt;T&gt; inferring the return type.<a name="line.568"></a>
+<span class="sourceLineNo">569</span>     * @return default value<a name="line.569"></a>
+<span class="sourceLineNo">570</span>     */<a name="line.570"></a>
+<span class="sourceLineNo">571</span>    @Contract(pure=true)<a name="line.571"></a>
+<span class="sourceLineNo">572</span>    public static &lt;T&gt; @Nullable T defaultValue(@NotNull Class&lt;T&gt; c) {<a name="line.572"></a>
+<span class="sourceLineNo">573</span>        try {<a name="line.573"></a>
+<span class="sourceLineNo">574</span>            Constructor&lt;?&gt; constructor = c.getConstructor();<a name="line.574"></a>
+<span class="sourceLineNo">575</span>            if (constructor !=null) return c.cast(constructor.newInstance());<a name="line.575"></a>
+<span class="sourceLineNo">576</span>        } catch (Exception ignored) { }<a name="line.576"></a>
+<span class="sourceLineNo">577</span><a name="line.577"></a>
+<span class="sourceLineNo">578</span>        if (c.isPrimitive()) {<a name="line.578"></a>
+<span class="sourceLineNo">579</span>            @SuppressWarnings("unchecked")<a name="line.579"></a>
+<span class="sourceLineNo">580</span>            Class&lt;T&gt; boxedEquivalent = (Class&lt;T&gt;) boxClass(c);<a name="line.580"></a>
+<span class="sourceLineNo">581</span>            c = boxedEquivalent;<a name="line.581"></a>
+<span class="sourceLineNo">582</span>        }<a name="line.582"></a>
+<span class="sourceLineNo">583</span><a name="line.583"></a>
+<span class="sourceLineNo">584</span>        if (c.isArray())                            return c.cast(Array.newInstance(c.getComponentType(), 0));<a name="line.584"></a>
+<span class="sourceLineNo">585</span>        if (BigDecimal.class.isAssignableFrom(c))   return c.cast(BigDecimal.ZERO);<a name="line.585"></a>
+<span class="sourceLineNo">586</span>        if (BigInteger.class.isAssignableFrom(c))   return c.cast(BigInteger.ZERO);<a name="line.586"></a>
+<span class="sourceLineNo">587</span>        if (Boolean.class.equals(c))                return c.cast(Boolean.FALSE);<a name="line.587"></a>
+<span class="sourceLineNo">588</span>        if (Byte.class.equals(c))                   return c.cast((byte) 0);<a name="line.588"></a>
+<span class="sourceLineNo">589</span>        if (Character.class.equals(c))              return c.cast('\0');<a name="line.589"></a>
+<span class="sourceLineNo">590</span>        if (Double.class.equals(c))                 return c.cast(0d);<a name="line.590"></a>
+<span class="sourceLineNo">591</span>        if (Float.class.equals(c))                  return c.cast(0f);<a name="line.591"></a>
+<span class="sourceLineNo">592</span>        if (Integer.class.equals(c))                return c.cast(0);<a name="line.592"></a>
+<span class="sourceLineNo">593</span>        if (Long.class.equals(c))                   return c.cast(0L);<a name="line.593"></a>
+<span class="sourceLineNo">594</span>        if (Short.class.equals(c))                  return c.cast((short) 0);<a name="line.594"></a>
+<span class="sourceLineNo">595</span><a name="line.595"></a>
+<span class="sourceLineNo">596</span>        if (Map.class.isAssignableFrom(c))          return c.cast(new LinkedHashMap&lt;&gt;());<a name="line.596"></a>
+<span class="sourceLineNo">597</span>        if (Set.class.isAssignableFrom(c))          return c.cast(new LinkedHashSet&lt;&gt;());<a name="line.597"></a>
+<span class="sourceLineNo">598</span>        if (List.class.isAssignableFrom(c))         return c.cast(new ArrayList&lt;&gt;());<a name="line.598"></a>
+<span class="sourceLineNo">599</span>        if (Collection.class.isAssignableFrom(c))   return c.cast(new ArrayList&lt;&gt;());<a name="line.599"></a>
+<span class="sourceLineNo">600</span><a name="line.600"></a>
+<span class="sourceLineNo">601</span>        return null; // void, classes without default constructor, etc.<a name="line.601"></a>
+<span class="sourceLineNo">602</span>    }<a name="line.602"></a>
+<span class="sourceLineNo">603</span><a name="line.603"></a>
+<span class="sourceLineNo">604</span>    /**<a name="line.604"></a>
+<span class="sourceLineNo">605</span>     * &lt;p&gt;Finds the best constructor for dependency injection instantiation, based on number of arguments<a name="line.605"></a>
+<span class="sourceLineNo">606</span>     * and {@code @Injected} annotation. If at least one candidate is annotated with {@code Injected}<a name="line.606"></a>
+<span class="sourceLineNo">607</span>     * or the {@code requireAnnotation==true}, then only annotated candidates will be considered.<a name="line.607"></a>
+<span class="sourceLineNo">608</span>     * Otherwise, return the candidates with largest number of formal arguments.&lt;/p&gt;<a name="line.608"></a>
+<span class="sourceLineNo">609</span>     * &lt;br&gt;<a name="line.609"></a>
+<span class="sourceLineNo">610</span>     * &lt;p&gt;Example: find the most suitable constructor for DI (annotated with {@code Inject}, or largest number of params):&lt;/p&gt;<a name="line.610"></a>
+<span class="sourceLineNo">611</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.611"></a>
+<span class="sourceLineNo">612</span>     * Constructor&amp;lt;FooBar&amp;gt; fbc = Extractors.findInjectableConstructor(false, FooBar.class.getConstructors());<a name="line.612"></a>
+<span class="sourceLineNo">613</span>     * FooBar foobar = fbc.newInstance(Extractors.autowireByType(fbc, Extractors::defaultValue));<a name="line.613"></a>
+<span class="sourceLineNo">614</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.614"></a>
+<span class="sourceLineNo">615</span>     *<a name="line.615"></a>
+<span class="sourceLineNo">616</span>     * @param requireAnnotation if {@code true}, consider only candidates annotated with {@code @Inject}<a name="line.616"></a>
+<span class="sourceLineNo">617</span>     * @param candidates list of constructors to consider. In practice we expect an array of {@code Constructor&lt;T&gt;},<a name="line.617"></a>
+<span class="sourceLineNo">618</span>     *                   though the actual arg is declared as {@code Constructor&lt;T&gt;} so it can be used without<a name="line.618"></a>
+<span class="sourceLineNo">619</span>     *                   warnings with the return value of {@link Class#getConstructors()}.<a name="line.619"></a>
+<span class="sourceLineNo">620</span>     *<a name="line.620"></a>
+<span class="sourceLineNo">621</span>     * @param &lt;T&gt; inferring the return type.<a name="line.621"></a>
+<span class="sourceLineNo">622</span>     * @return the most suitable constructor (most params, or annotated with {@code @Inject})<a name="line.622"></a>
+<span class="sourceLineNo">623</span>     *<a name="line.623"></a>
+<span class="sourceLineNo">624</span>     * @see #autowireByType(Executable, Function)<a name="line.624"></a>
+<span class="sourceLineNo">625</span>     * @see #findInjectableMethods(Method...)<a name="line.625"></a>
+<span class="sourceLineNo">626</span>     */<a name="line.626"></a>
+<span class="sourceLineNo">627</span>    @Contract(pure=true)<a name="line.627"></a>
+<span class="sourceLineNo">628</span>    public static &lt;T&gt; @NotNull Constructor&lt;T&gt; findInjectableConstructor(boolean requireAnnotation, @NotNull Constructor&lt;?&gt;... candidates) {<a name="line.628"></a>
+<span class="sourceLineNo">629</span>        if (candidates.length==0) {<a name="line.629"></a>
+<span class="sourceLineNo">630</span>            return doSneakyThrow(new NoSuchMethodException("Need at least one candidate for injectable constructor!"));<a name="line.630"></a>
+<span class="sourceLineNo">631</span>        }<a name="line.631"></a>
+<span class="sourceLineNo">632</span><a name="line.632"></a>
+<span class="sourceLineNo">633</span>        Constructor&lt;?&gt;[] injectable = findInjectableCandidates(requireAnnotation, null, candidates);<a name="line.633"></a>
+<span class="sourceLineNo">634</span>        if (injectable.length&gt;1) {<a name="line.634"></a>
+<span class="sourceLineNo">635</span>            return doSneakyThrow(new NoSuchMethodException("Ambiguous injectable constructor: " + Arrays.toString(injectable)));<a name="line.635"></a>
+<span class="sourceLineNo">636</span>        }<a name="line.636"></a>
+<span class="sourceLineNo">637</span><a name="line.637"></a>
+<span class="sourceLineNo">638</span>        if (injectable.length&lt;1) {<a name="line.638"></a>
+<span class="sourceLineNo">639</span>            return doSneakyThrow(new NoSuchMethodException("No injectable constructor found in: " + Arrays.toString(candidates)));<a name="line.639"></a>
+<span class="sourceLineNo">640</span>        }<a name="line.640"></a>
+<span class="sourceLineNo">641</span><a name="line.641"></a>
+<span class="sourceLineNo">642</span>        @SuppressWarnings("unchecked")  // cast Constructor&lt;?&gt; to Constructor&lt;T&gt;<a name="line.642"></a>
+<span class="sourceLineNo">643</span>        Constructor&lt;T&gt; injectableConstructor = (Constructor&lt;T&gt;) injectable[0];<a name="line.643"></a>
+<span class="sourceLineNo">644</span>        return injectableConstructor;<a name="line.644"></a>
+<span class="sourceLineNo">645</span>    }<a name="line.645"></a>
+<span class="sourceLineNo">646</span><a name="line.646"></a>
+<span class="sourceLineNo">647</span>    /**<a name="line.647"></a>
+<span class="sourceLineNo">648</span>     * &lt;p&gt;Finds candidates for method dependency injection, based on {@code @Injected} annotation.&lt;/p&gt;<a name="line.648"></a>
+<span class="sourceLineNo">649</span>     *<a name="line.649"></a>
+<span class="sourceLineNo">650</span>     * &lt;p&gt;Example: Find all methods annotated with {@code Inject} and invoke them:&lt;/p&gt;<a name="line.650"></a>
+<span class="sourceLineNo">651</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.651"></a>
+<span class="sourceLineNo">652</span>     * for (Executable m : Extractors.findInjectableCandidates(foobar.getClass().geMethods())) {<a name="line.652"></a>
+<span class="sourceLineNo">653</span>     *      m.invoke(foobar, Extractors.autowireByType(m, Extractors::defaultValue))<a name="line.653"></a>
+<span class="sourceLineNo">654</span>     * }<a name="line.654"></a>
+<span class="sourceLineNo">655</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.655"></a>
+<span class="sourceLineNo">656</span>     *<a name="line.656"></a>
+<span class="sourceLineNo">657</span>     * @param candidates list of methods to consider.<a name="line.657"></a>
+<span class="sourceLineNo">658</span>     * @return all candidates annotated with {@code @Inject})<a name="line.658"></a>
+<span class="sourceLineNo">659</span>     *<a name="line.659"></a>
+<span class="sourceLineNo">660</span>     * @see #findInjectableConstructor<a name="line.660"></a>
+<span class="sourceLineNo">661</span>     * @see #findInjectableCandidates(boolean, Predicate, Executable[])<a name="line.661"></a>
+<span class="sourceLineNo">662</span>     * @see #autowireByType(Executable, Function)<a name="line.662"></a>
+<span class="sourceLineNo">663</span>     */<a name="line.663"></a>
+<span class="sourceLineNo">664</span>    @Contract(pure=true)<a name="line.664"></a>
+<span class="sourceLineNo">665</span>    public static @NotNull Method[] findInjectableMethods(@NotNull Method... candidates) {<a name="line.665"></a>
+<span class="sourceLineNo">666</span>        return findInjectableCandidates(true, it -&gt; it.getParameterCount()&gt;0, candidates);<a name="line.666"></a>
+<span class="sourceLineNo">667</span>    }<a name="line.667"></a>
+<span class="sourceLineNo">668</span><a name="line.668"></a>
 <span class="sourceLineNo">669</span><a name="line.669"></a>
-<span class="sourceLineNo">670</span><a name="line.670"></a>
-<span class="sourceLineNo">671</span>    /**<a name="line.671"></a>
-<span class="sourceLineNo">672</span>     * &lt;p&gt;Finds constructors or methods for dependency injection, based on the number of arguments<a name="line.672"></a>
-<span class="sourceLineNo">673</span>     * and {@code @Injected} annotation. If at least one candidate is annotated with {@code Injected}<a name="line.673"></a>
-<span class="sourceLineNo">674</span>     * or the {@code requireAnnotation==true}, then only annotated candidates will be considered.<a name="line.674"></a>
-<span class="sourceLineNo">675</span>     * Otherwise, return the candidates with largest number of formal arguments.&lt;/p&gt;<a name="line.675"></a>
-<span class="sourceLineNo">676</span>     * &lt;br&gt;<a name="line.676"></a>
-<span class="sourceLineNo">677</span>     * &lt;p&gt;Example: find the most suitable constructor for DI (annotated with {@code Inject}, or largest number of params):&lt;/p&gt;<a name="line.677"></a>
-<span class="sourceLineNo">678</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.678"></a>
-<span class="sourceLineNo">679</span>     * Constructor&amp;lt;FooBar&amp;gt; fbc = Extractors.findInjectableCandidates(false, FooBar.class.getConstructors());<a name="line.679"></a>
-<span class="sourceLineNo">680</span>     * FooBar foobar = fbc.newInstance(Extractors.autowireByType(fbc, Extractors::defaultValue));<a name="line.680"></a>
-<span class="sourceLineNo">681</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.681"></a>
-<span class="sourceLineNo">682</span>     *<a name="line.682"></a>
-<span class="sourceLineNo">683</span>     * @param requireAnnotation if {@code true}, consider only candidates annotated with {@code @Inject}<a name="line.683"></a>
-<span class="sourceLineNo">684</span>     * @param filter     if not null and returns false for a candidate, the candidate is excluded<a name="line.684"></a>
-<span class="sourceLineNo">685</span>     * @param candidates list of constructors to consider. In practice we expect an array of {@code Constructor&lt;T&gt;},<a name="line.685"></a>
-<span class="sourceLineNo">686</span>     *                   though the actual arg is declared as {@code Constructor&lt;T&gt;} so it can be used without<a name="line.686"></a>
-<span class="sourceLineNo">687</span>     *                   warnings with the return value of {@link Class#getConstructors()}.<a name="line.687"></a>
-<span class="sourceLineNo">688</span>     *<a name="line.688"></a>
-<span class="sourceLineNo">689</span>     * @param &lt;T&gt; inferring the constructor or method type.<a name="line.689"></a>
-<span class="sourceLineNo">690</span>     * @return the most suitable constructor (most params, or annotated with {@code @Inject})<a name="line.690"></a>
-<span class="sourceLineNo">691</span>     *<a name="line.691"></a>
-<span class="sourceLineNo">692</span>     * @see #findInjectableConstructor(boolean, Constructor[])<a name="line.692"></a>
-<span class="sourceLineNo">693</span>     * @see #findInjectableMethods(Method...)<a name="line.693"></a>
-<span class="sourceLineNo">694</span>     * @see #autowireByType(Executable, Function)<a name="line.694"></a>
-<span class="sourceLineNo">695</span>     */<a name="line.695"></a>
-<span class="sourceLineNo">696</span>    @SafeVarargs<a name="line.696"></a>
-<span class="sourceLineNo">697</span>    @Contract(pure=true)<a name="line.697"></a>
-<span class="sourceLineNo">698</span>    public static &lt;T extends Executable&gt; @NotNull T[] findInjectableCandidates(boolean requireAnnotation, @Nullable Predicate&lt;T&gt; filter, @NotNull T... candidates) {<a name="line.698"></a>
-<span class="sourceLineNo">699</span>        if (requireAnnotation&amp;&amp;INJECT_ANNOTATION==null) return Arrays.copyOfRange(candidates, 0, 0);<a name="line.699"></a>
-<span class="sourceLineNo">700</span><a name="line.700"></a>
-<span class="sourceLineNo">701</span>        T[] selected = Arrays.copyOf(candidates, candidates.length);<a name="line.701"></a>
-<span class="sourceLineNo">702</span>        int found = 0;<a name="line.702"></a>
-<span class="sourceLineNo">703</span>        boolean annotated = requireAnnotation;<a name="line.703"></a>
-<span class="sourceLineNo">704</span><a name="line.704"></a>
-<span class="sourceLineNo">705</span>        for (T candidate : candidates) {<a name="line.705"></a>
-<span class="sourceLineNo">706</span>            if (filter!=null &amp;&amp; !filter.test(candidate)) continue;<a name="line.706"></a>
-<span class="sourceLineNo">707</span><a name="line.707"></a>
-<span class="sourceLineNo">708</span>            boolean selectedAnnotated = INJECT_ANNOTATION != null &amp;&amp; candidate.getAnnotation(INJECT_ANNOTATION) != null;<a name="line.708"></a>
-<span class="sourceLineNo">709</span>            if (selectedAnnotated) {<a name="line.709"></a>
-<span class="sourceLineNo">710</span>                if (!annotated) {<a name="line.710"></a>
-<span class="sourceLineNo">711</span>                    found = 0;<a name="line.711"></a>
-<span class="sourceLineNo">712</span>                    annotated = true;<a name="line.712"></a>
-<span class="sourceLineNo">713</span>                }<a name="line.713"></a>
-<span class="sourceLineNo">714</span>                selected[found++] = candidate;<a name="line.714"></a>
-<span class="sourceLineNo">715</span>            } else if (!annotated) {<a name="line.715"></a>
-<span class="sourceLineNo">716</span>                int selectedArity = found==0 ? -1 : selected[found - 1].getParameterTypes().length;<a name="line.716"></a>
-<span class="sourceLineNo">717</span>                int candidateArity = candidate.getParameterTypes().length;<a name="line.717"></a>
-<span class="sourceLineNo">718</span>                if (selectedArity &gt; candidateArity) continue;<a name="line.718"></a>
-<span class="sourceLineNo">719</span>                if (selectedArity &lt; candidateArity) found=0;<a name="line.719"></a>
-<span class="sourceLineNo">720</span>                selected[found++] = candidate;<a name="line.720"></a>
-<span class="sourceLineNo">721</span>            }<a name="line.721"></a>
-<span class="sourceLineNo">722</span>        }<a name="line.722"></a>
-<span class="sourceLineNo">723</span><a name="line.723"></a>
-<span class="sourceLineNo">724</span>        return Arrays.copyOf(selected, found);<a name="line.724"></a>
-<span class="sourceLineNo">725</span>    }<a name="line.725"></a>
-<span class="sourceLineNo">726</span><a name="line.726"></a>
-<span class="sourceLineNo">727</span>    /**<a name="line.727"></a>
-<span class="sourceLineNo">728</span>     * Provide arguments to invoke a method or constructor, based on signature types and resolver function.<a name="line.728"></a>
-<span class="sourceLineNo">729</span>     * Can be used to call arguments with null params, or implement simple DI layer.<a name="line.729"></a>
-<span class="sourceLineNo">730</span>     *<a name="line.730"></a>
-<span class="sourceLineNo">731</span>     * @param ctorOrMethod the constructor or method to call.<a name="line.731"></a>
-<span class="sourceLineNo">732</span>     * @param paramResolver mapping function from type to implementation value can be as simple as {@code Map::get}.<a name="line.732"></a>
-<span class="sourceLineNo">733</span>     * @return the signature array.<a name="line.733"></a>
-<span class="sourceLineNo">734</span>     */<a name="line.734"></a>
-<span class="sourceLineNo">735</span>    @Contract(pure=true)<a name="line.735"></a>
-<span class="sourceLineNo">736</span>    public static @NotNull Object[] autowireByType(<a name="line.736"></a>
-<span class="sourceLineNo">737</span>            @NotNull Executable ctorOrMethod,<a name="line.737"></a>
-<span class="sourceLineNo">738</span>            @NotNull Function&lt;Class&lt;?&gt;, Object&gt; paramResolver<a name="line.738"></a>
-<span class="sourceLineNo">739</span>    ) {<a name="line.739"></a>
-<span class="sourceLineNo">740</span>        Class&lt;?&gt;[] parameterTypes = ctorOrMethod.getParameterTypes();<a name="line.740"></a>
-<span class="sourceLineNo">741</span>        Object[] params = new Object[parameterTypes.length];<a name="line.741"></a>
-<span class="sourceLineNo">742</span>        int i = 0;<a name="line.742"></a>
-<span class="sourceLineNo">743</span>        for (Class&lt;?&gt; type : parameterTypes) {<a name="line.743"></a>
-<span class="sourceLineNo">744</span>            params[i++] = paramResolver.apply(type);<a name="line.744"></a>
-<span class="sourceLineNo">745</span>        }<a name="line.745"></a>
-<span class="sourceLineNo">746</span>        return params;<a name="line.746"></a>
-<span class="sourceLineNo">747</span>    }<a name="line.747"></a>
-<span class="sourceLineNo">748</span><a name="line.748"></a>
-<span class="sourceLineNo">749</span>    @Contract("_-&gt;fail") @SuppressWarnings("unchecked")<a name="line.749"></a>
-<span class="sourceLineNo">750</span>    private static &lt;T extends Throwable, R&gt; R doSneakyThrow(@NotNull Throwable t) throws T {<a name="line.750"></a>
-<span class="sourceLineNo">751</span>        throw (T) t;<a name="line.751"></a>
-<span class="sourceLineNo">752</span>    }<a name="line.752"></a>
-<span class="sourceLineNo">753</span><a name="line.753"></a>
-<span class="sourceLineNo">754</span>    /**<a name="line.754"></a>
-<span class="sourceLineNo">755</span>     * &lt;p&gt;Super-type linearization is an algorithm used to obtain an ordered<a name="line.755"></a>
-<span class="sourceLineNo">756</span>     * sequence of all super-types in the presence of multiple inheritance.<a name="line.756"></a>
-<span class="sourceLineNo">757</span>     * The list should provide the following guarantees:&lt;/p&gt;<a name="line.757"></a>
-<span class="sourceLineNo">758</span>     *<a name="line.758"></a>
-<span class="sourceLineNo">759</span>     * &lt;ol&gt;<a name="line.759"></a>
-<span class="sourceLineNo">760</span>     * &lt;li&gt;All classes in the result should be assignable from {@code type}<a name="line.760"></a>
-<span class="sourceLineNo">761</span>     *     (i.e. {@code it} is supertype of {@code type)}, and the result<a name="line.761"></a>
-<span class="sourceLineNo">762</span>     *     should contain all supertypes of {@code type}&lt;/li&gt;<a name="line.762"></a>
-<span class="sourceLineNo">763</span>     * &lt;li&gt;The linearization result of any supertype should result in a subset<a name="line.763"></a>
-<span class="sourceLineNo">764</span>     *     of the subtype linearization, preserving the same relative order.&lt;/li&gt;<a name="line.764"></a>
-<span class="sourceLineNo">765</span>     * &lt;li&gt;The ordering is by "specificity".&lt;/li&gt;<a name="line.765"></a>
-<span class="sourceLineNo">766</span>     * &lt;/ol&gt;<a name="line.766"></a>
-<span class="sourceLineNo">767</span>     *<a name="line.767"></a>
-<span class="sourceLineNo">768</span>     * &lt;p&gt;An informal definition of specificity ordering is &lt;em&gt;"given two types -<a name="line.768"></a>
-<span class="sourceLineNo">769</span>     * {@code A} and {@code B}, more specific is the type you would expect to match<a name="line.769"></a>
-<span class="sourceLineNo">770</span>     * if you had overloads with both types and an argument of type {@code type}"&lt;/em&gt;.<a name="line.770"></a>
-<span class="sourceLineNo">771</span>     * It is a concept easy to understand intuitively, and<a name="line.771"></a>
-<span class="sourceLineNo">772</span>     * &lt;a href="https://blogs.oracle.com/mcimadamore/entry/testing_overload_resolution"&gt;surprisingly tricky&lt;/a&gt;<a name="line.772"></a>
-<span class="sourceLineNo">773</span>     * around the edge cases.&lt;/p&gt;<a name="line.773"></a>
-<span class="sourceLineNo">774</span>     *<a name="line.774"></a>
-<span class="sourceLineNo">775</span>     * &lt;p&gt;In practice I currently use the following algorithm, which is a simple and<a name="line.775"></a>
-<span class="sourceLineNo">776</span>     * good enough approximation to the JLS rules (see the referenced link):&lt;/p&gt;<a name="line.776"></a>
-<span class="sourceLineNo">777</span>     * &lt;ol&gt;<a name="line.777"></a>
-<span class="sourceLineNo">778</span>     * &lt;li&gt;Superclasses come first, in the order of inheritance, except for<a name="line.778"></a>
-<span class="sourceLineNo">779</span>     *     Object which comes last. (That is, if {@code type} is not an interface)&lt;/li&gt;<a name="line.779"></a>
-<span class="sourceLineNo">780</span>     * &lt;li&gt;In the middle are all interfaces in breadth-first, left-to-right order.<a name="line.780"></a>
-<span class="sourceLineNo">781</span>     *     On multiple inheritances from the same interface, the first wins.&lt;/li&gt;<a name="line.781"></a>
-<span class="sourceLineNo">782</span>     * &lt;/ol&gt;<a name="line.782"></a>
-<span class="sourceLineNo">783</span>     * @param type the type we are linearizing<a name="line.783"></a>
-<span class="sourceLineNo">784</span>     * @return a sequence of all supertypes of the type, ordered by specificity<a name="line.784"></a>
-<span class="sourceLineNo">785</span>     * @see &lt;a href="http://docs.oracle.com/javase/specs/jls/se8/html/jls-15.html#jls-15.12.2.5"&gt;JLS 15.12.2.5 - specificity rules for method resolution&lt;/a&gt;<a name="line.785"></a>
-<span class="sourceLineNo">786</span>     * @see &lt;a href="https://en.wikipedia.org/wiki/C3_linearization"&gt;C3 alorithm for linearization&lt;/a&gt;<a name="line.786"></a>
-<span class="sourceLineNo">787</span>     */<a name="line.787"></a>
-<span class="sourceLineNo">788</span>    public static Iterable&lt;? extends Class&lt;?&gt;&gt; linearized(@NotNull Class&lt;?&gt; type) {<a name="line.788"></a>
-<span class="sourceLineNo">789</span>        LinkedHashSet&lt;Class&lt;?&gt;&gt; linearized = new LinkedHashSet&lt;&gt;(); // both ordering and uniqueness are important<a name="line.789"></a>
-<span class="sourceLineNo">790</span><a name="line.790"></a>
-<span class="sourceLineNo">791</span>        // step 1: put super-classes first, up to but excluding Object (classes take precedence to interfaces)<a name="line.791"></a>
-<span class="sourceLineNo">792</span>            for (Class&lt;?&gt; c = type; c != Object.class; c = c.getSuperclass()) {<a name="line.792"></a>
-<span class="sourceLineNo">793</span>                linearized.add(c);<a name="line.793"></a>
-<span class="sourceLineNo">794</span>                if (type.isInterface()) break; // interfaces are handled in the next step (still we need to put the seed)<a name="line.794"></a>
-<span class="sourceLineNo">795</span>            }<a name="line.795"></a>
-<span class="sourceLineNo">796</span><a name="line.796"></a>
-<span class="sourceLineNo">797</span>        // step 2: collect all interfaces in left-to-right breadth-first fashion<a name="line.797"></a>
-<span class="sourceLineNo">798</span>        Collection&lt;Class&lt;?&gt;&gt; prev = new ArrayList&lt;&gt;(linearized); // what we added in the previous round<a name="line.798"></a>
-<span class="sourceLineNo">799</span>        Collection&lt;Class&lt;?&gt;&gt; curr = new ArrayList&lt;&gt;();           // what we are going to add on this round<a name="line.799"></a>
-<span class="sourceLineNo">800</span>        do {<a name="line.800"></a>
-<span class="sourceLineNo">801</span>            for (Class&lt;?&gt; t : prev) {   // add the super interfaces of all types found in the prev round<a name="line.801"></a>
-<span class="sourceLineNo">802</span>                curr.addAll(Arrays.asList(t.getInterfaces()));<a name="line.802"></a>
-<span class="sourceLineNo">803</span>            }<a name="line.803"></a>
-<span class="sourceLineNo">804</span><a name="line.804"></a>
-<span class="sourceLineNo">805</span>            curr.removeAll(linearized); // remove the types already in the resulting set<a name="line.805"></a>
-<span class="sourceLineNo">806</span>            linearized.addAll(curr);    // add the new types to the resulting set<a name="line.806"></a>
-<span class="sourceLineNo">807</span><a name="line.807"></a>
-<span class="sourceLineNo">808</span>            // prepare for the curr iteration: swap prev&lt;-&gt;curr, clear the curr<a name="line.808"></a>
-<span class="sourceLineNo">809</span>            Collection&lt;Class&lt;?&gt;&gt; temp = curr;<a name="line.809"></a>
-<span class="sourceLineNo">810</span>            curr = prev;<a name="line.810"></a>
-<span class="sourceLineNo">811</span>            prev = temp;<a name="line.811"></a>
-<span class="sourceLineNo">812</span>            curr.clear();<a name="line.812"></a>
-<span class="sourceLineNo">813</span>        } while(!prev.isEmpty());<a name="line.813"></a>
-<span class="sourceLineNo">814</span><a name="line.814"></a>
-<span class="sourceLineNo">815</span>        // step 3: add Object last (or it would be more specific than all of then interfaces, which is counter-intuitive)<a name="line.815"></a>
-<span class="sourceLineNo">816</span>        if (!type.isInterface()) {<a name="line.816"></a>
-<span class="sourceLineNo">817</span>            linearized.add(Object.class);<a name="line.817"></a>
-<span class="sourceLineNo">818</span>        }<a name="line.818"></a>
-<span class="sourceLineNo">819</span><a name="line.819"></a>
-<span class="sourceLineNo">820</span>        return linearized;<a name="line.820"></a>
-<span class="sourceLineNo">821</span>    }<a name="line.821"></a>
-<span class="sourceLineNo">822</span><a name="line.822"></a>
-<span class="sourceLineNo">823</span>    /**<a name="line.823"></a>
-<span class="sourceLineNo">824</span>     * &lt;p&gt;Walks through all accessible members (fields, methods or constructors)<a name="line.824"></a>
-<span class="sourceLineNo">825</span>     * of a given type and its supertypes, regardless of their visibility or<a name="line.825"></a>
-<span class="sourceLineNo">826</span>     * modifiers. Members of derived classes are processed before the members of<a name="line.826"></a>
-<span class="sourceLineNo">827</span>     * base classes.&lt;/p&gt;<a name="line.827"></a>
-<span class="sourceLineNo">828</span>     * &lt;p&gt;Each member is made {@link AccessibleObject#setAccessible(boolean) accessible}<a name="line.828"></a>
-<span class="sourceLineNo">829</span>     * before being passed to the processor, so you can  invoke operations<a name="line.829"></a>
-<span class="sourceLineNo">830</span>     * on it directly.&lt;/p&gt;<a name="line.830"></a>
-<span class="sourceLineNo">831</span>     * &lt;p&gt;If the processor throws an exception, it will be rethrown, aborting the iteration.&lt;/p&gt;<a name="line.831"></a>
-<span class="sourceLineNo">832</span>     * @param &lt;T&gt; the inferred type of the accessible member.<a name="line.832"></a>
-<span class="sourceLineNo">833</span>     * @param extractor a function extracting a list of accessible members<a name="line.833"></a>
-<span class="sourceLineNo">834</span>     *                  from a class. Typically one of<a name="line.834"></a>
-<span class="sourceLineNo">835</span>     *                  {@link Class#getDeclaredConstructors()},<a name="line.835"></a>
-<span class="sourceLineNo">836</span>     *                  {@link Class#getDeclaredFields()},<a name="line.836"></a>
-<span class="sourceLineNo">837</span>     *                  {@link Class#getDeclaredMethods()}<a name="line.837"></a>
-<span class="sourceLineNo">838</span>     * @param startType the class from which we should start processing<a name="line.838"></a>
-<span class="sourceLineNo">839</span>     *                  working up the inheritance hierarchy towards<a name="line.839"></a>
-<span class="sourceLineNo">840</span>     *                  the {@code stopClass}<a name="line.840"></a>
-<span class="sourceLineNo">841</span>     * @param stopType the class where we should stop processing<a name="line.841"></a>
-<span class="sourceLineNo">842</span>     *                  (if {@code null}, we will stop at {@code Object})<a name="line.842"></a>
-<span class="sourceLineNo">843</span>     * @param processor typically lambda that will process each accessible<a name="line.843"></a>
-<span class="sourceLineNo">844</span>     *                  member. If needed to access {@code o} - do it through<a name="line.844"></a>
-<span class="sourceLineNo">845</span>     *                  the closure.<a name="line.845"></a>
-<span class="sourceLineNo">846</span>     */<a name="line.846"></a>
-<span class="sourceLineNo">847</span>    public static &lt;T extends AccessibleObject&gt; void eachAccessible(<a name="line.847"></a>
-<span class="sourceLineNo">848</span>            @NotNull Function&lt;Class&lt;?&gt;, T[]&gt; extractor,<a name="line.848"></a>
-<span class="sourceLineNo">849</span>            Class&lt;?&gt; startType, @Nullable Class&lt;Object&gt; stopType,<a name="line.849"></a>
-<span class="sourceLineNo">850</span>            @NotNull Extractors.AccessibleMemberProcessor&lt;@NotNull T&gt; processor<a name="line.850"></a>
-<span class="sourceLineNo">851</span>    ) {<a name="line.851"></a>
-<span class="sourceLineNo">852</span>        Class&lt;?&gt; type = startType;<a name="line.852"></a>
-<span class="sourceLineNo">853</span>        try {<a name="line.853"></a>
-<span class="sourceLineNo">854</span>            Class&lt;Object&gt; stop = stopType == null ? Object.class : stopType;<a name="line.854"></a>
-<span class="sourceLineNo">855</span>            while (type!=null &amp;&amp; type !=stop) {<a name="line.855"></a>
-<span class="sourceLineNo">856</span>                for (T it : extractor.apply(type)) {<a name="line.856"></a>
-<span class="sourceLineNo">857</span>                    it.setAccessible(true);<a name="line.857"></a>
-<span class="sourceLineNo">858</span>                    if (it instanceof Field) {<a name="line.858"></a>
-<span class="sourceLineNo">859</span>                        forceAccessible((Field) it);<a name="line.859"></a>
-<span class="sourceLineNo">860</span>                    }<a name="line.860"></a>
-<span class="sourceLineNo">861</span>                    processor.process(it);<a name="line.861"></a>
-<span class="sourceLineNo">862</span>                }<a name="line.862"></a>
-<span class="sourceLineNo">863</span>                type = type.getSuperclass();<a name="line.863"></a>
-<span class="sourceLineNo">864</span>            }<a name="line.864"></a>
-<span class="sourceLineNo">865</span>        } catch (Exception e) {<a name="line.865"></a>
-<span class="sourceLineNo">866</span>            doSneakyThrow(e);<a name="line.866"></a>
-<span class="sourceLineNo">867</span>        }<a name="line.867"></a>
-<span class="sourceLineNo">868</span>    }<a name="line.868"></a>
-<span class="sourceLineNo">869</span><a name="line.869"></a>
-<span class="sourceLineNo">870</span>    /**<a name="line.870"></a>
-<span class="sourceLineNo">871</span>     * Used by traversal functions to iterate over {@code AccessibleObjects} (i.e. methods, fields, constructors)<a name="line.871"></a>
-<span class="sourceLineNo">872</span>     * @param &lt;T&gt; generic type of the accessible object.<a name="line.872"></a>
-<span class="sourceLineNo">873</span>     */<a name="line.873"></a>
-<span class="sourceLineNo">874</span>    @FunctionalInterface<a name="line.874"></a>
-<span class="sourceLineNo">875</span>    public interface AccessibleMemberProcessor&lt;T extends AccessibleObject&gt; {<a name="line.875"></a>
-<span class="sourceLineNo">876</span>        /**<a name="line.876"></a>
-<span class="sourceLineNo">877</span>         * The traversal function will call this for for each method, field, or constructor<a name="line.877"></a>
-<span class="sourceLineNo">878</span>         * @param subject the current accessible object<a name="line.878"></a>
-<span class="sourceLineNo">879</span>         * @throws Exception we can pass through any exceptions to abort the iteration.<a name="line.879"></a>
-<span class="sourceLineNo">880</span>         */<a name="line.880"></a>
-<span class="sourceLineNo">881</span>        void process(T subject) throws Exception;<a name="line.881"></a>
-<span class="sourceLineNo">882</span>    }<a name="line.882"></a>
-<span class="sourceLineNo">883</span>}<a name="line.883"></a>
+<span class="sourceLineNo">670</span>    /**<a name="line.670"></a>
+<span class="sourceLineNo">671</span>     * &lt;p&gt;Finds constructors or methods for dependency injection, based on the number of arguments<a name="line.671"></a>
+<span class="sourceLineNo">672</span>     * and {@code @Injected} annotation. If at least one candidate is annotated with {@code Injected}<a name="line.672"></a>
+<span class="sourceLineNo">673</span>     * or the {@code requireAnnotation==true}, then only annotated candidates will be considered.<a name="line.673"></a>
+<span class="sourceLineNo">674</span>     * Otherwise, return the candidates with largest number of formal arguments.&lt;/p&gt;<a name="line.674"></a>
+<span class="sourceLineNo">675</span>     * &lt;br&gt;<a name="line.675"></a>
+<span class="sourceLineNo">676</span>     * &lt;p&gt;Example: find the most suitable constructor for DI (annotated with {@code Inject}, or largest number of params):&lt;/p&gt;<a name="line.676"></a>
+<span class="sourceLineNo">677</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.677"></a>
+<span class="sourceLineNo">678</span>     * Constructor&amp;lt;FooBar&amp;gt; fbc = Extractors.findInjectableCandidates(false, FooBar.class.getConstructors());<a name="line.678"></a>
+<span class="sourceLineNo">679</span>     * FooBar foobar = fbc.newInstance(Extractors.autowireByType(fbc, Extractors::defaultValue));<a name="line.679"></a>
+<span class="sourceLineNo">680</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.680"></a>
+<span class="sourceLineNo">681</span>     *<a name="line.681"></a>
+<span class="sourceLineNo">682</span>     * @param requireAnnotation if {@code true}, consider only candidates annotated with {@code @Inject}<a name="line.682"></a>
+<span class="sourceLineNo">683</span>     * @param filter     if not null and returns false for a candidate, the candidate is excluded<a name="line.683"></a>
+<span class="sourceLineNo">684</span>     * @param candidates list of constructors to consider. In practice we expect an array of {@code Constructor&lt;T&gt;},<a name="line.684"></a>
+<span class="sourceLineNo">685</span>     *                   though the actual arg is declared as {@code Constructor&lt;T&gt;} so it can be used without<a name="line.685"></a>
+<span class="sourceLineNo">686</span>     *                   warnings with the return value of {@link Class#getConstructors()}.<a name="line.686"></a>
+<span class="sourceLineNo">687</span>     *<a name="line.687"></a>
+<span class="sourceLineNo">688</span>     * @param &lt;T&gt; inferring the constructor or method type.<a name="line.688"></a>
+<span class="sourceLineNo">689</span>     * @return the most suitable constructor (most params, or annotated with {@code @Inject})<a name="line.689"></a>
+<span class="sourceLineNo">690</span>     *<a name="line.690"></a>
+<span class="sourceLineNo">691</span>     * @see #findInjectableConstructor(boolean, Constructor[])<a name="line.691"></a>
+<span class="sourceLineNo">692</span>     * @see #findInjectableMethods(Method...)<a name="line.692"></a>
+<span class="sourceLineNo">693</span>     * @see #autowireByType(Executable, Function)<a name="line.693"></a>
+<span class="sourceLineNo">694</span>     */<a name="line.694"></a>
+<span class="sourceLineNo">695</span>    @SafeVarargs<a name="line.695"></a>
+<span class="sourceLineNo">696</span>    @Contract(pure=true)<a name="line.696"></a>
+<span class="sourceLineNo">697</span>    public static &lt;T extends Executable&gt; @NotNull T[] findInjectableCandidates(boolean requireAnnotation, @Nullable Predicate&lt;T&gt; filter, @NotNull T... candidates) {<a name="line.697"></a>
+<span class="sourceLineNo">698</span>        if (requireAnnotation&amp;&amp;INJECT_ANNOTATION==null) return Arrays.copyOfRange(candidates, 0, 0);<a name="line.698"></a>
+<span class="sourceLineNo">699</span><a name="line.699"></a>
+<span class="sourceLineNo">700</span>        T[] selected = Arrays.copyOf(candidates, candidates.length);<a name="line.700"></a>
+<span class="sourceLineNo">701</span>        int found = 0;<a name="line.701"></a>
+<span class="sourceLineNo">702</span>        boolean annotated = requireAnnotation;<a name="line.702"></a>
+<span class="sourceLineNo">703</span><a name="line.703"></a>
+<span class="sourceLineNo">704</span>        for (T candidate : candidates) {<a name="line.704"></a>
+<span class="sourceLineNo">705</span>            if (filter!=null &amp;&amp; !filter.test(candidate)) continue;<a name="line.705"></a>
+<span class="sourceLineNo">706</span><a name="line.706"></a>
+<span class="sourceLineNo">707</span>            boolean selectedAnnotated = INJECT_ANNOTATION != null &amp;&amp; candidate.getAnnotation(INJECT_ANNOTATION) != null;<a name="line.707"></a>
+<span class="sourceLineNo">708</span>            if (selectedAnnotated) {<a name="line.708"></a>
+<span class="sourceLineNo">709</span>                if (!annotated) {<a name="line.709"></a>
+<span class="sourceLineNo">710</span>                    found = 0;<a name="line.710"></a>
+<span class="sourceLineNo">711</span>                    annotated = true;<a name="line.711"></a>
+<span class="sourceLineNo">712</span>                }<a name="line.712"></a>
+<span class="sourceLineNo">713</span>                selected[found++] = candidate;<a name="line.713"></a>
+<span class="sourceLineNo">714</span>            } else if (!annotated) {<a name="line.714"></a>
+<span class="sourceLineNo">715</span>                int selectedArity = found==0 ? -1 : selected[found - 1].getParameterTypes().length;<a name="line.715"></a>
+<span class="sourceLineNo">716</span>                int candidateArity = candidate.getParameterTypes().length;<a name="line.716"></a>
+<span class="sourceLineNo">717</span>                if (selectedArity &gt; candidateArity) continue;<a name="line.717"></a>
+<span class="sourceLineNo">718</span>                if (selectedArity &lt; candidateArity) found=0;<a name="line.718"></a>
+<span class="sourceLineNo">719</span>                selected[found++] = candidate;<a name="line.719"></a>
+<span class="sourceLineNo">720</span>            }<a name="line.720"></a>
+<span class="sourceLineNo">721</span>        }<a name="line.721"></a>
+<span class="sourceLineNo">722</span><a name="line.722"></a>
+<span class="sourceLineNo">723</span>        return Arrays.copyOf(selected, found);<a name="line.723"></a>
+<span class="sourceLineNo">724</span>    }<a name="line.724"></a>
+<span class="sourceLineNo">725</span><a name="line.725"></a>
+<span class="sourceLineNo">726</span>    /**<a name="line.726"></a>
+<span class="sourceLineNo">727</span>     * Provide arguments to invoke a method or constructor, based on signature types and resolver function.<a name="line.727"></a>
+<span class="sourceLineNo">728</span>     * Can be used to call arguments with null params, or implement simple DI layer.<a name="line.728"></a>
+<span class="sourceLineNo">729</span>     *<a name="line.729"></a>
+<span class="sourceLineNo">730</span>     * @param ctorOrMethod the constructor or method to call.<a name="line.730"></a>
+<span class="sourceLineNo">731</span>     * @param paramResolver mapping function from type to implementation value can be as simple as {@code Map::get}.<a name="line.731"></a>
+<span class="sourceLineNo">732</span>     * @return the signature array.<a name="line.732"></a>
+<span class="sourceLineNo">733</span>     */<a name="line.733"></a>
+<span class="sourceLineNo">734</span>    @Contract(pure=true)<a name="line.734"></a>
+<span class="sourceLineNo">735</span>    public static @NotNull Object[] autowireByType(<a name="line.735"></a>
+<span class="sourceLineNo">736</span>            @NotNull Executable ctorOrMethod,<a name="line.736"></a>
+<span class="sourceLineNo">737</span>            @NotNull Function&lt;Class&lt;?&gt;, Object&gt; paramResolver<a name="line.737"></a>
+<span class="sourceLineNo">738</span>    ) {<a name="line.738"></a>
+<span class="sourceLineNo">739</span>        Class&lt;?&gt;[] parameterTypes = ctorOrMethod.getParameterTypes();<a name="line.739"></a>
+<span class="sourceLineNo">740</span>        Object[] params = new Object[parameterTypes.length];<a name="line.740"></a>
+<span class="sourceLineNo">741</span>        int i = 0;<a name="line.741"></a>
+<span class="sourceLineNo">742</span>        for (Class&lt;?&gt; type : parameterTypes) {<a name="line.742"></a>
+<span class="sourceLineNo">743</span>            params[i++] = paramResolver.apply(type);<a name="line.743"></a>
+<span class="sourceLineNo">744</span>        }<a name="line.744"></a>
+<span class="sourceLineNo">745</span>        return params;<a name="line.745"></a>
+<span class="sourceLineNo">746</span>    }<a name="line.746"></a>
+<span class="sourceLineNo">747</span><a name="line.747"></a>
+<span class="sourceLineNo">748</span>    @Contract("_-&gt;fail") @SuppressWarnings("unchecked")<a name="line.748"></a>
+<span class="sourceLineNo">749</span>    private static &lt;T extends Throwable, R&gt; R doSneakyThrow(@NotNull Throwable t) throws T {<a name="line.749"></a>
+<span class="sourceLineNo">750</span>        throw (T) t;<a name="line.750"></a>
+<span class="sourceLineNo">751</span>    }<a name="line.751"></a>
+<span class="sourceLineNo">752</span><a name="line.752"></a>
+<span class="sourceLineNo">753</span>    /**<a name="line.753"></a>
+<span class="sourceLineNo">754</span>     * &lt;p&gt;Super-type linearization is an algorithm used to obtain an ordered<a name="line.754"></a>
+<span class="sourceLineNo">755</span>     * sequence of all super-types in the presence of multiple inheritance.<a name="line.755"></a>
+<span class="sourceLineNo">756</span>     * The list should provide the following guarantees:&lt;/p&gt;<a name="line.756"></a>
+<span class="sourceLineNo">757</span>     *<a name="line.757"></a>
+<span class="sourceLineNo">758</span>     * &lt;ol&gt;<a name="line.758"></a>
+<span class="sourceLineNo">759</span>     * &lt;li&gt;All classes in the result should be assignable from {@code type}<a name="line.759"></a>
+<span class="sourceLineNo">760</span>     *     (i.e. {@code it} is supertype of {@code type)}, and the result<a name="line.760"></a>
+<span class="sourceLineNo">761</span>     *     should contain all supertypes of {@code type}&lt;/li&gt;<a name="line.761"></a>
+<span class="sourceLineNo">762</span>     * &lt;li&gt;The linearization result of any supertype should result in a subset<a name="line.762"></a>
+<span class="sourceLineNo">763</span>     *     of the subtype linearization, preserving the same relative order.&lt;/li&gt;<a name="line.763"></a>
+<span class="sourceLineNo">764</span>     * &lt;li&gt;The ordering is by "specificity".&lt;/li&gt;<a name="line.764"></a>
+<span class="sourceLineNo">765</span>     * &lt;/ol&gt;<a name="line.765"></a>
+<span class="sourceLineNo">766</span>     *<a name="line.766"></a>
+<span class="sourceLineNo">767</span>     * &lt;p&gt;An informal definition of specificity ordering is &lt;em&gt;"given two types -<a name="line.767"></a>
+<span class="sourceLineNo">768</span>     * {@code A} and {@code B}, more specific is the type you would expect to match<a name="line.768"></a>
+<span class="sourceLineNo">769</span>     * if you had overloads with both types and an argument of type {@code type}"&lt;/em&gt;.<a name="line.769"></a>
+<span class="sourceLineNo">770</span>     * It is a concept easy to understand intuitively, and<a name="line.770"></a>
+<span class="sourceLineNo">771</span>     * &lt;a href="https://blogs.oracle.com/mcimadamore/entry/testing_overload_resolution"&gt;surprisingly tricky&lt;/a&gt;<a name="line.771"></a>
+<span class="sourceLineNo">772</span>     * around the edge cases.&lt;/p&gt;<a name="line.772"></a>
+<span class="sourceLineNo">773</span>     *<a name="line.773"></a>
+<span class="sourceLineNo">774</span>     * &lt;p&gt;In practice I currently use the following algorithm, which is a simple and<a name="line.774"></a>
+<span class="sourceLineNo">775</span>     * good enough approximation to the JLS rules (see the referenced link):&lt;/p&gt;<a name="line.775"></a>
+<span class="sourceLineNo">776</span>     * &lt;ol&gt;<a name="line.776"></a>
+<span class="sourceLineNo">777</span>     * &lt;li&gt;Superclasses come first, in the order of inheritance, except for<a name="line.777"></a>
+<span class="sourceLineNo">778</span>     *     Object which comes last. (That is, if {@code type} is not an interface)&lt;/li&gt;<a name="line.778"></a>
+<span class="sourceLineNo">779</span>     * &lt;li&gt;In the middle are all interfaces in breadth-first, left-to-right order.<a name="line.779"></a>
+<span class="sourceLineNo">780</span>     *     On multiple inheritances from the same interface, the first wins.&lt;/li&gt;<a name="line.780"></a>
+<span class="sourceLineNo">781</span>     * &lt;/ol&gt;<a name="line.781"></a>
+<span class="sourceLineNo">782</span>     * @param type the type we are linearizing<a name="line.782"></a>
+<span class="sourceLineNo">783</span>     * @return a sequence of all supertypes of the type, ordered by specificity<a name="line.783"></a>
+<span class="sourceLineNo">784</span>     * @see &lt;a href="http://docs.oracle.com/javase/specs/jls/se8/html/jls-15.html#jls-15.12.2.5"&gt;JLS 15.12.2.5 - specificity rules for method resolution&lt;/a&gt;<a name="line.784"></a>
+<span class="sourceLineNo">785</span>     * @see &lt;a href="https://en.wikipedia.org/wiki/C3_linearization"&gt;C3 alorithm for linearization&lt;/a&gt;<a name="line.785"></a>
+<span class="sourceLineNo">786</span>     */<a name="line.786"></a>
+<span class="sourceLineNo">787</span>    public static Iterable&lt;? extends Class&lt;?&gt;&gt; linearized(@NotNull Class&lt;?&gt; type) {<a name="line.787"></a>
+<span class="sourceLineNo">788</span>        LinkedHashSet&lt;Class&lt;?&gt;&gt; linearized = new LinkedHashSet&lt;&gt;(); // both ordering and uniqueness are important<a name="line.788"></a>
+<span class="sourceLineNo">789</span><a name="line.789"></a>
+<span class="sourceLineNo">790</span>        // step 1: put super-classes first, up to but excluding Object (classes take precedence to interfaces)<a name="line.790"></a>
+<span class="sourceLineNo">791</span>            for (Class&lt;?&gt; c = type; c != Object.class; c = c.getSuperclass()) {<a name="line.791"></a>
+<span class="sourceLineNo">792</span>                linearized.add(c);<a name="line.792"></a>
+<span class="sourceLineNo">793</span>                if (type.isInterface()) break; // interfaces are handled in the next step (still we need to put the seed)<a name="line.793"></a>
+<span class="sourceLineNo">794</span>            }<a name="line.794"></a>
+<span class="sourceLineNo">795</span><a name="line.795"></a>
+<span class="sourceLineNo">796</span>        // step 2: collect all interfaces in left-to-right breadth-first fashion<a name="line.796"></a>
+<span class="sourceLineNo">797</span>        Collection&lt;Class&lt;?&gt;&gt; prev = new ArrayList&lt;&gt;(linearized); // what we added in the previous round<a name="line.797"></a>
+<span class="sourceLineNo">798</span>        Collection&lt;Class&lt;?&gt;&gt; curr = new ArrayList&lt;&gt;();           // what we are going to add on this round<a name="line.798"></a>
+<span class="sourceLineNo">799</span>        do {<a name="line.799"></a>
+<span class="sourceLineNo">800</span>            for (Class&lt;?&gt; t : prev) {   // add the super interfaces of all types found in the prev round<a name="line.800"></a>
+<span class="sourceLineNo">801</span>                curr.addAll(Arrays.asList(t.getInterfaces()));<a name="line.801"></a>
+<span class="sourceLineNo">802</span>            }<a name="line.802"></a>
+<span class="sourceLineNo">803</span><a name="line.803"></a>
+<span class="sourceLineNo">804</span>            curr.removeAll(linearized); // remove the types already in the resulting set<a name="line.804"></a>
+<span class="sourceLineNo">805</span>            linearized.addAll(curr);    // add the new types to the resulting set<a name="line.805"></a>
+<span class="sourceLineNo">806</span><a name="line.806"></a>
+<span class="sourceLineNo">807</span>            // prepare for the curr iteration: swap prev&lt;-&gt;curr, clear the curr<a name="line.807"></a>
+<span class="sourceLineNo">808</span>            Collection&lt;Class&lt;?&gt;&gt; temp = curr;<a name="line.808"></a>
+<span class="sourceLineNo">809</span>            curr = prev;<a name="line.809"></a>
+<span class="sourceLineNo">810</span>            prev = temp;<a name="line.810"></a>
+<span class="sourceLineNo">811</span>            curr.clear();<a name="line.811"></a>
+<span class="sourceLineNo">812</span>        } while(!prev.isEmpty());<a name="line.812"></a>
+<span class="sourceLineNo">813</span><a name="line.813"></a>
+<span class="sourceLineNo">814</span>        // step 3: add Object last (or it would be more specific than all of then interfaces, which is counter-intuitive)<a name="line.814"></a>
+<span class="sourceLineNo">815</span>        if (!type.isInterface()) {<a name="line.815"></a>
+<span class="sourceLineNo">816</span>            linearized.add(Object.class);<a name="line.816"></a>
+<span class="sourceLineNo">817</span>        }<a name="line.817"></a>
+<span class="sourceLineNo">818</span><a name="line.818"></a>
+<span class="sourceLineNo">819</span>        return linearized;<a name="line.819"></a>
+<span class="sourceLineNo">820</span>    }<a name="line.820"></a>
+<span class="sourceLineNo">821</span><a name="line.821"></a>
+<span class="sourceLineNo">822</span>    /**<a name="line.822"></a>
+<span class="sourceLineNo">823</span>     * &lt;p&gt;Walks through all accessible members (fields, methods or constructors)<a name="line.823"></a>
+<span class="sourceLineNo">824</span>     * of a given type and its supertypes, regardless of their visibility or<a name="line.824"></a>
+<span class="sourceLineNo">825</span>     * modifiers. Members of derived classes are processed before the members of<a name="line.825"></a>
+<span class="sourceLineNo">826</span>     * base classes.&lt;/p&gt;<a name="line.826"></a>
+<span class="sourceLineNo">827</span>     * &lt;p&gt;Each member is made {@link AccessibleObject#setAccessible(boolean) accessible}<a name="line.827"></a>
+<span class="sourceLineNo">828</span>     * before being passed to the processor, so you can  invoke operations<a name="line.828"></a>
+<span class="sourceLineNo">829</span>     * on it directly.&lt;/p&gt;<a name="line.829"></a>
+<span class="sourceLineNo">830</span>     * &lt;p&gt;If the processor throws an exception, it will be rethrown, aborting the iteration.&lt;/p&gt;<a name="line.830"></a>
+<span class="sourceLineNo">831</span>     * @param &lt;T&gt; the inferred type of the accessible member.<a name="line.831"></a>
+<span class="sourceLineNo">832</span>     * @param extractor a function extracting a list of accessible members<a name="line.832"></a>
+<span class="sourceLineNo">833</span>     *                  from a class. Typically one of<a name="line.833"></a>
+<span class="sourceLineNo">834</span>     *                  {@link Class#getDeclaredConstructors()},<a name="line.834"></a>
+<span class="sourceLineNo">835</span>     *                  {@link Class#getDeclaredFields()},<a name="line.835"></a>
+<span class="sourceLineNo">836</span>     *                  {@link Class#getDeclaredMethods()}<a name="line.836"></a>
+<span class="sourceLineNo">837</span>     * @param startType the class from which we should start processing<a name="line.837"></a>
+<span class="sourceLineNo">838</span>     *                  working up the inheritance hierarchy towards<a name="line.838"></a>
+<span class="sourceLineNo">839</span>     *                  the {@code stopClass}<a name="line.839"></a>
+<span class="sourceLineNo">840</span>     * @param stopType the class where we should stop processing<a name="line.840"></a>
+<span class="sourceLineNo">841</span>     *                  (if {@code null}, we will stop at {@code Object})<a name="line.841"></a>
+<span class="sourceLineNo">842</span>     * @param processor typically lambda that will process each accessible<a name="line.842"></a>
+<span class="sourceLineNo">843</span>     *                  member. If needed to access {@code o} - do it through<a name="line.843"></a>
+<span class="sourceLineNo">844</span>     *                  the closure.<a name="line.844"></a>
+<span class="sourceLineNo">845</span>     */<a name="line.845"></a>
+<span class="sourceLineNo">846</span>    public static &lt;T extends AccessibleObject&gt; void eachAccessible(<a name="line.846"></a>
+<span class="sourceLineNo">847</span>            @NotNull Function&lt;Class&lt;?&gt;, T[]&gt; extractor,<a name="line.847"></a>
+<span class="sourceLineNo">848</span>            Class&lt;?&gt; startType, @Nullable Class&lt;Object&gt; stopType,<a name="line.848"></a>
+<span class="sourceLineNo">849</span>            @NotNull Extractors.AccessibleMemberProcessor&lt;@NotNull T&gt; processor<a name="line.849"></a>
+<span class="sourceLineNo">850</span>    ) {<a name="line.850"></a>
+<span class="sourceLineNo">851</span>        Class&lt;?&gt; type = startType;<a name="line.851"></a>
+<span class="sourceLineNo">852</span>        try {<a name="line.852"></a>
+<span class="sourceLineNo">853</span>            Class&lt;Object&gt; stop = stopType == null ? Object.class : stopType;<a name="line.853"></a>
+<span class="sourceLineNo">854</span>            while (type!=null &amp;&amp; type !=stop) {<a name="line.854"></a>
+<span class="sourceLineNo">855</span>                for (T it : extractor.apply(type)) {<a name="line.855"></a>
+<span class="sourceLineNo">856</span>                    it.setAccessible(true);<a name="line.856"></a>
+<span class="sourceLineNo">857</span>                    if (it instanceof Field) {<a name="line.857"></a>
+<span class="sourceLineNo">858</span>                        forceAccessible((Field) it);<a name="line.858"></a>
+<span class="sourceLineNo">859</span>                    }<a name="line.859"></a>
+<span class="sourceLineNo">860</span>                    processor.process(it);<a name="line.860"></a>
+<span class="sourceLineNo">861</span>                }<a name="line.861"></a>
+<span class="sourceLineNo">862</span>                type = type.getSuperclass();<a name="line.862"></a>
+<span class="sourceLineNo">863</span>            }<a name="line.863"></a>
+<span class="sourceLineNo">864</span>        } catch (Exception e) {<a name="line.864"></a>
+<span class="sourceLineNo">865</span>            doSneakyThrow(e);<a name="line.865"></a>
+<span class="sourceLineNo">866</span>        }<a name="line.866"></a>
+<span class="sourceLineNo">867</span>    }<a name="line.867"></a>
+<span class="sourceLineNo">868</span><a name="line.868"></a>
+<span class="sourceLineNo">869</span>    /**<a name="line.869"></a>
+<span class="sourceLineNo">870</span>     * Used by traversal functions to iterate over {@code AccessibleObjects} (i.e. methods, fields, constructors)<a name="line.870"></a>
+<span class="sourceLineNo">871</span>     * @param &lt;T&gt; generic type of the accessible object.<a name="line.871"></a>
+<span class="sourceLineNo">872</span>     */<a name="line.872"></a>
+<span class="sourceLineNo">873</span>    @FunctionalInterface<a name="line.873"></a>
+<span class="sourceLineNo">874</span>    public interface AccessibleMemberProcessor&lt;T extends AccessibleObject&gt; {<a name="line.874"></a>
+<span class="sourceLineNo">875</span>        /**<a name="line.875"></a>
+<span class="sourceLineNo">876</span>         * The traversal function will call this for for each method, field, or constructor<a name="line.876"></a>
+<span class="sourceLineNo">877</span>         * @param subject the current accessible object<a name="line.877"></a>
+<span class="sourceLineNo">878</span>         * @throws Exception we can pass through any exceptions to abort the iteration.<a name="line.878"></a>
+<span class="sourceLineNo">879</span>         */<a name="line.879"></a>
+<span class="sourceLineNo">880</span>        void process(T subject) throws Exception;<a name="line.880"></a>
+<span class="sourceLineNo">881</span>    }<a name="line.881"></a>
+<span class="sourceLineNo">882</span>}<a name="line.882"></a>
 
 
 
