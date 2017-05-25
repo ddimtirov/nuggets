@@ -432,38 +432,6 @@ public class Ports implements AutoCloseable {
     }
 
     /**
-     * Indicates that one of the exporters did not like an allocated port
-     * and requests re-allocation of a new block.
-     */
-    public static class PortVetoException extends Exception {
-        private static final long serialVersionUID = -6421513924172619422L;
-
-        /**
-         * The port ID that had a problem
-         */
-        public final String id;
-
-        /**
-         * The actual port that had a problem
-         */
-        public final int port;
-
-        /**
-         * Indicates that one of the exporters did not like an allocated port
-         * and requests re-allocation of a new block.
-         *
-         * @param id the port ID that had a problem
-         * @param port the actual port that had a problem
-         * @param message human-readable description of the problem
-         */
-        public PortVetoException(@NotNull String id, int port, @NotNull String message) {
-            super(message);
-            this.id = id;
-            this.port = port;
-        }
-    }
-
-    /**
      * A strategy for allocating a port block.
      */
     public interface Registrar extends AutoCloseable {

@@ -433,7 +433,7 @@ class PortsBlockRegistrarSpec extends Specification {
         when:
         ports = new Ports(registrar).withExporter { id, p ->
             if (id=='' || portAvailable(p)) return
-            throw new Ports.PortVetoException(id, p, 'Port taken')
+            throw new PortVetoException(id, p, 'Port taken')
         }.with {
             reservePort "foo", 3
             reservePort "bar", occupiedOffset
@@ -462,7 +462,7 @@ class PortsBlockRegistrarSpec extends Specification {
         when:
         ports = new Ports(registrar).withExporter { id, p ->
             if (id=='' || portAvailable(p)) return
-            throw new Ports.PortVetoException(id, p, 'Port taken')
+            throw new PortVetoException(id, p, 'Port taken')
         }.with {
             reservePort "foo", 3
             reservePort "bar", occupiedOffset
