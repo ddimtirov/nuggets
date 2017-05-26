@@ -22,7 +22,7 @@ ReflectionProxy.wrap(acceptor).get("reactor").get("config").set("timeout", 100_0
 
 Another useful feature for concurrent testing is being able to retry until 
 success. This is achieved by `Functions.retry()`. While concept is similar to Spock's 
-[PollingConditions|http://spockframework.org/spock/javadoc/1.0/spock/util/concurrent/PollingConditions.html],
+[PollingConditions](http://spockframework.org/spock/javadoc/1.0/spock/util/concurrent/PollingConditions.html),
 the main difference is that `Functions.retry()` is reentrant. 
 
 By *reentrant*, we mean that you may write a method `foo` using `retry()` 
