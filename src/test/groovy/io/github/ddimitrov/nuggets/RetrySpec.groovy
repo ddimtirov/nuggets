@@ -58,8 +58,9 @@ class RetrySpec extends Specification {
 
         cleanup:
         interrupter.interrupt()
-        while (testThread.interrupted) testThread.interrupted() // clear the interruptions of the current thread before calling join()
-        interrupter.join()
+        Functions.retry("race between the interrupter interrupting us and us interrupting it", 10_000) {
+            interrupter.join()
+        }
     }
 
     def "one can listen for retries - useful for test reports"() {
