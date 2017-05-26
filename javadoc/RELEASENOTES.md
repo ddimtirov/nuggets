@@ -1,3 +1,47 @@
+# v0.4.0 Thread Introspection, Reflection Proxy, Retry, Data and Classpath URLs 
+
+This release delivers 4 small features - while not related, they are 
+especially useful if you are hacking legacy code or doing whitebox testing.
+
+The `Threads` class is a wraps a Java `ThreadGroup` and provides convenient 
+access its contained `Threads` or the actual `Runnable` instances that do the 
+work. This, combined with reflection allows to get access to the internals 
+of servers and messaging frameworks, or could be just useful to monitor for 
+leaked threads. The API also allows conveniently to navigate to parent and 
+child thread-groups starting from `main` or the thread group of the current 
+thread. 
+
+`ReflectionProxy` complements the `Threads` class, by providing convenient 
+way to apply a series of reflective operations on an object graph. Here is 
+a combined example, changing timeout field of a hypothetical server.
+
+```$java
+Runnable acceptor = Threads.getAllThreads().getWithUniqueName("Acceptor-Thread");
+ReflectionProxy.wrap(acceptor).get("reactor").get("config").set("timeout", 100_000);
+```
+
+Another useful feature for concurrent testing is being able to retry until 
+success. This is achieved by `Functions.retry()`. While concept is similar to Spock's 
+[PollingConditions|http://spockframework.org/spock/javadoc/1.0/spock/util/concurrent/PollingConditions.html],
+the main difference is that `Functions.retry()` is reentrant. 
+
+By *reentrant*, we mean that you may write a method `foo` using `retry()` 
+and later call `foo` from the `retry()` body in method `bar`. 
+A naive implementation would spin in `foo` until it times out, effectively 
+causing priority inversion. This is exacerbated when used in architectures
+such as single-threaded reactor. `Functions.retry()` only spins at the 
+top-level, of the stack with any reentrant calls being treated as pass-through.
+ 
+In addition, `Functions.retry()` can come handy outside of testing too - i.e. 
+for handling unavoidable races. It is robust, allows for busy-waiting before 
+sleeping, and handles interruption well. 
+
+Finally, the `UrlStreamHandlers` provides base classes that can be used to add
+support for Data URLs, Classpath URLs, or custom schemas translating to supported 
+URL types (i.e. one may implement a handler translating `config:connection/http/port` 
+to `file:config/connection.xml` and delegating the resolution to it).
+
+
 # v0.3.0 Port allocator, Reflective invocation, Void to returning function adaptors 
 
 While the theme of this release was to improve the continuous integration infrastructure,
