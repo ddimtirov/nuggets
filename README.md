@@ -1,6 +1,12 @@
-**nuggets** is (yet another) utility library for Java. I have tried to include 
-only non-trivial features, especially ones that I find I have needed repeatedly,
-as well as features that make code easier to read and maintain. 
+**nuggets** is (yet another) utility library for Java. **nuggets** is a sharp tool - 
+it is you who uses it for good or for evil. **nuggets** is rubber gloves for those 
+of us who need to dig deep in shitty codebases. **nuggets** is an experiment in 
+transgressing the one-size-fits-all rules of thumb of "Effective Java". **nuggets** 
+strives to maximize the [functionality-to-code](http://www.infovis-wiki.net/index.php/Data-Ink_Ratio) 
+ratio, by providing a composable basis set of well chosen primitives, rather than 
+catering explicitly for every usage scenario. **nuggets** is an aesthetic exercise -
+from the Javadoc stylesheet, to the choice of infrastructure, I tinker and 
+experiment until the result pleases me. 
 
 [![Linux/OSX Build](https://travis-ci.org/ddimtirov/nuggets.svg?branch=master)](https://travis-ci.org/ddimtirov/nuggets)
 [![Windows Build](https://ci.appveyor.com/api/projects/status/uruwl3u6eynnpok9/branch/master?svg=true)](https://ci.appveyor.com/project/ddimtirov/nuggets/branch/master)
@@ -46,6 +52,7 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
   - flexible `fallback()` combinator, trying multiple functions until the 
     result matches a predicate and/or no exception is thrown. Nice error 
     reporting.
+  - composable reentrant `retry()` decorator 
   - factory for utility function objects allowing to intercept function 
     objects before/after call
   - adaptors allowing to use `void` functions in non-void context
@@ -54,6 +61,14 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
   - hook to customize the actual allocation algorithm.  
   - hooks to validate and export the allocated ports to custom config mechanism 
     (i.e. generate config files, or update `System.getProperties()`)
+- `UrlStreamHandlers` provides base classes and utilities to easily incorporate 
+  data URLs and custom resource-based URL handlers into any application.
+- `Threads` allows to introspect running threads, thread-groups and runnables. 
+- `ReflectionProxy` is a convenient way to perform a series of reflective 
+   accesses, starting from an object. Invaluable for all these cases where you 
+   need to monkey-patch a vendor class (especially powerful when combined with 
+   `Threads` to get access to the runnable of another thread).
+    
 - Special Groovy API  
   - Use `Extractors` as Groovy [category](http://groovy-lang.org/metaprogramming.html#categories) 
     to decorate any object with `peekField()/pokeField()`, which can be used access private or 
@@ -75,7 +90,18 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
         id "baz"
      }
     ```
-      
+  - `Threads` allows access to the runnable of threads with unique name within the scope by using
+     square-brackets notation - i.e. `threadPool['worker-thread-1']`
+  - `ReflectionProxy` allows the usage of square brackets to 
+    access fields, as well as specify resolution type for shadowed fields.
+    For example, if a private field `foo` is declared in both `Parent` and `Child`
+    you can access te parent's `foo` from a child instance by doing
+    `childProxy[Parent]['foo']`.
+  - Each object gets an extra `reflectionDsl()` method which allows to use the `ReflectionProxy`
+    in more idiomatic way. Just call the methods and access the fields as properties.
+    Use square brackets to specify a resolution type. I.e. the above example would translate to
+    `chieldProxyDsl[Parent].foo`      
+        
 - Special Kotlin API
   - Transform Exceptions in more natural way, by adding `throwable.transform {...}`
     extension method. Added few extension methods to the transform builder.
