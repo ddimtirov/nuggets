@@ -189,6 +189,12 @@ public class TextTable {
      */
     public static volatile String indent;
 
+    /**
+     * Whether to draw a frame around the table or just leave the internal
+     * heading and column separators.
+     */
+    public static volatile boolean outerFrame;
+
     static {
         presetBox(Box.ASCII);
     }
@@ -217,6 +223,7 @@ public class TextTable {
     public static void presetBox(@NotNull Style style) {
         indent = " ";
         padding = " ";
+        outerFrame = true;
         eol = System.lineSeparator();
         TextTable.style = style;
     }
@@ -281,22 +288,31 @@ public class TextTable {
 
         StringBuilder indentPad = pad(new StringBuilder(indent), indent, TextTable.indent);
 
-        out.append(indentPad);
-        appendSeparator(out, style.joints(0));
+        // outer-frame: top
+        if (outerFrame) {
+            out.append(indentPad);
+            appendSeparator(out, style.joints(0));
+        }
 
+        // header row
         out.append(indentPad);
         appendRow(out, null);
 
+        // inner-frame: header/values separator
         out.append(indentPad);
         appendSeparator(out, style.joints(1));
 
+        // rows
         for (List<?> row : data) {
             out.append(indentPad);
             appendRow(out, row);
         }
 
-        out.append(indentPad);
-        appendSeparator(out, style.joints(2));
+        // outer-frame: bottom
+        if (outerFrame) {
+            out.append(indentPad);
+            appendSeparator(out, style.joints(2));
+        }
         return out;
     }
 
@@ -331,14 +347,23 @@ public class TextTable {
      * @throws IOException if the {@param out} throws while appending.
      * @see Style#joints(int)
      */
-    private void appendSeparator(@NotNull Appendable out, @NotNull String[] jointRow) throws IOException {
+    private void appendSeparator(@NotNull Appendable out, String[] jointRow) throws IOException {
+        String horizontal = style.horizontal();
+        if (horizontal==null) return;
+
         for (int i = 0; i < columns.size(); i++) {
             Column column = columns.get(i);
-            boolean lastColumn = i < columns.size() - 1;
+            boolean lastColumn = i >= columns.size() - 1;
 
-            if (i == 0) out.append(jointRow[0]);
-            pad(out, column.padding * 2 + column.width, style.horizontal());
-            out.append(jointRow[lastColumn ? 1 : 2]);
+            if (outerFrame && jointRow[0]!=null && i == 0) out.append(jointRow[0]);
+            pad(out, column.padding * 2 + column.width, horizontal);
+            if (lastColumn) {
+                String jointGlyph = jointRow[2];
+                if (outerFrame && jointGlyph != null) out.append(jointGlyph);
+            } else {
+                String jointGlyph = jointRow[1];
+                if (jointGlyph!=null) out.append(jointGlyph);
+            }
         }
         out.append(eol);
     }
@@ -353,7 +378,8 @@ public class TextTable {
      */
     @SuppressWarnings("try")
     private void appendRow(@NotNull Appendable out, @Nullable List<?> row) throws IOException {
-        out.append(style.vertical());
+        if (outerFrame && style.vertical()!=null) out.append(style.vertical());
+        Column lastColumn = columns.get(columns.size() - 1);
         for (Column column : columns) {
             try (Column.Memento ignored = column.new Memento()) {
                 String formatted;
@@ -382,7 +408,7 @@ public class TextTable {
                     out.append(formatted);
                     pad(out, rightAlignmentPad + column.padding, padding);
                 }
-                out.append(style.vertical());
+                if ((column!=lastColumn || outerFrame) && style.vertical()!=null) out.append(style.vertical());
             }
         }
         out.append(eol);
@@ -400,22 +426,24 @@ public class TextTable {
          * Determines the characters used to draw the horizontal lines of a table.
          * @return horizontal line string. If multiple characters, will be repeated
          *         and trimmed as required to reach the desired size.
+         *         If {@code null}, horizontal separators will be skipped entirely.
          * @see TextTable#style
          * @see #presetBox(Style)
          */
         @Contract(pure = true)
-        @NotNull String horizontal();
+        @Nullable String horizontal();
 
         /**
          * Determines the characters used to draw the vertical lines of a table.
          * @return vertical line string. If multiple characters, the column separators
          *         will be using the whole string (make sure to have matching T-joints
          *         and cross-joints).
+         *         If {@code null}, vertical separators will be skipped entirely.
          * @see TextTable#style
          * @see #presetBox(Style)
          */
         @Contract(pure = true)
-        @NotNull String vertical();
+        @Nullable String vertical();
 
         /**
          * Determines the characters used to draw the joints and corners of a table.
@@ -445,6 +473,20 @@ public class TextTable {
      * @see TextTable#presetBox(Style)
      */
     public enum Box implements Style {
+        /** No decorations - good start if you want to customize */
+        NO_BOX(null, null,
+                new String[]{"NOT_USED", "NOT_USED", "NOT_USED"},
+                new String[]{"NOT_USED", "NOT_USED", "NOT_USED"},
+                new String[]{"NOT_USED", "NOT_USED", "NOT_USED"}),
+
+        ASCII_HORIZONTAL("-", null,
+                new String[]{"-", "-", "-"},
+                new String[]{"-", "-", "-"},
+                new String[]{"-", "-", "-"}),
+        ASCII_HORIZONTAL_DOUBLE("=", null,
+                new String[]{"=", "=", "="},
+                new String[]{"=", "=", "="},
+                new String[]{"=", "=", "="}),
         /** Plain ASCII - suitable for every log file */
         ASCII("-", "|",
                 new String[]{"+", "+", "+"},
@@ -475,13 +517,13 @@ public class TextTable {
                 new String[]{"\u2560", "\u256c", "\u2563"},
                 new String[]{"\u255a", "\u2569", "\u255d"});
 
-        private final @NotNull String horizontal;
-        private final @NotNull String vertical;
+        private final @Nullable String horizontal;
+        private final @Nullable String vertical;
 
         @SuppressWarnings("ImmutableEnumChecker")
         private final @NotNull String[][] joints;
 
-        Box(@NotNull String horizontal, @NotNull String vertical, @NotNull String[]... joints) {
+        Box(@Nullable String horizontal, @Nullable String vertical, @NotNull String[]... joints) {
             this.horizontal = horizontal;
             this.vertical = vertical;
             this.joints = joints;
@@ -489,13 +531,13 @@ public class TextTable {
 
         @Override
         @Contract(pure = true)
-        public @NotNull String horizontal() {
+        public @Nullable String horizontal() {
             return horizontal;
         }
 
         @Override
         @Contract(pure = true)
-        public @NotNull String vertical() {
+        public @Nullable String vertical() {
             return vertical;
         }
 

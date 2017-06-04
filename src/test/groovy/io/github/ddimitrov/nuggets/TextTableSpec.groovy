@@ -3,6 +3,7 @@ package io.github.ddimitrov.nuggets
 import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.Title
+import spock.lang.Unroll
 
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -111,6 +112,24 @@ class TextTableSpec extends Specification {
 """ - '\n'
     }
 
+    def 'turn off outer frame'() {
+        given: TextTable.outerFrame = false
+
+        when:
+        def table = TextTable.withColumns("key", 'value', 'notes').withData().rows([
+                ['abc', 123, ''],
+                ['foobar', 'bazqux', 'whatever blah']
+               ]).buildTable().format(10, new StringBuilder()).toString()
+
+        then:
+        table == """\
+           key    | value  | notes         
+          --------+--------+---------------
+           abc    | 123    |               
+           foobar | bazqux | whatever blah 
+"""
+    }
+
     def 'padding and indent can be multicharacter string'() {
         setup:
         TextTable.padding = 'PADDING'
@@ -140,7 +159,8 @@ _2_4_6_8_0+----------+------------+---------------------+
 """ - '\n'
     }
 
-    def "you can use unicode tables"(TextTable.Style style, String expected) {
+    @Unroll "decorations #style"() {
+//    def "you can use unicode tables"(TextTable.Style style, String expected) {
         setup:
         def table = TextTable.withColumns('first', 'second').withData().rows([
                 ['foo bar baz qux', ''],
@@ -152,40 +172,55 @@ _2_4_6_8_0+----------+------------+---------------------+
         TextTable.eol='\n'
 
         then:
-        table.format(0, new StringBuilder()).toString() == expected.replaceAll(~/\n\s+/, '\n') + TextTable.eol
+        table.format(0, new StringBuilder()).toString().replaceAll(' +'+ TextTable.eol, TextTable.eol) == expected.stripMargin(':') + TextTable.eol
 
         where:
         style || expected
-        TextTable.Box.ASCII                || '''+-----------------+--------+
-                                                 | first           | second |
-                                                 +-----------------+--------+
-                                                 | foo bar baz qux |        |
-                                                 | qux             | 123    |
-                                                 +-----------------+--------+'''
-        TextTable.Box.UNICODE_THIN         || '''┌─────────────────┬────────┐
-                                                 │ first           │ second │
-                                                 ├─────────────────┼────────┤
-                                                 │ foo bar baz qux │        │
-                                                 │ qux             │ 123    │
-                                                 └─────────────────┴────────┘'''
-        TextTable.Box.UNICODE_THIN_ROUNDED || '''╭─────────────────┬────────╮
-                                                 │ first           │ second │
-                                                 ├─────────────────┼────────┤
-                                                 │ foo bar baz qux │        │
-                                                 │ qux             │ 123    │
-                                                 ╰─────────────────┴────────╯'''
-        TextTable.Box.UNICODE_THICK        || '''┏━━━━━━━━━━━━━━━━━┳━━━━━━━━┓
-                                                 ┃ first           ┃ second ┃
-                                                 ┣━━━━━━━━━━━━━━━━━╋━━━━━━━━┫
-                                                 ┃ foo bar baz qux ┃        ┃
-                                                 ┃ qux             ┃ 123    ┃
-                                                 ┗━━━━━━━━━━━━━━━━━┻━━━━━━━━┛'''
-        TextTable.Box.UNICODE_DOUBLE       || '''╔═════════════════╦════════╗
-                                                 ║ first           ║ second ║
-                                                 ╠═════════════════╬════════╣
-                                                 ║ foo bar baz qux ║        ║
-                                                 ║ qux             ║ 123    ║
-                                                 ╚═════════════════╩════════╝'''
+        TextTable.Box.NO_BOX               || ''': first            second
+                                                 : foo bar baz qux
+                                                 : qux              123'''
+        TextTable.Box.ASCII_HORIZONTAL     || ''':----------------------------
+                                                 : first            second
+                                                 :----------------------------
+                                                 : foo bar baz qux
+                                                 : qux              123
+                                                 :----------------------------'''
+        TextTable.Box.ASCII_HORIZONTAL_DOUBLE||''':============================
+                                                 : first            second
+                                                 :============================
+                                                 : foo bar baz qux
+                                                 : qux              123
+                                                 :============================'''
+        TextTable.Box.ASCII                || ''':+-----------------+--------+
+                                                 :| first           | second |
+                                                 :+-----------------+--------+
+                                                 :| foo bar baz qux |        |
+                                                 :| qux             | 123    |
+                                                 :+-----------------+--------+'''
+        TextTable.Box.UNICODE_THIN         || ''':┌─────────────────┬────────┐
+                                                 :│ first           │ second │
+                                                 :├─────────────────┼────────┤
+                                                 :│ foo bar baz qux │        │
+                                                 :│ qux             │ 123    │
+                                                 :└─────────────────┴────────┘'''
+        TextTable.Box.UNICODE_THIN_ROUNDED || ''':╭─────────────────┬────────╮
+                                                 :│ first           │ second │
+                                                 :├─────────────────┼────────┤
+                                                 :│ foo bar baz qux │        │
+                                                 :│ qux             │ 123    │
+                                                 :╰─────────────────┴────────╯'''
+        TextTable.Box.UNICODE_THICK        || ''':┏━━━━━━━━━━━━━━━━━┳━━━━━━━━┓
+                                                 :┃ first           ┃ second ┃
+                                                 :┣━━━━━━━━━━━━━━━━━╋━━━━━━━━┫
+                                                 :┃ foo bar baz qux ┃        ┃
+                                                 :┃ qux             ┃ 123    ┃
+                                                 :┗━━━━━━━━━━━━━━━━━┻━━━━━━━━┛'''
+        TextTable.Box.UNICODE_DOUBLE       || ''':╔═════════════════╦════════╗
+                                                 :║ first           ║ second ║
+                                                 :╠═════════════════╬════════╣
+                                                 :║ foo bar baz qux ║        ║
+                                                 :║ qux             ║ 123    ║
+                                                 :╚═════════════════╩════════╝'''
     }
 
     def 'when we use Java, 2D arrays for data are nicer than collections'() {
