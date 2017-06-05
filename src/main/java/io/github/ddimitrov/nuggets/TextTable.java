@@ -408,7 +408,8 @@ public class TextTable {
                     out.append(formatted);
                     pad(out, rightAlignmentPad + column.padding, padding);
                 }
-                if ((column!=lastColumn || outerFrame) && style.vertical()!=null) out.append(style.vertical());
+                String rightBorderGlyph = column.rightBorder==null ? style.vertical() : column.rightBorder;
+                if ((column!=lastColumn || outerFrame) && rightBorderGlyph !=null) out.append(rightBorderGlyph);
             }
         }
         out.append(eol);
@@ -569,6 +570,12 @@ public class TextTable {
         public int width;
 
         /**
+         * Optionally overrides the right border for the column. Can be changed per row.
+         * If the value is {@code null}, {@link TextTable#style style.vertical()} will be used.
+         */
+        public @Nullable String rightBorder = null;
+
+        /**
          * Padding to be left between the value and the column separator (measured in characters)
          */
         public int padding = 1;
@@ -612,6 +619,7 @@ public class TextTable {
             private int padding = Column.this.padding;
             private double alignment = Column.this.alignment;
             private @NotNull Function<@Nullable Object, String> formatter = Column.this.formatter;
+            private @Nullable String rightBorder = Column.this.rightBorder;
             private @Nullable Object defaultValue = Column.this.defaultValue;
 
             /**
@@ -643,6 +651,7 @@ public class TextTable {
                 Column.this.alignment = alignment;
                 Column.this.formatter = formatter;
                 Column.this.defaultValue = defaultValue;
+                Column.this.rightBorder = rightBorder;
             }
         }
 

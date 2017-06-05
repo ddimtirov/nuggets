@@ -590,4 +590,31 @@ _2_4_6_8_0+----------+------------+---------------------+
           +-------+
 """ - '\n'
     }
+
+    def "formatters can control cell's right border"() {
+        when:
+        def table = TextTable.withColumns().column('a') { column ->
+                def defaultFormatter = column.formatter
+                column.formatter = {
+                    if ("$it".endsWith("->")) column.rightBorder = '>'
+                    defaultFormatter.apply(it - ~/ *->/)
+                }
+                column.alignment = 1
+            }.column('b').withData().rows([
+                    [ 'abc ->', 123],
+                    [ 'foo', 'bar'],
+                    [ 'buttermilk ->', 'gold']
+            ]).buildTable()
+
+        then:
+        table.format(10, new StringBuilder()).toString()=="""\
+          +------------+------+
+          |          a | b    |
+          +------------+------+
+          |        abc > 123  |
+          |        foo | bar  |
+          | buttermilk > gold |
+          +------------+------+
+"""
+    }
 }
