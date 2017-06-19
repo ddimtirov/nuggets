@@ -203,6 +203,7 @@ public class TextTable {
     // the TextTable class will not modify the collections
     private final @NotNull List<@NotNull Column> columns;
     private final @NotNull List<@NotNull List<?>> data;
+    private final @NotNull Map<Integer, Separator> separatorBefore;
 
     /**
      * If set to true, before calling {@link #format(int, Appendable)} all column widths
@@ -261,10 +262,12 @@ public class TextTable {
      *
      * @param columns list of columns describing the layout of the table
      * @param data collection of data rows
+     * @param separatorBefore map of row index to separator style
      */
-    public TextTable(@NotNull List<@NotNull Column> columns, @NotNull List<@NotNull List<?>> data) {
+    public TextTable(@NotNull List<@NotNull Column> columns, @NotNull List<@NotNull List<?>> data, @Nullable TreeMap<Integer, Separator> separatorBefore) {
         this.columns = columns;
         this.data = data;
+        this.separatorBefore = separatorBefore != null ? separatorBefore : Collections.emptyMap();
     }
 
     /**
@@ -291,7 +294,7 @@ public class TextTable {
         // outer-frame: top
         if (outerFrame) {
             out.append(indentPad);
-            appendSeparator(out, style.joints(0));
+            appendFrameHline(out, style.joints(0));
         }
 
         // header row
@@ -300,10 +303,16 @@ public class TextTable {
 
         // inner-frame: header/values separator
         out.append(indentPad);
-        appendSeparator(out, style.joints(1));
+        appendFrameHline(out, style.joints(1));
 
         // rows
+        int rowNum=0;
         for (List<?> row : data) {
+            Separator sep = separatorBefore.get(rowNum++);
+            if (sep!=null) {
+                out.append(indentPad);
+                appendFrame(out, sep);
+            }
             out.append(indentPad);
             appendRow(out, row);
         }
@@ -311,7 +320,7 @@ public class TextTable {
         // outer-frame: bottom
         if (outerFrame) {
             out.append(indentPad);
-            appendSeparator(out, style.joints(2));
+            appendFrameHline(out, style.joints(2));
         }
         return out;
     }
@@ -338,6 +347,44 @@ public class TextTable {
         }
     }
 
+    private void appendFrame(@NotNull Appendable out, @NotNull Separator separator) throws IOException {
+        String horizontal = separator.horizontalGlyph != null ? separator.horizontalGlyph : style.horizontal();
+        String[] jointRow = separator.junctionGlyphs != null ? separator.junctionGlyphs : style.joints(2);
+
+
+        int leftBorderSize = outerFrame && jointRow[0] != null ? jointRow[0].length() : 0;
+        int rightBorderSize = outerFrame && jointRow[2] != null ? jointRow[2].length() : 0;
+        int jointSize = jointRow[1] != null ? jointRow[1].length() : 0;
+        int size = columns.stream().mapToInt(x -> x.width + x.padding*2).sum()
+                + leftBorderSize + jointSize * (columns.size()-1) + rightBorderSize;
+        StringBuilder sb = new StringBuilder(size+16);
+        appendHline(sb, jointRow, horizontal);
+        assert sb.length()==size;
+
+        if (separator.name!=null) {
+            int maxTitleSize = Math.max(0, size - 2 * separator.padding);
+            int alignGap = maxTitleSize - separator.name.length();
+            if(alignGap>0) {
+                int start = separator.padding + (int) (alignGap * separator.alignment);
+                sb.replace(start, start+separator.name.length(), separator.name);
+            } else {
+                String title;
+                if (maxTitleSize>9) {
+                    title = separator.name.substring(0, (maxTitleSize-3) / 2);
+                    title += "...";
+                    title += separator.name.substring(separator.name.length()-(maxTitleSize-title.length()));
+                } else {
+                    title = separator.name.substring(0, maxTitleSize);
+                }
+                assert title.length()==maxTitleSize;
+                sb.replace(separator.padding, size - separator.padding, title);
+            }
+            assert sb.length()==size;
+        }
+
+        out.append(sb).append(eol);
+    }
+
     /**
      * Appends formatted text line for horizontal table separator, including line terminator.
      * Indentation is no appended as we want to reuse the rendering buffer
@@ -347,17 +394,31 @@ public class TextTable {
      * @throws IOException if the {@param out} throws while appending.
      * @see Style#joints(int)
      */
-    private void appendSeparator(@NotNull Appendable out, String[] jointRow) throws IOException {
+    private void appendFrameHline(@NotNull Appendable out, String[] jointRow) throws IOException {
         String horizontal = style.horizontal();
         if (horizontal==null) return;
 
+        appendHline(out, jointRow, horizontal);
+        out.append(eol);
+    }
+
+    /**
+     * Appends formatted text line for horizontal table separator, including line terminator.
+     * Indentation is no appended as we want to reuse the rendering buffer
+     * (see the implementation of {@link #format(int, Appendable)}).
+     * @param out destination for the table row.
+     * @param jointRow array of 3 values for left, middle and center joints.
+     * @param horizontal the glyph used to draw the hlines of this table
+     * @throws IOException if the {@param out} throws while appending.
+     * @see Style#joints(int)
+     */
+    private void appendHline(@NotNull Appendable out, String[] jointRow, @Nullable String horizontal) throws IOException {
         for (int i = 0; i < columns.size(); i++) {
             Column column = columns.get(i);
-            boolean lastColumn = i >= columns.size() - 1;
 
             if (outerFrame && jointRow[0]!=null && i == 0) out.append(jointRow[0]);
-            pad(out, column.padding * 2 + column.width, horizontal);
-            if (lastColumn) {
+            pad(out, column.padding * 2 + column.width, horizontal !=null ? horizontal : " ");
+            if (i >= columns.size() - 1) {
                 String jointGlyph = jointRow[2];
                 if (outerFrame && jointGlyph != null) out.append(jointGlyph);
             } else {
@@ -365,7 +426,6 @@ public class TextTable {
                 if (jointGlyph!=null) out.append(jointGlyph);
             }
         }
-        out.append(eol);
     }
 
     /**
@@ -464,6 +524,62 @@ public class TextTable {
          */
         @Contract(pure = true)
         @NotNull String[] joints(int row);
+    }
+
+    /**
+     * Config object, modelling a table internal horizontal separator
+     */
+    public static class Separator {
+        /**
+         * Text that should be rendered in the separator line.
+         * If you want start/end decorations (i.e. square brackets), make them part of the name.
+         */
+        public final @Nullable String name;
+
+        /**
+         * The glyph used to draw the hlines.
+         * @see Style#horizontal()
+         */
+        public @Nullable String horizontalGlyph;
+
+        /**
+         * The glyphs used to draw left, center and right joints.
+         * @see Style#joints(int)
+         */
+        public @Nullable String[] junctionGlyphs;
+
+        /**
+         * Title alignment - 0 for left; 0.5 for center; 1 for right
+         * @see Column#alignment
+         */
+        public double alignment = 0;
+
+        /**
+         * Title padding - distance from the frame to the title.
+         * @see Column#padding
+         */
+        public int padding = 3;
+
+        private Separator(@Nullable String name, @Nullable String horizontalGlyph, @Nullable String[] junctionGlyphs) {
+            this.name = name;
+            this.horizontalGlyph = horizontalGlyph;
+            this.junctionGlyphs = junctionGlyphs;
+        }
+
+        /**
+         * Factory method fro separator instances.
+         * @param name the title that should be rendered in the separator. If you want start/end
+         *             decorations, make them part of the name.
+         * @param horizontalGlyph the glyph used to draw the hlines.
+         * @param junctionGlyphs same as in {@link Style#joints(int)}
+         * @param config a closure allowing to set alignment, padding, etc.
+         * @return a new instance of {@code Separator}
+         */
+        static Separator of(@Nullable String name, @Nullable String horizontalGlyph, @Nullable String[] junctionGlyphs, @Nullable Consumer<Separator> config) {
+            Separator separator = new Separator(name, horizontalGlyph, junctionGlyphs);
+            if (config!=null) config.accept(separator);
+            return separator;
+        }
     }
 
     /**
@@ -723,7 +839,7 @@ public class TextTable {
          * @param config a function that can configure the column. If {@code null} or missing,
          *               the default attributes will be used.
          * @return reference to {@code this} for chaining.
-         * @see #column(String, Consumer)
+         * @see #column(String)
          */
         @NotNull
         public LayoutBuilder column(@NotNull String columnName, @Nullable Consumer<Column> config) {
@@ -804,6 +920,7 @@ public class TextTable {
         private final boolean strict;
         private final @NotNull List<@NotNull Column> columns;
         private final @NotNull List<@NotNull List<?>> data = new ArrayList<>();
+        private final @NotNull Map<@NotNull Integer, @NotNull Separator> separatorBefore = new TreeMap<>();
 
         /**
          * Creates a builder for the specified layout.
@@ -881,6 +998,49 @@ public class TextTable {
             return this;
         }
 
+        /**
+         * Add a plain row separator (use table style, no title)
+         * @return reference to {@code this} for chaining.
+         */
+        public @NotNull DataBuilder separator() { return separator(null, null); }
+
+        /**
+         * Add a row separator with optional title using the table inner joints style
+         * @param name the separator title - it will be left-aligned and padded by default
+         * @return reference to {@code this} for chaining.
+         */
+        public @NotNull DataBuilder separator(@Nullable String name) { return separator(name, null); }
+
+        /**
+         * Add a row separator with no title and optional config closure
+         * @param config a closure to configure a {@code Separator} object,
+         *               if {@code null} - use the table inner joints style
+         * @return reference to {@code this} for chaining.
+         */
+        public @NotNull DataBuilder separator(@Nullable Consumer<Separator> config) { return separator(null, config); }
+
+        /**
+         * Add a row separator with optional title and config closure
+         * @param name the separator title - it will be aligned and padded according to te config
+         * @param config a closure to configure a {@code Separator} object,
+         *               if {@code null} - use the table inner joints style
+         * @return reference to {@code this} for chaining.
+         */
+        public @NotNull DataBuilder separator(@Nullable String name, @Nullable Consumer<Separator> config) {
+            return separator(Separator.of(name, null, null, config));
+        }
+
+        /**
+         * Add a prepared row separator
+         * @param separator the configured separator instance. The separator is not copied -
+         *                  take care if you modify after adding.
+         * @return reference to {@code this} for chaining.
+         */
+        public @NotNull DataBuilder separator(Separator separator) {
+            separatorBefore.put(data.size(), separator);
+            return this;
+        }
+
         private DataBuilder appendRowChecked(List<?> row, @Nullable Object rowDescription) {
             if (strict) {
                 if (row.size() != maxColumnIndex + 1) {
@@ -921,7 +1081,7 @@ public class TextTable {
          */
         @NotNull @Contract(pure = true)
         public TextTable buildTable() {
-            return new TextTable(new ArrayList<>(columns), new ArrayList<>(data));
+            return new TextTable(new ArrayList<>(columns), new ArrayList<>(data), new TreeMap<>(separatorBefore));
         }
 
         @Override

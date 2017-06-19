@@ -507,6 +507,7 @@ _2_4_6_8_0+----------+------------+---------------------+
         ].collect { it.replaceAll ~/\n\s*/, '\n' }
     }
 
+    @SuppressWarnings("GroovyAccessibility")
     def 'we can disable the data profiling by setting `pendingAutoformat` to false'() {
         setup:
         def layout = TextTable.withColumns('A', 'B')
@@ -521,7 +522,6 @@ _2_4_6_8_0+----------+------------+---------------------+
         e.message == "Formatted string '123'::length==3 > column 0-A::width==1"
 
         when: 'if we manually sized column A and put the same data (for illustration purposes only)'
-        //noinspection GroovyAccessibility
         table.columns.find { it.name=='A' }.width = 4
         def formatted = table.format(10, new StringBuilder()).toString()
 
@@ -535,14 +535,13 @@ _2_4_6_8_0+----------+------------+---------------------+
 """ - '\n'
     }
 
-    @SuppressWarnings("GroovyAssignabilityCheck")
     def "we can specify custom formatters"() {
         when:
         def table = TextTable.withColumns()
             .column('category')
             .column('count') {
                 it.alignment=1
-                it.formatter = {it in Number ? '(0x' + Long.toHexString(it) + ") " + it : it.toString() }
+                it.formatter = {it in Number ? '(0x' + Long.toHexString(it as long) + ") " + it : it.toString() }
             }.column('class') {
                 it.alignment=1
                 it.formatter = { it.toString().toUpperCase() }
@@ -616,5 +615,71 @@ _2_4_6_8_0+----------+------------+---------------------+
           | buttermilk > gold |
           +------------+------+
 """
+    }
+
+    def "wide table with separators"() {
+        when:
+        def table = TextTable.withColumns("#", "Step", "Notes").withData().rows([
+                        [ 1, "Flour", "Put some flour in a bowl" ],
+                    ]).separator("[ make sure you've got a really big bowl. we actually need really long heading here ]") { it.horizontalGlyph='='} .rows([
+                        [ 2, "Eggs", "Add eggs" ],
+                        [ 3, "Milk", "Add some more milk" ],
+                        [ 4, "Water", "Add a bit of water" ]
+                    ]).separator("[ Whisk together ]", null).rows([
+                        [ 5, "Butter", "Grease the hot pan with a knob of butter" ],
+                        [ 6, "Batter", "Use a ladle to pour some batter in the pan" ],
+                        [ 7, "Spread", "Twist the pan to spread the batter" ]
+                    ]).separator("<< Wait a minute") { it.alignment=1 }.rows([
+                        [ 8, "Flip", "Flip the crepe" ]
+                    ]).separator().rows([
+                        [ 9, "Plate", "Flip again in the plate, and bon apetit!" ]
+                    ]).buildTable()
+        then:
+        table.format(10, new StringBuilder()).toString()=="""
+          +---+--------+--------------------------------------------+
+          | # | Step   | Notes                                      |
+          +---+--------+--------------------------------------------+
+          | 1 | Flour  | Put some flour in a bowl                   |
+          +==[ make sure you've got a ...eally long heading here ]==+
+          | 2 | Eggs   | Add eggs                                   |
+          | 3 | Milk   | Add some more milk                         |
+          | 4 | Water  | Add a bit of water                         |
+          +--[ Whisk together ]-------------------------------------+
+          | 5 | Butter | Grease the hot pan with a knob of butter   |
+          | 6 | Batter | Use a ladle to pour some batter in the pan |
+          | 7 | Spread | Twist the pan to spread the batter         |
+          +---+--------+--------------------------<< Wait a minute--+
+          | 8 | Flip   | Flip the crepe                             |
+          +---+--------+--------------------------------------------+
+          | 9 | Plate  | Flip again in the plate, and bon apetit!   |
+          +---+--------+--------------------------------------------+
+""" - '\n'
+    }
+
+    def "narrow table with separators"() {
+        when:
+        def table = TextTable.withColumns("#", "%", "???").withData().rows([
+                        [ 1, "A", "Foo" ],
+                    ]).separator("[ make sure you've got a really big bowl. we actually need really long heading here ]") { it.horizontalGlyph='='} .rows([
+                        [ 2, "B", "Bar" ],
+                    ]).separator("qwer").rows([
+                        [ 3, "C", "Baz" ],
+                    ]).separator { it.junctionGlyphs=["|", "-", "|"] }.rows([
+                        [ 5, "E", "Goo" ]
+                    ]).buildTable()
+        then:
+        table.format(10, new StringBuilder()).toString()=="""
+          +---+---+-----+
+          | # | % | ??? |
+          +---+---+-----+
+          | 1 | A | Foo |
+          +==[ make su==+
+          | 2 | B | Bar |
+          +--qwer-+-----+
+          | 3 | C | Baz |
+          |-------------|
+          | 5 | E | Goo |
+          +---+---+-----+
+""" - '\n'
     }
 }
