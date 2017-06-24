@@ -289,6 +289,47 @@ _2_4_6_8_0+----------+------------+---------------------+
         table.format(0, new StringBuilder()).toString() !=~ 'ignored'
     }
 
+    def 'multiline values'() {
+        setup:
+        def layout = TextTable.withColumns('name', 'aliaz')
+
+        when:
+        def table = layout.withData().rows([
+            ['zuul', 'the gatekeeper'],
+            ['vinz clortho', ['the keymaster']]
+        ]).separator { it.horizontalGlyph="."; it.junctionGlyphs=['|']*3 }.rows([
+            ['gozer', ['the gozerian', 'the destructor', 'the destroyer', 'the traveller', 'volguus zildrohar', 'lord of the sebouillia', 'nimble, little minx', '  ']],
+            ['vigo',  ['the carpathian', 'the cruel', 'the torturer', 'the despised', 'the unholy', 'the butch', 'scourge of carpathia', 'sorrow of moldovia']],
+        ]).buildTable()
+
+        then:
+        table.format(10, new StringBuilder()).toString() =="""
+          +--------------+------------------------+
+          | name         | aliaz                  |
+          +--------------+------------------------+
+          | zuul         | the gatekeeper         |
+          | vinz clortho | the keymaster          |
+          |..............|........................|
+          | gozer        | the gozerian           |
+          |              | the destructor         |
+          |              | the destroyer          |
+          |              | the traveller          |
+          |              | volguus zildrohar      |
+          |              | lord of the sebouillia |
+          |              | nimble, little minx    |
+          |              |                        |
+          | vigo         | the carpathian         |
+          |              | the cruel              |
+          |              | the torturer           |
+          |              | the despised           |
+          |              | the unholy             |
+          |              | the butch              |
+          |              | scourge of carpathia   |
+          |              | sorrow of moldovia     |
+          +--------------+------------------------+
+"""-'\n'
+    }
+
     def 'specifying extra row columns is an error with regular data builder'() {
         setup:
         def layout = TextTable.withColumns('first', 'second')

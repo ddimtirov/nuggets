@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * <p><span class="badge green">Entry Point</span> Formats data as text-table, suitable for logging and printing. The recommended way is to
@@ -299,7 +300,7 @@ public class TextTable {
 
         // header row
         out.append(indentPad);
-        appendRow(out, null);
+        appendRow(out, null, indentPad);
 
         // inner-frame: header/values separator
         out.append(indentPad);
@@ -314,7 +315,7 @@ public class TextTable {
                 appendFrame(out, sep);
             }
             out.append(indentPad);
-            appendRow(out, row);
+            appendRow(out, row, indentPad);
         }
 
         // outer-frame: bottom
@@ -334,14 +335,14 @@ public class TextTable {
         for (Column column : columns) {
             int maxValueLength = data.stream()
                                      .map(row -> row.get(column.index))
-                                     .map(value -> {
+                                     .map(cellValue -> {
                                          try (Column.Memento ignored = column.new Memento()) {
-                                             return column.format(value);
+                                             return column.format(cellValue);
                                          }
                                      })
-                                     .map(String::length)
-                                     .max(Comparator.naturalOrder())
-                                     .orElse(0);
+                                     .flatMap(formattedCell -> Arrays.stream(formattedCell.split(eol)))
+                                     .mapToInt(String::length)
+                                     .max().orElse(0);
 
             column.width = Math.max(maxValueLength, column.width);
         }
@@ -429,17 +430,26 @@ public class TextTable {
     }
 
     /**
-     * Appends formatted text line for single table row or header, including padding and
-     * line terminator. Indentation is no appended as we want to reuse the rendering buffer
-     * (see the implementation of {@link #format(int, Appendable)}).
+     * Appends formatted text snipped for single table row or header, including padding and
+     * line terminator. Indentation is not appended for the first line, but in case there are
+     * cell values rendering to multi-line, it will be appnded on the continuation lines (see
+     * the implementation of {@link #format(int, Appendable)}).
+     *
      * @param out destination for the table row.
      * @param row the values to append. If {@code null} - append header with the column names.
+     * @param continuationIndentPad the padding to use for
      * @throws IOException if the {@param out} throws while appending.
      */
     @SuppressWarnings("try")
-    private void appendRow(@NotNull Appendable out, @Nullable List<?> row) throws IOException {
-        if (outerFrame && style.vertical()!=null) out.append(style.vertical());
+    private void appendRow(@NotNull Appendable out, @Nullable List<?> row, StringBuilder continuationIndentPad) throws IOException {
         Column lastColumn = columns.get(columns.size() - 1);
+
+        // rethink the approach if efficiency becomes an issue
+        // we can have a fast-path for single-line values and lazy allocation of arrays
+        int maxIndex = columns.stream().mapToInt(x->x.index).max().orElseThrow(() -> new IllegalStateException("No columns defined!"));
+        String[][] multilineValues = new String[maxIndex+1][];
+        Column.Memento[] multilineFormating = new Column.Memento[maxIndex+1];
+
         for (Column column : columns) {
             try (Column.Memento ignored = column.new Memento()) {
                 String formatted;
@@ -451,28 +461,47 @@ public class TextTable {
                     formatted = column.format(defaultedValue);
                 }
 
+                String[] lines = formatted.split(eol);
+                multilineFormating[column.index] = column.new Memento();
+                multilineValues[column.index] = lines;
+            }
+        }
+
+        int maxLines = Arrays.stream(multilineValues).filter(Objects::nonNull).mapToInt(x->x.length).max().orElse(0);
+        for (int lineIdx = 0; lineIdx < maxLines; lineIdx++) {
+            if (lineIdx>0) out.append(continuationIndentPad);
+            if (outerFrame && style.vertical()!=null) out.append(style.vertical());
+            for (Column column : columns) {
+                Column.Memento paragraphFormatting = multilineFormating[column.index];
+                String[] lines = multilineValues[column.index];
+                String formatted = lines!=null && lines.length>lineIdx ? lines[lineIdx] : "";
                 if (formatted.length() > column.width) {
                     throw new IllegalStateException(
                             "Formatted string '" + formatted + "'::length==" + formatted.length() +
                                     " > column " + column + "::width==" + column.width);
                 }
-
-                if (formatted.isEmpty()) {
-                    // in case of multi-char padding string, don't restart in the middle
-                    pad(out, column.width + column.padding * 2, padding);
-                } else {
-                    int alignmentGap = column.width - formatted.length();
-                    int leftAlignmentPad = (int) (alignmentGap * column.alignment);
-                    int rightAlignmentPad = alignmentGap - leftAlignmentPad;
-                    pad(out, leftAlignmentPad + column.padding, padding);
-                    out.append(formatted);
-                    pad(out, rightAlignmentPad + column.padding, padding);
-                }
-                String rightBorderGlyph = column.rightBorder==null ? style.vertical() : column.rightBorder;
-                if ((column!=lastColumn || outerFrame) && rightBorderGlyph !=null) out.append(rightBorderGlyph);
+                appendValue(out, formatted,
+                        paragraphFormatting.width, paragraphFormatting.padding, paragraphFormatting.alignment,
+                        paragraphFormatting.rightBorder, column != lastColumn);
             }
+            out.append(eol);
         }
-        out.append(eol);
+    }
+
+    private void appendValue(@NotNull Appendable out, String formattedValue, int width, int padding, double alignment, @Nullable String rightBorder, boolean lastColumn) throws IOException {
+        if (formattedValue.isEmpty()) {
+            // in case of multi-char padding string, don't restart in the middle
+            pad(out, width + padding * 2, TextTable.padding);
+        } else {
+            int alignmentGap = width - formattedValue.length();
+            int leftAlignmentPad = (int) (alignmentGap * alignment);
+            int rightAlignmentPad = alignmentGap - leftAlignmentPad;
+            pad(out, leftAlignmentPad + padding, TextTable.padding);
+            out.append(formattedValue);
+            pad(out, rightAlignmentPad + padding, TextTable.padding);
+        }
+        String rightBorderGlyph = rightBorder ==null ? style.vertical() : rightBorder;
+        if ((lastColumn || outerFrame) && rightBorderGlyph !=null) out.append(rightBorderGlyph);
     }
 
     /**
@@ -802,8 +831,13 @@ public class TextTable {
         @SuppressWarnings("unchecked")
         @Contract(pure = true)
         private static @NotNull String defaultFormatter(@Nullable Object value) {
-            if (value instanceof Callable) return Exceptions.rethrow((Callable) value).toString();
-            if (value instanceof Supplier) return ((Supplier) value).get().toString();
+            if (value instanceof Callable) return defaultFormatter(Exceptions.rethrow((Callable) value));
+            if (value instanceof Supplier) return defaultFormatter(((Supplier) value).get());
+            if (value instanceof Optional) return defaultFormatter(((Optional) value).orElse(""));
+            if (value instanceof Collection) return defaultFormatter(((Collection<?>) value).stream());
+            if (value instanceof Object[]) return defaultFormatter(Arrays.stream((Object[]) value));
+            if (value instanceof Stream) return ((Stream<?>) value).map(Column::defaultFormatter)
+                                                                   .collect(Collectors.joining(eol));
             return String.valueOf(value);
         }
     }
