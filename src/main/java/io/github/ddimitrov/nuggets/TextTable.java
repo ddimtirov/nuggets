@@ -440,6 +440,7 @@ public class TextTable {
             Column column = columns.get(i);
 
             if (outerFrame && jointRow[0]!=null && i == 0) out.append(jointRow[0]);
+            if (column.hidden) continue;
             pad(out, column.padding * 2 + column.width, horizontal !=null ? horizontal : " ");
             if (i >= columns.size() - 1) {
                 String jointGlyph = jointRow[2];
@@ -473,6 +474,8 @@ public class TextTable {
         Column.Memento[] multilineFormating = new Column.Memento[maxIndex+1];
 
         for (Column column : columns) {
+            if (column.hidden) continue;
+
             try (Column.Memento ignored = column.new Memento()) {
                 String formatted;
                 if (row == null) {
@@ -494,6 +497,8 @@ public class TextTable {
             if (lineIdx>0) out.append(continuationIndentPad);
             if (outerFrame && style.vertical()!=null) out.append(style.vertical());
             for (Column column : columns) {
+                if (column.hidden) continue;
+
                 Column.Memento paragraphFormatting = multilineFormating[column.index];
                 String[] lines = multilineValues[column.index];
                 String formatted = lines!=null && lines.length>lineIdx ? lines[lineIdx] : "";
@@ -758,6 +763,14 @@ public class TextTable {
          * (they will be reset for the next row).
          */
         public @NotNull Function<@Nullable Object, String> formatter = Column::defaultFormatter;
+
+        /**
+         * Hidden columns will not be rendered, but their values can be accessed through
+         * {@link SiblingLookup}.
+         *
+         * @see #withSiblingLookup(BiFunction)
+         */
+        public boolean hidden;
 
         /**
          * Used if the row value is {@code null}.
