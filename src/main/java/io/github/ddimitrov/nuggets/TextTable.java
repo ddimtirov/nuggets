@@ -23,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -205,6 +206,7 @@ public class TextTable {
     private final @NotNull List<@NotNull Column> columns;
     private final @NotNull List<@NotNull List<?>> data;
     private final @NotNull Map<Integer, Separator> separatorBefore;
+    private final @NotNull List<SiblingAwareFormatter> siblingAwareFormatters;
 
     /**
      * If set to true, before calling {@link #format(int, Appendable)} all column widths
@@ -269,6 +271,16 @@ public class TextTable {
         this.columns = columns;
         this.data = data;
         this.separatorBefore = separatorBefore != null ? separatorBefore : Collections.emptyMap();
+
+        List<SiblingAwareFormatter> safs = new ArrayList<>();
+        for (Column column : columns) {
+            if (column.formatter instanceof SiblingAwareFormatter) {
+                SiblingAwareFormatter saf = (SiblingAwareFormatter) column.formatter;
+                saf.lookup = new SiblingLookup(column.name);
+                safs.add(saf);
+            }
+        }
+        siblingAwareFormatters = safs;
     }
 
     /**
@@ -299,6 +311,7 @@ public class TextTable {
         }
 
         // header row
+        siblingAwareFormatters.forEach(saf -> saf.lookup.row=0);
         out.append(indentPad);
         appendRow(out, null, indentPad);
 
@@ -307,9 +320,11 @@ public class TextTable {
         appendFrameHline(out, style.joints(1));
 
         // rows
-        int rowNum=0;
-        for (List<?> row : data) {
-            Separator sep = separatorBefore.get(rowNum++);
+        int itemIdx=0;
+        for (int rowIdx = 0; rowIdx < data.size(); rowIdx++) {
+            for (SiblingAwareFormatter saf : siblingAwareFormatters) saf.lookup.row=rowIdx;
+            List<?> row = data.get(rowIdx);
+            Separator sep = separatorBefore.get(itemIdx++);
             if (sep!=null) {
                 out.append(indentPad);
                 appendFrame(out, sep);
@@ -333,18 +348,25 @@ public class TextTable {
     @SuppressWarnings("try")
     private void autoformatFromContent() {
         for (Column column : columns) {
-            int maxValueLength = data.stream()
-                                     .map(row -> row.get(column.index))
-                                     .map(cellValue -> {
-                                         try (Column.Memento ignored = column.new Memento()) {
-                                             return column.format(cellValue);
-                                         }
-                                     })
-                                     .flatMap(formattedCell -> Arrays.stream(formattedCell.split(eol)))
-                                     .mapToInt(String::length)
-                                     .max().orElse(0);
+            SiblingAwareFormatter saf = column.formatter instanceof SiblingAwareFormatter
+                    ? (SiblingAwareFormatter) column.formatter
+                    : null;
 
-            column.width = Math.max(maxValueLength, column.width);
+            for (int rowIdx = 0; rowIdx < data.size(); rowIdx++) {
+                List<?> row = data.get(rowIdx);
+                if (saf!=null) saf.lookup.row = rowIdx;
+
+                int cellWidth;
+                try (Column.Memento ignored = column.new Memento()) {
+                    Object rawCell = row.get(column.index);
+                    String formattedCell = column.format(rawCell);
+                    cellWidth = Arrays.stream(formattedCell.split(eol))
+                                   .mapToInt(String::length)
+                                   .max().orElse(0);
+                }
+                column.width = Math.max(column.width, cellWidth);
+
+            }
         }
     }
 
@@ -812,6 +834,19 @@ public class TextTable {
         }
 
         /**
+         * Creates formatters that are aware of the row number, can reference sibling values from
+         * the same row, or aggregates of all values in a column.
+         *
+         * @param siblingAwareFormatter a 2 argument function accepting the current value and sibling
+         *                              lookup, and returning formatted value,
+         * @return a normal formatter function.
+         * @see #formatter
+         */
+        public @NotNull Function<@Nullable Object, String> withSiblingLookup(BiFunction<@Nullable Object, SiblingLookup, String> siblingAwareFormatter) {
+            return new SiblingAwareFormatter(siblingAwareFormatter);
+        }
+
+        /**
          * Convert a data value into string.
          * @param value the input value (typically {@code row[column.index]})
          * @return the formatted value (length should be less or equal to
@@ -840,6 +875,117 @@ public class TextTable {
                                                                    .collect(Collectors.joining(eol));
             return String.valueOf(value);
         }
+    }
+
+    private static class SiblingAwareFormatter implements Function<@Nullable Object, String> {
+        final BiFunction<@Nullable Object, SiblingLookup, String> delegate;
+        SiblingLookup lookup;
+
+        public SiblingAwareFormatter(BiFunction<@Nullable Object, SiblingLookup, String> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public String apply(@Nullable Object o) {
+            return delegate.apply(o, lookup);
+        }
+    }
+
+    /**
+     * Used by renderers to lookup values from the same row, coordinates of te currently rendered cell,
+     * as well as column aggregates.
+     */
+    // as the instance is per column we may also add memoization if it pops in profiling
+    public class SiblingLookup {
+        /**
+         * The name of the column for the cell being rendered.
+         */
+        public final @NotNull String columnName;
+
+        /**
+         * The index of the row for the cell being rendered.
+         */
+        public int row;
+
+        /**
+         * Create new lookup for a column - typically called by {@link TextTable}.
+         * We create a new instance for each column, to reduce the mutable state and allow
+         * for more efficient caching.
+         * @param columnName the current column name.
+         */
+        protected SiblingLookup(@NotNull String columnName) {
+            this.columnName = columnName;
+        }
+
+        /**
+         * Lookup aggregate value from the formatted values in a column.
+         * @param columnName the column to look up.
+         * @return a stream of the column's formatted values.
+         */
+        public @NotNull Stream<String> column(@NotNull String columnName) {
+            Column column = columnByName(columnName);
+            int originalRow = row;
+            try {
+                String[] c = new String[data.size()];
+                for (row = 0; row < c.length; row++) {
+                    Object cell = data.get(row).get(column.index);
+                    c[row] = column.format(cell);
+                }
+                return Arrays.stream(c);
+            } finally {
+                row = originalRow;
+            }
+        }
+
+        /**
+         * Lookup aggregate value from the raw values in a column.
+         * @param columnName the column to look up.
+         * @return a stream of the column's raw values.
+         */
+        public @NotNull Stream<Object> columnRaw(@NotNull String columnName) {
+            Column column = columnByName(columnName);
+            return data.stream().map(r -> r.get(column.index));
+        }
+
+        /**
+         * Lookup formatted value from another column on the same row as the currently rendered
+         * cell.
+         *
+         * @param columnName the column to look up.
+         * @return formatted value
+         */
+        public @NotNull String sibling(@NotNull String columnName) {
+            Column column = columnByName(columnName);
+            Object value = data.get(row).get(column.index);
+            if (column.formatter instanceof SiblingAwareFormatter) {
+                SiblingAwareFormatter saf = (SiblingAwareFormatter) column.formatter;
+                saf.lookup.row = row;
+            }
+            return column.format(value);
+        }
+
+        /**
+         * Lookup raw value from another column on the same row as the currently rendered
+         * cell.
+         *
+         * @param columnName the column to look up.
+         * @return raw value
+         */
+        public @Nullable Object siblingRaw(@NotNull String columnName) {
+            Column column = columnByName(columnName);
+            return data.get(row).get(column.index);
+        }
+
+        @NotNull
+        private TextTable.@NotNull Column columnByName(@NotNull String columnName) {
+            //noinspection ForLoopReplaceableByForEach - we want to save on the ArrayList iterator
+            for (int i = 0; i < columns.size(); i++) {
+                Column c = columns.get(i);
+                if (Objects.equals(columnName, c.name)) return c;
+            }
+            throw new NoSuchElementException("Can't find a column named '" + columnName + "'");
+        }
+
     }
 
     /**
