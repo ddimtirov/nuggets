@@ -160,6 +160,7 @@ public class TextTable {
     /**
      * Determines the characters used to draw the lines and corners of a table
      * Defaults to ASCII graphics.
+     *
      * @see #presetBox(Style)
      * @see Box
      */
@@ -168,6 +169,7 @@ public class TextTable {
     /**
      * End-of-line character used to separate the lines of the table.
      * Defaults to the OS-specific EOL character.
+     *
      * @see #presetBox(Style)
      * @see System#lineSeparator()
      */
@@ -178,6 +180,7 @@ public class TextTable {
      * Could be longer than one character, in which case they will be repeated
      * to fill the desired gap (useful for subtle counting patterns).
      * Defaults to space character {@code "\\u0020"}.
+     *
      * @see #presetBox(Style)
      */
     public static volatile String padding;
@@ -187,6 +190,7 @@ public class TextTable {
      * Could be longer than one character, in which case they will be repeated
      * to fill the desired gap (useful for subtle counting patterns).
      * Defaults to space character {@code "\\u0020"}.
+     *
      * @see #presetBox(Style)
      */
     public static volatile String indent;
@@ -234,6 +238,7 @@ public class TextTable {
 
     /**
      * Starts a builder chain for defining a layout, which one can use to create a table.
+     *
      * @param columnNames a list of column names, if no customizations are needed
      * @return a builder to customize the table layout
      * @see LayoutBuilder#column(String, Consumer)
@@ -263,8 +268,8 @@ public class TextTable {
      * logger.info(table.format(0, new StringBuilder()));   // log to a logger
      * </code></pre>
      *
-     * @param columns list of columns describing the layout of the table
-     * @param data collection of data rows
+     * @param columns         list of columns describing the layout of the table
+     * @param data            collection of data rows
      * @param separatorBefore map of row index to separator style
      */
     public TextTable(@NotNull List<@NotNull Column> columns, @NotNull List<@NotNull List<?>> data, @Nullable TreeMap<Integer, Separator> separatorBefore) {
@@ -297,6 +302,25 @@ public class TextTable {
      * @see #pendingAutoformat
      */
     public <F extends Appendable> @NotNull F format(int indent, @NotNull F out) throws IOException {
+        return format(indent, out, outerFrame, true);
+    }
+
+    /**
+     * <p>Render the table as text, based on the layout, per-column formatter, alignment and padding; and
+     * the {@code indent} parameter. If {@code pendingAutoformat} field is set to {@code true}, this
+     * method will also adjust the widths of the columns, so that the data will fit in the table.</p>
+     *
+     * @param indent the number of characters to put to the left of the start of the table.
+     * @param out the destination to which to append the text.
+     * @param outerFrame if {@code false} will not render the outer frame
+     * @param includeHeader if {@code false} will not render the header and header-values separator
+     * @param <F> captures the type of the {@code out} parameter, so we can return it.
+     * @return the {@code out} parameter for chaining.
+     * @throws IOException passing through exceptions from {@link Appendable#append(char)}
+     *
+     * @see #pendingAutoformat
+     */
+    public <F extends Appendable> @NotNull F format(int indent, @NotNull F out, boolean outerFrame, boolean includeHeader) throws IOException {
         if (pendingAutoformat) {
             autoformatFromContent();
             pendingAutoformat = false;
@@ -310,14 +334,16 @@ public class TextTable {
             appendFrameHline(out, style.joints(0));
         }
 
-        // header row
-        siblingAwareFormatters.forEach(saf -> saf.lookup.row=0);
-        out.append(indentPad);
-        appendRow(out, null, indentPad);
+        if (includeHeader) {
+            // header row
+            siblingAwareFormatters.forEach(saf -> saf.lookup.row=0);
+            out.append(indentPad);
+            appendRow(out, null, indentPad);
 
-        // inner-frame: header/values separator
-        out.append(indentPad);
-        appendFrameHline(out, style.joints(1));
+            // inner-frame: header/values separator
+            out.append(indentPad);
+            appendFrameHline(out, style.joints(1));
+        }
 
         // rows
         int itemIdx=0;
