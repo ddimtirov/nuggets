@@ -888,4 +888,117 @@ _2_4_6_8_0+----------+------------+---------------------+
           +-------+---------------------+
 """ - '\n'
     }
+
+    def "virtual columns"() {
+        given: 'a formatter'
+        def summaryFormatter = { value, TextTable.SiblingLookup lookup ->
+            assert lookup.column('value').filter { !it.number }.count()==0
+            assert lookup.sibling('value') instanceof String
+            assert lookup.sibling('value') == String.valueOf(lookup.sibling('value')) // no formatter for value
+            try {
+                def valueThatShouldNotBe = lookup.sibling('missing column')
+                assert false: "should have thrown exception - returned $valueThatShouldNotBe"
+            } catch (NoSuchElementException e) {
+                assert e.message =~ 'missing column'
+            }
+
+            def formattedValue = lookup.sibling('value')
+            def allValuesRaw = lookup.columnRaw('value')
+            def safFormattedValue = lookup.sibling('graph')
+            return " ${ formattedValue} of ${allValuesRaw.mapToInt {it} sum()}, length ${safFormattedValue.trim().length()}" as String
+        }
+
+        def barWidth = 12
+        def graphFormatter = { value, TextTable.SiblingLookup lookup ->
+            def ret = ""
+            def maxVal = lookup.columnRaw('value').mapToInt { it }.max().orElse(0)
+            def val = lookup.siblingRaw('value') as int
+            def length = barWidth * val / maxVal as int
+            while (ret.length()<length) ret += "="
+            return ret.substring(0, length)
+        }
+
+        when:
+        def table = TextTable.withColumns("#", "value")
+                .column('graph') { it.virtual=true ; it.formatter = it.withSiblingLookup(graphFormatter) }
+                .column('summary') { it.formatter = it.withSiblingLookup(summaryFormatter) }
+                .withData().rows([
+                [ 1, 1, 'FOO' ],
+                [ 2, 3, '' ],
+                [ 3, 2, '' ],
+                [ 4, 5, '' ]
+        ]).buildTable()
+        then:
+        table.format(10, new StringBuilder()).toString()=="""
+          +---+-------+--------------+---------------------+
+          | # | value | graph        | summary             |
+          +---+-------+--------------+---------------------+
+          | 1 | 1     | ==           |  1 of 11, length 2  |
+          | 2 | 3     | =======      |  3 of 11, length 7  |
+          | 3 | 2     | ====         |  2 of 11, length 4  |
+          | 4 | 5     | ============ |  5 of 11, length 12 |
+          +---+-------+--------------+---------------------+
+""" - '\n'
+    }
+
+    def "hidden virtual columns"() {
+        given: 'a formatter'
+        def summaryFormatter = { value, TextTable.SiblingLookup lookup ->
+            assert lookup.column('value').filter { !it.number }.count()==0
+            assert lookup.sibling('value') instanceof String
+            assert lookup.sibling('value') == String.valueOf(lookup.sibling('value')) // no formatter for value
+            try {
+                def valueThatShouldNotBe = lookup.sibling('missing column')
+                assert false: "should have thrown exception - returned $valueThatShouldNotBe"
+            } catch (NoSuchElementException e) {
+                assert e.message =~ 'missing column'
+            }
+
+            def formattedValue = lookup.sibling('value')
+            def allValuesRaw = lookup.columnRaw('value')
+            def safFormattedValue = lookup.sibling('graph')
+            return " ${ formattedValue} of ${allValuesRaw.mapToInt {it} sum()}, length ${safFormattedValue.trim().length()}" as String
+        }
+
+        def barWidth = 12
+        def graphFormatter = { value, TextTable.SiblingLookup lookup ->
+            def ret = ""
+            def maxVal = lookup.columnRaw('value').mapToInt { it }.max().orElse(0)
+            def val = lookup.siblingRaw('value') as int
+            def length = barWidth * val / maxVal as int
+            while (ret.length()<length) ret += value
+            return ret.substring(0, length)
+        }
+
+        when:
+        def table = TextTable.withColumns()
+                .column("#") { it.hidden=true }
+                .column("value")
+                .column('graph') {
+                    it.formatter = it.withSiblingLookup(graphFormatter)
+                    it.hidden = true
+                    it.virtual= true
+                }
+                .column('summary') {
+                    it.formatter = it.withSiblingLookup(summaryFormatter)
+                    it.virtual= true
+                }
+                .withData().rows([
+                [ 1, 1 ],
+                [ 2, 3 ],
+                [ 3, 2 ],
+                [ 4, 5 ]
+        ]).buildTable()
+        then:
+        table.format(10, new StringBuilder()).toString()=="""
+          +-------+---------------------+
+          | value | summary             |
+          +-------+---------------------+
+          | 1     |  1 of 11, length 2  |
+          | 3     |  3 of 11, length 7  |
+          | 2     |  2 of 11, length 4  |
+          | 5     |  5 of 11, length 12 |
+          +-------+---------------------+
+""" - '\n'
+    }
 }

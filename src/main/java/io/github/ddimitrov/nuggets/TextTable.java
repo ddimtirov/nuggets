@@ -212,6 +212,9 @@ public class TextTable {
     private final @NotNull Map<Integer, Separator> separatorBefore;
     private final @NotNull List<SiblingAwareFormatter> siblingAwareFormatters;
 
+    /** Logical-to-Physical column index, mapping the column index to data-layout index */
+    private final int[] c2d;
+
     /**
      * If set to true, before calling {@link #format(int, Appendable)} all column widths
      * will be adjusted to fit the data, then this field will be reset to false.
@@ -277,6 +280,7 @@ public class TextTable {
         this.data = data;
         this.separatorBefore = separatorBefore != null ? separatorBefore : Collections.emptyMap();
 
+        c2d = mapColumnIndexToDataIndex(columns);
         List<SiblingAwareFormatter> safs = new ArrayList<>();
         for (Column column : columns) {
             if (column.formatter instanceof SiblingAwareFormatter) {
@@ -384,7 +388,7 @@ public class TextTable {
 
                 int cellWidth;
                 try (Column.Memento ignored = column.new Memento()) {
-                    Object rawCell = row.get(column.index);
+                    Object rawCell = column.virtual ? column.defaultValue : row.get(c2d[column.index]);
                     String formattedCell = column.format(rawCell);
                     cellWidth = Arrays.stream(formattedCell.split(eol))
                                    .mapToInt(String::length)
@@ -507,7 +511,7 @@ public class TextTable {
                 if (row == null) {
                     formatted = column.name;
                 } else {
-                    Object rawValue = row.get(column.index);
+                    Object rawValue = column.virtual ? column.defaultValue : row.get(c2d[column.index]);
                     Object defaultedValue = rawValue == null ? column.defaultValue : rawValue;
                     formatted = column.format(defaultedValue);
                 }
@@ -799,6 +803,12 @@ public class TextTable {
         public boolean hidden;
 
         /**
+         * Virtual columns are skipped from the input data and the formatters
+         * are always passed the default value.
+         */
+        public boolean virtual;
+
+        /**
          * Used if the row value is {@code null}.
          */
         public @Nullable Object defaultValue;
@@ -967,7 +977,7 @@ public class TextTable {
             try {
                 String[] c = new String[data.size()];
                 for (row = 0; row < c.length; row++) {
-                    Object cell = data.get(row).get(column.index);
+                    Object cell = data.get(row).get(c2d[column.index]);
                     c[row] = column.format(cell);
                 }
                 return Arrays.stream(c);
@@ -983,7 +993,7 @@ public class TextTable {
          */
         public @NotNull Stream<Object> columnRaw(@NotNull String columnName) {
             Column column = columnByName(columnName);
-            return data.stream().map(r -> r.get(column.index));
+            return data.stream().map(r -> r.get(c2d[column.index]));
         }
 
         /**
@@ -995,7 +1005,7 @@ public class TextTable {
          */
         public @NotNull String sibling(@NotNull String columnName) {
             Column column = columnByName(columnName);
-            Object value = data.get(row).get(column.index);
+            Object value = column.virtual ? column.defaultValue : data.get(row).get(c2d[column.index]);
             if (column.formatter instanceof SiblingAwareFormatter) {
                 SiblingAwareFormatter saf = (SiblingAwareFormatter) column.formatter;
                 saf.lookup.row = row;
@@ -1012,7 +1022,7 @@ public class TextTable {
          */
         public @Nullable Object siblingRaw(@NotNull String columnName) {
             Column column = columnByName(columnName);
-            return data.get(row).get(column.index);
+            return data.get(row).get(c2d[column.index]);
         }
 
         @NotNull
@@ -1187,6 +1197,7 @@ public class TextTable {
         public DataBuilder row(@NotNull Map<@NotNull String, @Nullable Object> row) {
             Object[] rowArray = new Object[maxColumnIndex+1];
             for (Column column : columns) {
+                if (column.virtual) continue;
                 if (!row.containsKey(column.name) && column.defaultValue == null) continue;
                 rowArray[column.index] = row.getOrDefault(column.name, column.defaultValue);
             }
@@ -1262,24 +1273,31 @@ public class TextTable {
 
         private DataBuilder appendRowChecked(List<?> row, @Nullable Object rowDescription) {
             if (strict) {
-                if (row.size() != maxColumnIndex + 1) {
+                long virtualColumns = columns.stream().filter(c->c.virtual).count();
+                if (row.size() != maxColumnIndex - virtualColumns + 1) {
                     throw new IllegalArgumentException(String.format(
                             "Data doesn't match the columns:%n%d COLUMNS: %s%n%d DATA: %s",
                             columns.size(), columns, row.size(), rowDescription
                     ));
                 }
             }
+            int virtualOffset = 0;
             for (Column column : columns) {
+                if (column.virtual) {
+                    virtualOffset++;
+                    continue;
+                }
                 if (column.defaultValue != null) continue;
 
-                if (column.index>=row.size()) {
+                int colValueIndex = column.index - virtualOffset;
+                if (colValueIndex >=row.size()) {
                     throw new IllegalArgumentException(String.format(
                             "Column index out of range: %s%n%d COLUMNS: %s%n%d DATA: %s",
                             column, columns.size(), columns, row.size(), rowDescription
                     ));
                 }
 
-                if (row.get(column.index)==null) {
+                if (row.get(colValueIndex)==null) {
                     throw new IllegalArgumentException(String.format(
                             "Non default column is null: %s%n%d COLUMNS: %s%n%d DATA: %s",
                             column, columns.size(), columns, row.size(), rowDescription
@@ -1316,7 +1334,7 @@ public class TextTable {
      * <p>Adds {@code length} characters of padding to the {@code out} parameter.
      * The padding is filled by repeating the {@code pad} pattern as needed,
      * trimming the last occurrence to size.</p>
-     * <p>For ecample, {@code pad(out, 8, "abc")} will result in <em>"abcabcab"</em>
+     * <p>For example, {@code pad(out, 8, "abc")} will result in <em>"abcabcab"</em>
      * (8 characters) appened to the {@code out} parameter.</p>
      * @param out where to put the padding.
      * @param length how many characters to pad.
@@ -1336,5 +1354,27 @@ public class TextTable {
         } catch (IOException e) {
             return Exceptions.rethrow(e);
         }
+    }
+
+    /**
+     * Maps the ingested data to the desired data layout.
+     * @param columns the column spec;
+     * @return array mapping column logical index to its place in the data layout.
+     */
+    protected static int[] mapColumnIndexToDataIndex(@NotNull List<@NotNull Column> columns) {
+        int maxIndex = columns.stream().mapToInt(x->x.index).max().orElseThrow(() -> new IllegalStateException("No columns defined!"));
+        int[] c2d = new int[maxIndex+1];
+        Arrays.fill(c2d, -1);
+
+        int passedVirtual = 0;
+        for (Column column : columns) {
+            if (column.virtual) {
+                passedVirtual++;
+                c2d[column.index] = -2;
+            } else {
+                c2d[column.index] = column.index - passedVirtual;
+            }
+        }
+        return c2d;
     }
 }
