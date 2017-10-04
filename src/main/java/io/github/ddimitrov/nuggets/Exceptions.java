@@ -27,6 +27,7 @@ import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -528,6 +529,26 @@ scan_loop:
         return rethrow(() -> parseStacktraceInternal(lineSeparator, "", new AtomicInteger(), new ArrayDeque<>(10), lines));
     }
 
+    /**
+     * Convert throwing runnable interface to normal runnable that rethrows silently.
+     * @param throwingRunnable runnable to be converted, may declare checked exceptions
+     * @return normal runnable that does not declare checked exceptions
+     */
+    @Contract("null->null;!null->!null")
+    public static @Nullable Runnable rethrowing(@Nullable ThrowingRunnable throwingRunnable) {
+        return throwingRunnable==null ? null : () -> rethrow(throwingRunnable);
+    }
+
+    /**
+     * Convert throwing runnable interface to normal runnable that rethrows silently.
+     * @param throwingSupplier callable to be converted, may declare checked exceptions
+     * @return normal supplier that does not declare checked exceptions
+     */
+    @Contract("null->null;!null->!null")
+    public static <T> @Nullable Supplier rethrowing(@Nullable Callable<T> throwingSupplier) {
+        return throwingSupplier==null ? null : () -> rethrow(throwingSupplier);
+    }
+
     private static final String STRACE_AT = "\tat ";
     private static final String STRACE_SUPPRESSED = "\tSuppressed: ";
     private static final String STRACE_CAUSED_BY = "Caused by: ";
@@ -539,7 +560,7 @@ scan_loop:
     private static @NotNull Throwable parseStacktraceInternal(
             @NotNull String eol, @NotNull String prefix, @NotNull AtomicInteger index,
             @NotNull Deque<Throwable> caused, @NotNull String[] lines
-    ) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+    ) throws IllegalAccessException, InvocationTargetException, InstantiationException {
         int i = index.get();
 
         String[] classMessage = lines[i++].split(": ", 2);
