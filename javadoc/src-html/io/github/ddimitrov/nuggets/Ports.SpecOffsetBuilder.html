@@ -22,600 +22,601 @@
 <span class="sourceLineNo">014</span> *    limitations under the License.<a name="line.14"></a>
 <span class="sourceLineNo">015</span> */<a name="line.15"></a>
 <span class="sourceLineNo">016</span><a name="line.16"></a>
-<span class="sourceLineNo">017</span>package io.github.ddimitrov.nuggets;<a name="line.17"></a>
-<span class="sourceLineNo">018</span><a name="line.18"></a>
-<span class="sourceLineNo">019</span>import org.jetbrains.annotations.NotNull;<a name="line.19"></a>
-<span class="sourceLineNo">020</span>import org.jetbrains.annotations.Nullable;<a name="line.20"></a>
-<span class="sourceLineNo">021</span><a name="line.21"></a>
-<span class="sourceLineNo">022</span>import java.io.IOException;<a name="line.22"></a>
-<span class="sourceLineNo">023</span>import java.net.InetAddress;<a name="line.23"></a>
-<span class="sourceLineNo">024</span>import java.net.InetSocketAddress;<a name="line.24"></a>
-<span class="sourceLineNo">025</span>import java.net.ServerSocket;<a name="line.25"></a>
-<span class="sourceLineNo">026</span>import java.util.*;<a name="line.26"></a>
-<span class="sourceLineNo">027</span>import java.util.function.Consumer;<a name="line.27"></a>
-<span class="sourceLineNo">028</span>import java.util.function.Supplier;<a name="line.28"></a>
-<span class="sourceLineNo">029</span><a name="line.29"></a>
-<span class="sourceLineNo">030</span>import static io.github.ddimitrov.nuggets.Exceptions.rethrow;<a name="line.30"></a>
-<span class="sourceLineNo">031</span>import static java.util.Objects.requireNonNull;<a name="line.31"></a>
-<span class="sourceLineNo">032</span><a name="line.32"></a>
-<span class="sourceLineNo">033</span>/**<a name="line.33"></a>
-<span class="sourceLineNo">034</span> * &lt;p&gt;&lt;span class="badge green"&gt;Entry Point&lt;/span&gt; Provides utilities for<a name="line.34"></a>
-<span class="sourceLineNo">035</span> * ad-hoc coordination of port usage for distributed systems in tests and<a name="line.35"></a>
-<span class="sourceLineNo">036</span> * lab environments.&lt;/p&gt;<a name="line.36"></a>
-<span class="sourceLineNo">037</span> *<a name="line.37"></a>
-<span class="sourceLineNo">038</span> * &lt;p&gt; For example, when you do integration testing for a distributed system,<a name="line.38"></a>
-<span class="sourceLineNo">039</span> * and you want to run a couple of tests in parallel you need to make sure that<a name="line.39"></a>
-<span class="sourceLineNo">040</span> * none of the test environments shares ports and file paths with the others.&lt;/p&gt;<a name="line.40"></a>
-<span class="sourceLineNo">041</span> *<a name="line.41"></a>
-<span class="sourceLineNo">042</span> * &lt;p&gt;To achieve that, you can use the {@code Ports} class to allocate the ports<a name="line.42"></a>
-<span class="sourceLineNo">043</span> * and tweak the app configuration in application-specific manner.<a name="line.43"></a>
-<span class="sourceLineNo">044</span> * See the user manual for details and more use-cases.&lt;/p&gt;<a name="line.44"></a>
-<span class="sourceLineNo">045</span> *<a name="line.45"></a>
-<span class="sourceLineNo">046</span> * &lt;p&gt;This class has explicit lifecycle as follows:&lt;/p&gt;<a name="line.46"></a>
-<span class="sourceLineNo">047</span> * &lt;pre&gt;&lt;code&gt;<a name="line.47"></a>
-<span class="sourceLineNo">048</span> *     Ports p = new Ports(...);<a name="line.48"></a>
-<span class="sourceLineNo">049</span> *     // CONFIGURE: call withExporter(...), reservePort(id[, offset]), withPorts(...) as needed<a name="line.49"></a>
-<span class="sourceLineNo">050</span> *     p.freeze(...);<a name="line.50"></a>
-<span class="sourceLineNo">051</span> *     // USE: call getBasePort() and port(id)<a name="line.51"></a>
-<span class="sourceLineNo">052</span> *     p.close();<a name="line.52"></a>
-<span class="sourceLineNo">053</span> *     // DEAD: any method call would result in exception<a name="line.53"></a>
-<span class="sourceLineNo">054</span> * &lt;/code&gt;&lt;/pre&gt;<a name="line.54"></a>
-<span class="sourceLineNo">055</span> */<a name="line.55"></a>
-<span class="sourceLineNo">056</span>public class Ports implements AutoCloseable {<a name="line.56"></a>
-<span class="sourceLineNo">057</span><a name="line.57"></a>
-<span class="sourceLineNo">058</span>    private final List&lt;String&gt; claimedOffsets = Collections.synchronizedList(new ArrayList&lt;&gt;());<a name="line.58"></a>
-<span class="sourceLineNo">059</span>    private final Set&lt;String&gt; dynamicOffsets = new HashSet&lt;&gt;();<a name="line.59"></a>
-<span class="sourceLineNo">060</span>    private final Set&lt;Exporter&gt; exporters = new HashSet&lt;&gt;();<a name="line.60"></a>
-<span class="sourceLineNo">061</span>    private final @NotNull Registrar registrar;<a name="line.61"></a>
-<span class="sourceLineNo">062</span>    private final @NotNull Supplier&lt;Integer&gt; dynamicPortFinder;<a name="line.62"></a>
-<span class="sourceLineNo">063</span>    private volatile int basePort = -1;<a name="line.63"></a>
-<span class="sourceLineNo">064</span>    private volatile boolean closed;<a name="line.64"></a>
-<span class="sourceLineNo">065</span><a name="line.65"></a>
-<span class="sourceLineNo">066</span>    /**<a name="line.66"></a>
-<span class="sourceLineNo">067</span>     * &lt;p&gt;Creates new ports allocator with the specified registrar<a name="line.67"></a>
-<span class="sourceLineNo">068</span>     * and default dynamic port allocation strategy.&lt;/p&gt;<a name="line.68"></a>
-<span class="sourceLineNo">069</span>     *<a name="line.69"></a>
-<span class="sourceLineNo">070</span>     * &lt;p&gt;The default port allocation strategy assigns offsets to the<a name="line.70"></a>
-<span class="sourceLineNo">071</span>     * dynamic port ID's starting from the base port of the block and<a name="line.71"></a>
-<span class="sourceLineNo">072</span>     * skipping all explicitly assigned offsets.&lt;/p&gt;<a name="line.72"></a>
-<span class="sourceLineNo">073</span>     *<a name="line.73"></a>
-<span class="sourceLineNo">074</span>     * @param registrar defines a strategy for allocating a port block.<a name="line.74"></a>
-<span class="sourceLineNo">075</span>     */<a name="line.75"></a>
-<span class="sourceLineNo">076</span>    public Ports(@NotNull Registrar registrar) {<a name="line.76"></a>
-<span class="sourceLineNo">077</span>        this(registrar, null);<a name="line.77"></a>
-<span class="sourceLineNo">078</span>    }<a name="line.78"></a>
-<span class="sourceLineNo">079</span><a name="line.79"></a>
-<span class="sourceLineNo">080</span>    /**<a name="line.80"></a>
-<span class="sourceLineNo">081</span>     * &lt;p&gt;Creates new ports allocator with the specified registrar<a name="line.81"></a>
-<span class="sourceLineNo">082</span>     * and default dynamic port allocation strategy.&lt;/p&gt;<a name="line.82"></a>
-<span class="sourceLineNo">083</span>     *<a name="line.83"></a>
-<span class="sourceLineNo">084</span>     * @param registrar defines a strategy for allocating a port block.<a name="line.84"></a>
-<span class="sourceLineNo">085</span>     * @param dynamicPortFinder defines a strategy for dynamically allocating<a name="line.85"></a>
-<span class="sourceLineNo">086</span>     *        ports within a block. If {@code null}, a default strategy assigns<a name="line.86"></a>
-<span class="sourceLineNo">087</span>     *        offsets to the dynamic port ID's starting from the {@link #basePort base port}<a name="line.87"></a>
-<span class="sourceLineNo">088</span>     *        of the block and skipping all explicitly assigned offsets.<a name="line.88"></a>
-<span class="sourceLineNo">089</span>     */<a name="line.89"></a>
-<span class="sourceLineNo">090</span>    public Ports(@NotNull Registrar registrar, @Nullable Supplier&lt;Integer&gt; dynamicPortFinder) {<a name="line.90"></a>
-<span class="sourceLineNo">091</span>        this.registrar = registrar;<a name="line.91"></a>
-<span class="sourceLineNo">092</span>        this.dynamicPortFinder = dynamicPortFinder!=null<a name="line.92"></a>
-<span class="sourceLineNo">093</span>                ? dynamicPortFinder<a name="line.93"></a>
-<span class="sourceLineNo">094</span>                : () -&gt; {<a name="line.94"></a>
-<span class="sourceLineNo">095</span>                    int gapIdx = claimedOffsets.indexOf(null);<a name="line.95"></a>
-<span class="sourceLineNo">096</span>                    return gapIdx&gt;=0 ? gapIdx : claimedOffsets.size();<a name="line.96"></a>
-<span class="sourceLineNo">097</span>                };<a name="line.97"></a>
-<span class="sourceLineNo">098</span>    }<a name="line.98"></a>
-<span class="sourceLineNo">099</span><a name="line.99"></a>
-<span class="sourceLineNo">100</span>    /**<a name="line.100"></a>
-<span class="sourceLineNo">101</span>     * &lt;p&gt;Registers an {@link Exporter} that would be used to publish/validate<a name="line.101"></a>
-<span class="sourceLineNo">102</span>     * the allocated ports. Can throw {@link PortVetoException} to reject a<a name="line.102"></a>
-<span class="sourceLineNo">103</span>     * port and force the port allocator to use another block&lt;/p&gt;<a name="line.103"></a>
-<span class="sourceLineNo">104</span>     *<a name="line.104"></a>
-<span class="sourceLineNo">105</span>     * &lt;p&gt;If more than one exporter is registered, exporters will be called in<a name="line.105"></a>
-<span class="sourceLineNo">106</span>     * their registration order.&lt;/p&gt;<a name="line.106"></a>
-<span class="sourceLineNo">107</span>     *<a name="line.107"></a>
+<span class="sourceLineNo">017</span>// NOTE: this class overuses nested classes, because I find I often need to copy/paste it to proprietary projects.<a name="line.17"></a>
+<span class="sourceLineNo">018</span>package io.github.ddimitrov.nuggets;<a name="line.18"></a>
+<span class="sourceLineNo">019</span><a name="line.19"></a>
+<span class="sourceLineNo">020</span>import org.jetbrains.annotations.NotNull;<a name="line.20"></a>
+<span class="sourceLineNo">021</span>import org.jetbrains.annotations.Nullable;<a name="line.21"></a>
+<span class="sourceLineNo">022</span><a name="line.22"></a>
+<span class="sourceLineNo">023</span>import java.io.IOException;<a name="line.23"></a>
+<span class="sourceLineNo">024</span>import java.net.InetAddress;<a name="line.24"></a>
+<span class="sourceLineNo">025</span>import java.net.InetSocketAddress;<a name="line.25"></a>
+<span class="sourceLineNo">026</span>import java.net.ServerSocket;<a name="line.26"></a>
+<span class="sourceLineNo">027</span>import java.util.*;<a name="line.27"></a>
+<span class="sourceLineNo">028</span>import java.util.function.Consumer;<a name="line.28"></a>
+<span class="sourceLineNo">029</span>import java.util.function.Supplier;<a name="line.29"></a>
+<span class="sourceLineNo">030</span><a name="line.30"></a>
+<span class="sourceLineNo">031</span>import static io.github.ddimitrov.nuggets.Exceptions.rethrow;<a name="line.31"></a>
+<span class="sourceLineNo">032</span>import static java.util.Objects.requireNonNull;<a name="line.32"></a>
+<span class="sourceLineNo">033</span><a name="line.33"></a>
+<span class="sourceLineNo">034</span>/**<a name="line.34"></a>
+<span class="sourceLineNo">035</span> * &lt;p&gt;&lt;span class="badge green"&gt;Entry Point&lt;/span&gt; Provides utilities for<a name="line.35"></a>
+<span class="sourceLineNo">036</span> * ad-hoc coordination of port usage for distributed systems in tests and<a name="line.36"></a>
+<span class="sourceLineNo">037</span> * lab environments.&lt;/p&gt;<a name="line.37"></a>
+<span class="sourceLineNo">038</span> *<a name="line.38"></a>
+<span class="sourceLineNo">039</span> * &lt;p&gt; For example, when you do integration testing for a distributed system,<a name="line.39"></a>
+<span class="sourceLineNo">040</span> * and you want to run a couple of tests in parallel you need to make sure that<a name="line.40"></a>
+<span class="sourceLineNo">041</span> * none of the test environments shares ports and file paths with the others.&lt;/p&gt;<a name="line.41"></a>
+<span class="sourceLineNo">042</span> *<a name="line.42"></a>
+<span class="sourceLineNo">043</span> * &lt;p&gt;To achieve that, you can use the {@code Ports} class to allocate the ports<a name="line.43"></a>
+<span class="sourceLineNo">044</span> * and tweak the app configuration in application-specific manner.<a name="line.44"></a>
+<span class="sourceLineNo">045</span> * See the user manual for details and more use-cases.&lt;/p&gt;<a name="line.45"></a>
+<span class="sourceLineNo">046</span> *<a name="line.46"></a>
+<span class="sourceLineNo">047</span> * &lt;p&gt;This class has explicit lifecycle as follows:&lt;/p&gt;<a name="line.47"></a>
+<span class="sourceLineNo">048</span> * &lt;pre&gt;&lt;code&gt;<a name="line.48"></a>
+<span class="sourceLineNo">049</span> *     Ports p = new Ports(...);<a name="line.49"></a>
+<span class="sourceLineNo">050</span> *     // CONFIGURE: call withExporter(...), reservePort(id[, offset]), withPorts(...) as needed<a name="line.50"></a>
+<span class="sourceLineNo">051</span> *     p.freeze(...);<a name="line.51"></a>
+<span class="sourceLineNo">052</span> *     // USE: call getBasePort() and port(id)<a name="line.52"></a>
+<span class="sourceLineNo">053</span> *     p.close();<a name="line.53"></a>
+<span class="sourceLineNo">054</span> *     // DEAD: any method call would result in exception<a name="line.54"></a>
+<span class="sourceLineNo">055</span> * &lt;/code&gt;&lt;/pre&gt;<a name="line.55"></a>
+<span class="sourceLineNo">056</span> */<a name="line.56"></a>
+<span class="sourceLineNo">057</span>public class Ports implements AutoCloseable {<a name="line.57"></a>
+<span class="sourceLineNo">058</span><a name="line.58"></a>
+<span class="sourceLineNo">059</span>    private final List&lt;String&gt; claimedOffsets = Collections.synchronizedList(new ArrayList&lt;&gt;());<a name="line.59"></a>
+<span class="sourceLineNo">060</span>    private final Set&lt;String&gt; dynamicOffsets = new HashSet&lt;&gt;();<a name="line.60"></a>
+<span class="sourceLineNo">061</span>    private final Set&lt;Exporter&gt; exporters = new HashSet&lt;&gt;();<a name="line.61"></a>
+<span class="sourceLineNo">062</span>    private final @NotNull Registrar registrar;<a name="line.62"></a>
+<span class="sourceLineNo">063</span>    private final @NotNull Supplier&lt;Integer&gt; dynamicPortFinder;<a name="line.63"></a>
+<span class="sourceLineNo">064</span>    private volatile int basePort = -1;<a name="line.64"></a>
+<span class="sourceLineNo">065</span>    private volatile boolean closed;<a name="line.65"></a>
+<span class="sourceLineNo">066</span><a name="line.66"></a>
+<span class="sourceLineNo">067</span>    /**<a name="line.67"></a>
+<span class="sourceLineNo">068</span>     * &lt;p&gt;Creates new ports allocator with the specified registrar<a name="line.68"></a>
+<span class="sourceLineNo">069</span>     * and default dynamic port allocation strategy.&lt;/p&gt;<a name="line.69"></a>
+<span class="sourceLineNo">070</span>     *<a name="line.70"></a>
+<span class="sourceLineNo">071</span>     * &lt;p&gt;The default port allocation strategy assigns offsets to the<a name="line.71"></a>
+<span class="sourceLineNo">072</span>     * dynamic port ID's starting from the base port of the block and<a name="line.72"></a>
+<span class="sourceLineNo">073</span>     * skipping all explicitly assigned offsets.&lt;/p&gt;<a name="line.73"></a>
+<span class="sourceLineNo">074</span>     *<a name="line.74"></a>
+<span class="sourceLineNo">075</span>     * @param registrar defines a strategy for allocating a port block.<a name="line.75"></a>
+<span class="sourceLineNo">076</span>     */<a name="line.76"></a>
+<span class="sourceLineNo">077</span>    public Ports(@NotNull Registrar registrar) {<a name="line.77"></a>
+<span class="sourceLineNo">078</span>        this(registrar, null);<a name="line.78"></a>
+<span class="sourceLineNo">079</span>    }<a name="line.79"></a>
+<span class="sourceLineNo">080</span><a name="line.80"></a>
+<span class="sourceLineNo">081</span>    /**<a name="line.81"></a>
+<span class="sourceLineNo">082</span>     * &lt;p&gt;Creates new ports allocator with the specified registrar<a name="line.82"></a>
+<span class="sourceLineNo">083</span>     * and default dynamic port allocation strategy.&lt;/p&gt;<a name="line.83"></a>
+<span class="sourceLineNo">084</span>     *<a name="line.84"></a>
+<span class="sourceLineNo">085</span>     * @param registrar defines a strategy for allocating a port block.<a name="line.85"></a>
+<span class="sourceLineNo">086</span>     * @param dynamicPortFinder defines a strategy for dynamically allocating<a name="line.86"></a>
+<span class="sourceLineNo">087</span>     *        ports within a block. If {@code null}, a default strategy assigns<a name="line.87"></a>
+<span class="sourceLineNo">088</span>     *        offsets to the dynamic port ID's starting from the {@link #basePort base port}<a name="line.88"></a>
+<span class="sourceLineNo">089</span>     *        of the block and skipping all explicitly assigned offsets.<a name="line.89"></a>
+<span class="sourceLineNo">090</span>     */<a name="line.90"></a>
+<span class="sourceLineNo">091</span>    public Ports(@NotNull Registrar registrar, @Nullable Supplier&lt;Integer&gt; dynamicPortFinder) {<a name="line.91"></a>
+<span class="sourceLineNo">092</span>        this.registrar = registrar;<a name="line.92"></a>
+<span class="sourceLineNo">093</span>        this.dynamicPortFinder = dynamicPortFinder!=null<a name="line.93"></a>
+<span class="sourceLineNo">094</span>                ? dynamicPortFinder<a name="line.94"></a>
+<span class="sourceLineNo">095</span>                : () -&gt; {<a name="line.95"></a>
+<span class="sourceLineNo">096</span>                    int gapIdx = claimedOffsets.indexOf(null);<a name="line.96"></a>
+<span class="sourceLineNo">097</span>                    return gapIdx&gt;=0 ? gapIdx : claimedOffsets.size();<a name="line.97"></a>
+<span class="sourceLineNo">098</span>                };<a name="line.98"></a>
+<span class="sourceLineNo">099</span>    }<a name="line.99"></a>
+<span class="sourceLineNo">100</span><a name="line.100"></a>
+<span class="sourceLineNo">101</span>    /**<a name="line.101"></a>
+<span class="sourceLineNo">102</span>     * &lt;p&gt;Registers an {@link Exporter} that would be used to publish/validate<a name="line.102"></a>
+<span class="sourceLineNo">103</span>     * the allocated ports. Can throw {@link PortVetoException} to reject a<a name="line.103"></a>
+<span class="sourceLineNo">104</span>     * port and force the port allocator to use another block&lt;/p&gt;<a name="line.104"></a>
+<span class="sourceLineNo">105</span>     *<a name="line.105"></a>
+<span class="sourceLineNo">106</span>     * &lt;p&gt;If more than one exporter is registered, exporters will be called in<a name="line.106"></a>
+<span class="sourceLineNo">107</span>     * their registration order.&lt;/p&gt;<a name="line.107"></a>
 <span class="sourceLineNo">108</span>     *<a name="line.108"></a>
-<span class="sourceLineNo">109</span>     * &lt;p&gt;If the implementation of this interface also implements<a name="line.109"></a>
-<span class="sourceLineNo">110</span>     * {@link AutoCloseable}, the {@code close()} method will be called after<a name="line.110"></a>
-<span class="sourceLineNo">111</span>     * all offsets have been exported and successfully validated, after<a name="line.111"></a>
-<span class="sourceLineNo">112</span>     * the allocation is confirmed successful.&lt;/p&gt;<a name="line.112"></a>
-<span class="sourceLineNo">113</span>     *<a name="line.113"></a>
-<span class="sourceLineNo">114</span>     * @param exporter a callback to publish or validate an allocated port.<a name="line.114"></a>
-<span class="sourceLineNo">115</span>     * @return {@code this} instance for chaining.<a name="line.115"></a>
-<span class="sourceLineNo">116</span>     *<a name="line.116"></a>
-<span class="sourceLineNo">117</span>     * @see Exporter#batching(Consumer)<a name="line.117"></a>
-<span class="sourceLineNo">118</span>     */<a name="line.118"></a>
-<span class="sourceLineNo">119</span>    public @NotNull Ports withExporter(@NotNull Exporter exporter) {<a name="line.119"></a>
-<span class="sourceLineNo">120</span>        if (basePort&gt;=0) throw new IllegalStateException("Already frozen!");<a name="line.120"></a>
-<span class="sourceLineNo">121</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.121"></a>
-<span class="sourceLineNo">122</span>        exporters.add(exporter);<a name="line.122"></a>
-<span class="sourceLineNo">123</span>        return this;<a name="line.123"></a>
-<span class="sourceLineNo">124</span>    }<a name="line.124"></a>
-<span class="sourceLineNo">125</span><a name="line.125"></a>
-<span class="sourceLineNo">126</span>    /**<a name="line.126"></a>
-<span class="sourceLineNo">127</span>     * Registers a port ID at desired offset within the block.<a name="line.127"></a>
-<span class="sourceLineNo">128</span>     * Should be called as many times as needed before {@link #freeze(int)}.<a name="line.128"></a>
-<span class="sourceLineNo">129</span>     *<a name="line.129"></a>
-<span class="sourceLineNo">130</span>     * @param id the ID of the port we are registering.<a name="line.130"></a>
-<span class="sourceLineNo">131</span>     *           Should be unique.<a name="line.131"></a>
-<span class="sourceLineNo">132</span>     * @param offset the desired offset for the finally allocated port.<a name="line.132"></a>
-<span class="sourceLineNo">133</span>     *               Should be unique.<a name="line.133"></a>
-<span class="sourceLineNo">134</span>     *<a name="line.134"></a>
-<span class="sourceLineNo">135</span>     * @return {@code this} instance for chaining.<a name="line.135"></a>
-<span class="sourceLineNo">136</span>     *<a name="line.136"></a>
-<span class="sourceLineNo">137</span>     * @throws IllegalArgumentException if any of the arguments is not unique<a name="line.137"></a>
-<span class="sourceLineNo">138</span>     *         within the scope of {@code this} instance.<a name="line.138"></a>
-<span class="sourceLineNo">139</span>     * @throws IllegalArgumentException if this port allocator has already been<a name="line.139"></a>
-<span class="sourceLineNo">140</span>     *         {@link #freeze(int) frozen} or {@link #close() closed}<a name="line.140"></a>
-<span class="sourceLineNo">141</span>     *<a name="line.141"></a>
-<span class="sourceLineNo">142</span>     * @see #reservePort(String)<a name="line.142"></a>
-<span class="sourceLineNo">143</span>     * @see #withPorts(int, Consumer)<a name="line.143"></a>
-<span class="sourceLineNo">144</span>     */<a name="line.144"></a>
-<span class="sourceLineNo">145</span>    public @NotNull Ports reservePort(@NotNull String id, int offset) {<a name="line.145"></a>
-<span class="sourceLineNo">146</span>        if (basePort&gt;=0) throw new IllegalStateException("Port allocation already finalized!");<a name="line.146"></a>
-<span class="sourceLineNo">147</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.147"></a>
-<span class="sourceLineNo">148</span><a name="line.148"></a>
-<span class="sourceLineNo">149</span>        if (Exporter.BASE_PORT_ID.equals(id)) throw new IllegalArgumentException("Port ID can not be empty");<a name="line.149"></a>
-<span class="sourceLineNo">150</span>        if (dynamicOffsets.contains(id)) throw new IllegalArgumentException("Port ID '" + id + "' already registered as dynamic (requested " + offset + ")");<a name="line.150"></a>
-<span class="sourceLineNo">151</span><a name="line.151"></a>
-<span class="sourceLineNo">152</span>        int pos = claimedOffsets.indexOf(id);<a name="line.152"></a>
-<span class="sourceLineNo">153</span>        if (pos&gt;=0 &amp;&amp; pos!=offset) throw new IllegalArgumentException("Port ID '" + id + "' already registered at offset: " + pos + " (requested " + offset + ")");<a name="line.153"></a>
-<span class="sourceLineNo">154</span><a name="line.154"></a>
-<span class="sourceLineNo">155</span>        while (offset&gt;=claimedOffsets.size()) claimedOffsets.add(null); // pad the list so we don't get an IOBE<a name="line.155"></a>
-<span class="sourceLineNo">156</span>        String old = claimedOffsets.set(offset, requireNonNull(id));<a name="line.156"></a>
-<span class="sourceLineNo">157</span><a name="line.157"></a>
-<span class="sourceLineNo">158</span>        if (old!=null &amp;&amp; !old.equals(id)) {<a name="line.158"></a>
-<span class="sourceLineNo">159</span>            claimedOffsets.set(offset, old); // EAFP to avoid TOCTOU issues<a name="line.159"></a>
-<span class="sourceLineNo">160</span>            throw new IllegalArgumentException("Clashing port reservations for offset " + offset + ": old='" + old + "', new='" + id + "'");<a name="line.160"></a>
-<span class="sourceLineNo">161</span>        }<a name="line.161"></a>
-<span class="sourceLineNo">162</span>        return this;<a name="line.162"></a>
-<span class="sourceLineNo">163</span>    }<a name="line.163"></a>
-<span class="sourceLineNo">164</span><a name="line.164"></a>
-<span class="sourceLineNo">165</span>    /**<a name="line.165"></a>
-<span class="sourceLineNo">166</span>     * Registers a port ID at automatically chosen offset within the block.<a name="line.166"></a>
-<span class="sourceLineNo">167</span>     * Should be called as many times as needed before {@link #freeze(int)}.<a name="line.167"></a>
-<span class="sourceLineNo">168</span>     *<a name="line.168"></a>
-<span class="sourceLineNo">169</span>     * @param id the ID of the port we are registering. Should be unique.<a name="line.169"></a>
-<span class="sourceLineNo">170</span>     *<a name="line.170"></a>
-<span class="sourceLineNo">171</span>     * @return {@code this} instance for chaining.<a name="line.171"></a>
-<span class="sourceLineNo">172</span>     *<a name="line.172"></a>
-<span class="sourceLineNo">173</span>     * @throws IllegalArgumentException if any of the ID is not unique<a name="line.173"></a>
-<span class="sourceLineNo">174</span>     *         within the scope of {@code this} instance.<a name="line.174"></a>
-<span class="sourceLineNo">175</span>     * @throws IllegalArgumentException if this port allocator has already been<a name="line.175"></a>
-<span class="sourceLineNo">176</span>     *         {@link #freeze(int) frozen} or {@link #close() closed}<a name="line.176"></a>
-<span class="sourceLineNo">177</span>     *<a name="line.177"></a>
-<span class="sourceLineNo">178</span>     * @see #reservePort(String, int)<a name="line.178"></a>
-<span class="sourceLineNo">179</span>     * @see #withPorts(int, Consumer)<a name="line.179"></a>
-<span class="sourceLineNo">180</span>     */<a name="line.180"></a>
-<span class="sourceLineNo">181</span>    public @NotNull Ports reservePort(@NotNull String id) {<a name="line.181"></a>
-<span class="sourceLineNo">182</span>        if (basePort&gt;=0) throw new IllegalStateException("Port allocation already finalized!");<a name="line.182"></a>
-<span class="sourceLineNo">183</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.183"></a>
-<span class="sourceLineNo">184</span><a name="line.184"></a>
-<span class="sourceLineNo">185</span>        if (Exporter.BASE_PORT_ID.equals(id)) throw new IllegalArgumentException("Port ID can not be empty");<a name="line.185"></a>
-<span class="sourceLineNo">186</span><a name="line.186"></a>
-<span class="sourceLineNo">187</span>        int pos = claimedOffsets.indexOf(id);<a name="line.187"></a>
-<span class="sourceLineNo">188</span>        if (pos&gt;=0) throw new IllegalArgumentException("Port ID '" + id + "' already registered at offset " + pos + " (requested dynamic offset)");<a name="line.188"></a>
-<span class="sourceLineNo">189</span><a name="line.189"></a>
-<span class="sourceLineNo">190</span>        dynamicOffsets.add(id);<a name="line.190"></a>
-<span class="sourceLineNo">191</span>        return this;<a name="line.191"></a>
-<span class="sourceLineNo">192</span>    }<a name="line.192"></a>
-<span class="sourceLineNo">193</span><a name="line.193"></a>
-<span class="sourceLineNo">194</span>    /**<a name="line.194"></a>
-<span class="sourceLineNo">195</span>     * Configures port IDs and freezes this allocator in one step. Uses a builder based DSL (see example).<a name="line.195"></a>
-<span class="sourceLineNo">196</span>     * Should be called only once, IMPORTANT: internally it calls {@code freeze(basePortHint)}.<a name="line.196"></a>
-<span class="sourceLineNo">197</span>     *<a name="line.197"></a>
-<span class="sourceLineNo">198</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.198"></a>
-<span class="sourceLineNo">199</span>     * p.withPorts(5000, register -&amp;gt; {<a name="line.199"></a>
-<span class="sourceLineNo">200</span>     *     register.id("foo");<a name="line.200"></a>
-<span class="sourceLineNo">201</span>     *     register.id("bar").offset(1);<a name="line.201"></a>
-<span class="sourceLineNo">202</span>     *     register.id("baz").offset(2);<a name="line.202"></a>
-<span class="sourceLineNo">203</span>     *     register.id("qux");<a name="line.203"></a>
-<span class="sourceLineNo">204</span>     * });<a name="line.204"></a>
-<span class="sourceLineNo">205</span>     * assert p.getBasePort()==5000; // p is ready to use<a name="line.205"></a>
-<span class="sourceLineNo">206</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.206"></a>
-<span class="sourceLineNo">207</span>     *<a name="line.207"></a>
-<span class="sourceLineNo">208</span>     * @param spec a closure configuring the builder (see example above).<a name="line.208"></a>
-<span class="sourceLineNo">209</span>     * @param basePortHint the desired base port - the actual base port may<a name="line.209"></a>
-<span class="sourceLineNo">210</span>     *                     differ if there is a conflict.<a name="line.210"></a>
-<span class="sourceLineNo">211</span>     *<a name="line.211"></a>
-<span class="sourceLineNo">212</span>     * @return {@code this} instance in {@link #freeze(int) frozen} state.<a name="line.212"></a>
-<span class="sourceLineNo">213</span>     *<a name="line.213"></a>
-<span class="sourceLineNo">214</span>     * @throws IllegalArgumentException if any of the ID's and offsets are conflicting.<a name="line.214"></a>
-<span class="sourceLineNo">215</span>     * @throws IllegalArgumentException if this port allocator has already been<a name="line.215"></a>
-<span class="sourceLineNo">216</span>     *         {@link #freeze(int) frozen} or {@link #close() closed}<a name="line.216"></a>
-<span class="sourceLineNo">217</span>     *<a name="line.217"></a>
-<span class="sourceLineNo">218</span>     * @see #reservePort(String)<a name="line.218"></a>
-<span class="sourceLineNo">219</span>     * @see #reservePort(String, int)<a name="line.219"></a>
-<span class="sourceLineNo">220</span>     * @see #freeze(int)<a name="line.220"></a>
-<span class="sourceLineNo">221</span>     */<a name="line.221"></a>
-<span class="sourceLineNo">222</span>    public @NotNull Ports withPorts(int basePortHint, @NotNull Consumer&lt;SpecIdBuilder&gt; spec) {<a name="line.222"></a>
-<span class="sourceLineNo">223</span>        PortsSpecBuilder builder = new PortsSpecBuilder();<a name="line.223"></a>
-<span class="sourceLineNo">224</span>        spec.accept(builder);<a name="line.224"></a>
-<span class="sourceLineNo">225</span>        builder.flush();<a name="line.225"></a>
-<span class="sourceLineNo">226</span>        return freeze(basePortHint);<a name="line.226"></a>
-<span class="sourceLineNo">227</span>    }<a name="line.227"></a>
-<span class="sourceLineNo">228</span><a name="line.228"></a>
-<span class="sourceLineNo">229</span>    /**<a name="line.229"></a>
-<span class="sourceLineNo">230</span>     * Uses the {@code registrar} and {@code dynamicPortFinder} to allocate<a name="line.230"></a>
-<span class="sourceLineNo">231</span>     * actual ports for each registered {@code portId} and transitions the<a name="line.231"></a>
-<span class="sourceLineNo">232</span>     * internal state to USE.<a name="line.232"></a>
-<span class="sourceLineNo">233</span>     * @param basePortHint the desired base port - the actual base port may<a name="line.233"></a>
-<span class="sourceLineNo">234</span>     *                     differ if there is a conflict.<a name="line.234"></a>
-<span class="sourceLineNo">235</span>     * @return this instance, on which now we can call {@link #port(String)}<a name="line.235"></a>
-<span class="sourceLineNo">236</span>     *         and {@link #getBasePort()}<a name="line.236"></a>
-<span class="sourceLineNo">237</span>     */<a name="line.237"></a>
-<span class="sourceLineNo">238</span>    public @NotNull Ports freeze(int basePortHint) {<a name="line.238"></a>
-<span class="sourceLineNo">239</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.239"></a>
-<span class="sourceLineNo">240</span>        if (this.basePort&gt;=0) throw new IllegalStateException("Port range already decided!");<a name="line.240"></a>
-<span class="sourceLineNo">241</span><a name="line.241"></a>
-<span class="sourceLineNo">242</span>        try {<a name="line.242"></a>
-<span class="sourceLineNo">243</span>            int allocatedBasePort = registrar.lock(basePortHint);<a name="line.243"></a>
-<span class="sourceLineNo">244</span>            if (allocatedBasePort&lt;=0) {<a name="line.244"></a>
-<span class="sourceLineNo">245</span>                throw new IllegalStateException("Failed to reserve a port range!");<a name="line.245"></a>
-<span class="sourceLineNo">246</span>            }<a name="line.246"></a>
-<span class="sourceLineNo">247</span><a name="line.247"></a>
-<span class="sourceLineNo">248</span>            for (String dynamicId : dynamicOffsets) {<a name="line.248"></a>
-<span class="sourceLineNo">249</span>                int freePort = dynamicPortFinder.get();<a name="line.249"></a>
-<span class="sourceLineNo">250</span><a name="line.250"></a>
-<span class="sourceLineNo">251</span>                while (freePort&gt;=claimedOffsets.size()) claimedOffsets.add(null); // pad the list so we don't get an IOBE<a name="line.251"></a>
-<span class="sourceLineNo">252</span>                String old = claimedOffsets.set(freePort, dynamicId);<a name="line.252"></a>
-<span class="sourceLineNo">253</span>                if (old!=null) {<a name="line.253"></a>
-<span class="sourceLineNo">254</span>                    claimedOffsets.set(freePort, old); // undo - better undo than check to avoid TOCTOU errors<a name="line.254"></a>
-<span class="sourceLineNo">255</span>                    throw new IllegalArgumentException("The dynamic port finder caused conflict! Clashing port reservations for offset " + freePort + ": old='" + old + "', new='" + dynamicId + "'");<a name="line.255"></a>
-<span class="sourceLineNo">256</span>                }<a name="line.256"></a>
-<span class="sourceLineNo">257</span>            }<a name="line.257"></a>
-<span class="sourceLineNo">258</span><a name="line.258"></a>
-<span class="sourceLineNo">259</span>            for (Exporter exporter : exporters) {<a name="line.259"></a>
-<span class="sourceLineNo">260</span>                exporter.export(Exporter.BASE_PORT_ID, allocatedBasePort);<a name="line.260"></a>
-<span class="sourceLineNo">261</span>                for (int portOffset = 0; portOffset &lt; claimedOffsets.size(); portOffset++) {<a name="line.261"></a>
-<span class="sourceLineNo">262</span>                    String id = claimedOffsets.get(portOffset);<a name="line.262"></a>
-<span class="sourceLineNo">263</span>                    if (id!=null) {<a name="line.263"></a>
-<span class="sourceLineNo">264</span>                        exporter.export(id, allocatedBasePort+portOffset);<a name="line.264"></a>
-<span class="sourceLineNo">265</span>                    }<a name="line.265"></a>
-<span class="sourceLineNo">266</span>                }<a name="line.266"></a>
-<span class="sourceLineNo">267</span>            }<a name="line.267"></a>
-<span class="sourceLineNo">268</span>            exporters.stream().filter(it -&gt; it instanceof AutoCloseable)<a name="line.268"></a>
-<span class="sourceLineNo">269</span>                     .forEach(it -&gt; rethrow(((AutoCloseable) it)::close));<a name="line.269"></a>
-<span class="sourceLineNo">270</span>            this.basePort = allocatedBasePort;<a name="line.270"></a>
-<span class="sourceLineNo">271</span>            return this;<a name="line.271"></a>
-<span class="sourceLineNo">272</span>        } catch (PortVetoException e) {<a name="line.272"></a>
-<span class="sourceLineNo">273</span>            return freeze(e.port + 1);<a name="line.273"></a>
-<span class="sourceLineNo">274</span>        }<a name="line.274"></a>
-<span class="sourceLineNo">275</span>    }<a name="line.275"></a>
-<span class="sourceLineNo">276</span><a name="line.276"></a>
-<span class="sourceLineNo">277</span>    /**<a name="line.277"></a>
-<span class="sourceLineNo">278</span>     * The lowest port of the allocated block or {@code IllegalStateException}<a name="line.278"></a>
-<span class="sourceLineNo">279</span>     * if {@link #freeze(int)} has not been called yet.<a name="line.279"></a>
-<span class="sourceLineNo">280</span>     *<a name="line.280"></a>
-<span class="sourceLineNo">281</span>     * @return the lowest port of the allocated block.<a name="line.281"></a>
-<span class="sourceLineNo">282</span>     */<a name="line.282"></a>
-<span class="sourceLineNo">283</span>    public int getBasePort() {<a name="line.283"></a>
-<span class="sourceLineNo">284</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.284"></a>
-<span class="sourceLineNo">285</span>        if (basePort==-1) throw new IllegalStateException("Port range not allocated yet!");<a name="line.285"></a>
-<span class="sourceLineNo">286</span>        return basePort;<a name="line.286"></a>
-<span class="sourceLineNo">287</span>    }<a name="line.287"></a>
-<span class="sourceLineNo">288</span><a name="line.288"></a>
-<span class="sourceLineNo">289</span>    /**<a name="line.289"></a>
-<span class="sourceLineNo">290</span>     * Look up a port for ID.<a name="line.290"></a>
-<span class="sourceLineNo">291</span>     * @param id the port ID, which we shall look up.<a name="line.291"></a>
-<span class="sourceLineNo">292</span>     * @return the port corresponding to the {@code id}<a name="line.292"></a>
-<span class="sourceLineNo">293</span>     */<a name="line.293"></a>
-<span class="sourceLineNo">294</span>    public int port(@NotNull String id) {<a name="line.294"></a>
-<span class="sourceLineNo">295</span>        if (basePort&lt;=0) throw new IllegalStateException("Port allocation not finished yet! Perhaps somebody forgot to call freeze()?");<a name="line.295"></a>
-<span class="sourceLineNo">296</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.296"></a>
-<span class="sourceLineNo">297</span><a name="line.297"></a>
-<span class="sourceLineNo">298</span>        int offset = claimedOffsets.indexOf(id);<a name="line.298"></a>
-<span class="sourceLineNo">299</span>        return offset&gt;=0<a name="line.299"></a>
-<span class="sourceLineNo">300</span>                ? basePort + offset<a name="line.300"></a>
-<span class="sourceLineNo">301</span>                : rethrow(new NoSuchElementException("No registered port for id: '" + id + "'"));<a name="line.301"></a>
-<span class="sourceLineNo">302</span>    }<a name="line.302"></a>
-<span class="sourceLineNo">303</span><a name="line.303"></a>
-<span class="sourceLineNo">304</span>    /**<a name="line.304"></a>
-<span class="sourceLineNo">305</span>     * &lt;p&gt;Releases all resources and transitions the internal state, so that<a name="line.305"></a>
-<span class="sourceLineNo">306</span>     * a call to any methods other than {@code close()} will result in<a name="line.306"></a>
-<span class="sourceLineNo">307</span>     * {@code IllegalStateException}.&lt;/p&gt;<a name="line.307"></a>
-<span class="sourceLineNo">308</span>     *<a name="line.308"></a>
-<span class="sourceLineNo">309</span>     * &lt;p&gt;This method is idempotent.&lt;/p&gt;<a name="line.309"></a>
-<span class="sourceLineNo">310</span>     */<a name="line.310"></a>
-<span class="sourceLineNo">311</span>    @Override<a name="line.311"></a>
-<span class="sourceLineNo">312</span>    public void close() {<a name="line.312"></a>
-<span class="sourceLineNo">313</span>        if (basePort&gt;=0) registrar.close();<a name="line.313"></a>
-<span class="sourceLineNo">314</span>        basePort = 0;<a name="line.314"></a>
-<span class="sourceLineNo">315</span>        closed = true;<a name="line.315"></a>
-<span class="sourceLineNo">316</span>    }<a name="line.316"></a>
-<span class="sourceLineNo">317</span><a name="line.317"></a>
-<span class="sourceLineNo">318</span>    /** Builder interface used to provide constrained, typesafe DSL. */<a name="line.318"></a>
-<span class="sourceLineNo">319</span>    public interface SpecOffsetBuilder {<a name="line.319"></a>
-<span class="sourceLineNo">320</span>        /**<a name="line.320"></a>
-<span class="sourceLineNo">321</span>         * Specify port offset for an ID specified by preceding builder step.<a name="line.321"></a>
-<span class="sourceLineNo">322</span>         * @param offset the port offset<a name="line.322"></a>
-<span class="sourceLineNo">323</span>         * @see PortsSpecBuilder#id(String)<a name="line.323"></a>
-<span class="sourceLineNo">324</span>         */<a name="line.324"></a>
-<span class="sourceLineNo">325</span>        void offset(int offset);<a name="line.325"></a>
-<span class="sourceLineNo">326</span>    }<a name="line.326"></a>
-<span class="sourceLineNo">327</span><a name="line.327"></a>
-<span class="sourceLineNo">328</span>    /** Builder interface used to provide constrained, typesafe DSL. */<a name="line.328"></a>
-<span class="sourceLineNo">329</span>    public interface SpecIdBuilder {<a name="line.329"></a>
-<span class="sourceLineNo">330</span><a name="line.330"></a>
-<span class="sourceLineNo">331</span>        /**<a name="line.331"></a>
-<span class="sourceLineNo">332</span>         * Specify a port ID. If followed by a call to<a name="line.332"></a>
-<span class="sourceLineNo">333</span>         * {@link SpecOffsetBuilder#offset(int)},<a name="line.333"></a>
-<span class="sourceLineNo">334</span>         * then this ID would be with explicit offset,<a name="line.334"></a>
-<span class="sourceLineNo">335</span>         * otherwise it would be dynamic.<a name="line.335"></a>
-<span class="sourceLineNo">336</span>         *<a name="line.336"></a>
-<span class="sourceLineNo">337</span>         * @param id the port ID<a name="line.337"></a>
-<span class="sourceLineNo">338</span>         * @return {@code this} instance for chaining.<a name="line.338"></a>
-<span class="sourceLineNo">339</span>         */<a name="line.339"></a>
-<span class="sourceLineNo">340</span>        @NotNull Ports.SpecOffsetBuilder id(@NotNull String id);<a name="line.340"></a>
-<span class="sourceLineNo">341</span>    }<a name="line.341"></a>
-<span class="sourceLineNo">342</span><a name="line.342"></a>
-<span class="sourceLineNo">343</span>    /**<a name="line.343"></a>
-<span class="sourceLineNo">344</span>     * Typesafe builder implementation, used by extensions for specifying ports and offsets.<a name="line.344"></a>
-<span class="sourceLineNo">345</span>     */<a name="line.345"></a>
-<span class="sourceLineNo">346</span>    public class PortsSpecBuilder implements SpecIdBuilder, SpecOffsetBuilder {<a name="line.346"></a>
-<span class="sourceLineNo">347</span>        private String id;<a name="line.347"></a>
-<span class="sourceLineNo">348</span>        private Integer offset;<a name="line.348"></a>
-<span class="sourceLineNo">349</span><a name="line.349"></a>
-<span class="sourceLineNo">350</span>        @Override<a name="line.350"></a>
-<span class="sourceLineNo">351</span>        public @NotNull Ports.SpecOffsetBuilder id(@NotNull String id) {<a name="line.351"></a>
-<span class="sourceLineNo">352</span>            flush();<a name="line.352"></a>
-<span class="sourceLineNo">353</span>            this.id = id;<a name="line.353"></a>
-<span class="sourceLineNo">354</span>            return this;<a name="line.354"></a>
-<span class="sourceLineNo">355</span>        }<a name="line.355"></a>
-<span class="sourceLineNo">356</span><a name="line.356"></a>
-<span class="sourceLineNo">357</span>        @Override<a name="line.357"></a>
-<span class="sourceLineNo">358</span>        public void offset(int offset) {<a name="line.358"></a>
-<span class="sourceLineNo">359</span>            this.offset = offset;<a name="line.359"></a>
-<span class="sourceLineNo">360</span>            flush();<a name="line.360"></a>
-<span class="sourceLineNo">361</span>        }<a name="line.361"></a>
-<span class="sourceLineNo">362</span><a name="line.362"></a>
-<span class="sourceLineNo">363</span>        /**<a name="line.363"></a>
-<span class="sourceLineNo">364</span>         * Needs to be called after finishing building the configuration,<a name="line.364"></a>
-<span class="sourceLineNo">365</span>         * or the last configured port ID may be lost.<a name="line.365"></a>
-<span class="sourceLineNo">366</span>         */<a name="line.366"></a>
-<span class="sourceLineNo">367</span>        public void flush() {<a name="line.367"></a>
-<span class="sourceLineNo">368</span>            if (offset != null &amp;&amp; id == null) {<a name="line.368"></a>
-<span class="sourceLineNo">369</span>                throw new IllegalArgumentException("Ambiguous port offset in spec: " + offset);<a name="line.369"></a>
-<span class="sourceLineNo">370</span>            }<a name="line.370"></a>
-<span class="sourceLineNo">371</span>            if (id == null) return;<a name="line.371"></a>
-<span class="sourceLineNo">372</span>            if (offset == null) {<a name="line.372"></a>
-<span class="sourceLineNo">373</span>                reservePort(id);<a name="line.373"></a>
-<span class="sourceLineNo">374</span>            } else {<a name="line.374"></a>
-<span class="sourceLineNo">375</span>                reservePort(id, offset);<a name="line.375"></a>
-<span class="sourceLineNo">376</span>            }<a name="line.376"></a>
-<span class="sourceLineNo">377</span>            offset = null;<a name="line.377"></a>
-<span class="sourceLineNo">378</span>            id = null;<a name="line.378"></a>
-<span class="sourceLineNo">379</span>        }<a name="line.379"></a>
-<span class="sourceLineNo">380</span>    }<a name="line.380"></a>
-<span class="sourceLineNo">381</span><a name="line.381"></a>
-<span class="sourceLineNo">382</span>    /**<a name="line.382"></a>
-<span class="sourceLineNo">383</span>     * &lt;p&gt;A hook notified about allocated ports, and optionally validating them.<a name="line.383"></a>
-<span class="sourceLineNo">384</span>     * Can be used to update configs, set system properties, validate port<a name="line.384"></a>
-<span class="sourceLineNo">385</span>     * availability, etc.&lt;/p&gt;<a name="line.385"></a>
-<span class="sourceLineNo">386</span>     *<a name="line.386"></a>
-<span class="sourceLineNo">387</span>     * &lt;p&gt;If the implementation of this interface also implements<a name="line.387"></a>
-<span class="sourceLineNo">388</span>     * {@link AutoCloseable}, the {@code close()} method will be called after<a name="line.388"></a>
-<span class="sourceLineNo">389</span>     * all offsets have been exported and successfully validated, after<a name="line.389"></a>
-<span class="sourceLineNo">390</span>     * the allocation is confirmed successful.&lt;/p&gt;<a name="line.390"></a>
-<span class="sourceLineNo">391</span>     */<a name="line.391"></a>
-<span class="sourceLineNo">392</span>    @FunctionalInterface<a name="line.392"></a>
-<span class="sourceLineNo">393</span>    public interface Exporter {<a name="line.393"></a>
-<span class="sourceLineNo">394</span>        /**<a name="line.394"></a>
-<span class="sourceLineNo">395</span>         * The base port will be passed with empty-string ID.<a name="line.395"></a>
-<span class="sourceLineNo">396</span>         * It is easier to check for empty string, but if you want to be explicit, you may use this constant.<a name="line.396"></a>
-<span class="sourceLineNo">397</span>         */<a name="line.397"></a>
-<span class="sourceLineNo">398</span>        String BASE_PORT_ID = "";<a name="line.398"></a>
-<span class="sourceLineNo">399</span><a name="line.399"></a>
-<span class="sourceLineNo">400</span>        /**<a name="line.400"></a>
-<span class="sourceLineNo">401</span>         * Called for each allocated port in the range, as well as for the base port.<a name="line.401"></a>
-<span class="sourceLineNo">402</span>         * Note that in event of {@code PortVetoException}, you would receive the<a name="line.402"></a>
-<span class="sourceLineNo">403</span>         * base port and port ID's more than once - the last value is the actual.<a name="line.403"></a>
-<span class="sourceLineNo">404</span>         *<a name="line.404"></a>
-<span class="sourceLineNo">405</span>         * @param id the port ID (empty string means base port)<a name="line.405"></a>
-<span class="sourceLineNo">406</span>         * @param port the allocated port<a name="line.406"></a>
-<span class="sourceLineNo">407</span>         * @throws PortVetoException to indicate that this block is bad and<a name="line.407"></a>
-<span class="sourceLineNo">408</span>         *         request reallocation of different block.<a name="line.408"></a>
-<span class="sourceLineNo">409</span>         */<a name="line.409"></a>
-<span class="sourceLineNo">410</span>        void export(@NotNull String id, int port) throws PortVetoException;<a name="line.410"></a>
-<span class="sourceLineNo">411</span><a name="line.411"></a>
-<span class="sourceLineNo">412</span>        /**<a name="line.412"></a>
-<span class="sourceLineNo">413</span>         * &lt;p&gt;A convenient way to receive the allocated ports (without the base port)<a name="line.413"></a>
-<span class="sourceLineNo">414</span>         * in one shot, rather than getting them one by one. Cannot do validation.&lt;/p&gt;<a name="line.414"></a>
-<span class="sourceLineNo">415</span>         *<a name="line.415"></a>
-<span class="sourceLineNo">416</span>         * &lt;p&gt;If you need the base port maping during export, you may use the<a name="line.416"></a>
-<span class="sourceLineNo">417</span>         * {@link BatchExporter} directly and pass {@code true} in the<a name="line.417"></a>
-<span class="sourceLineNo">418</span>         * constructor.&lt;/p&gt;<a name="line.418"></a>
-<span class="sourceLineNo">419</span>         *<a name="line.419"></a>
-<span class="sourceLineNo">420</span>         * @param publisher a consumer that does something with a map<a name="line.420"></a>
-<span class="sourceLineNo">421</span>         *                  mapping portId to port.<a name="line.421"></a>
-<span class="sourceLineNo">422</span>         *<a name="line.422"></a>
-<span class="sourceLineNo">423</span>         * @return the exporter aggregating the port mappings and<a name="line.423"></a>
-<span class="sourceLineNo">424</span>         *         on successful allocation calling the publishing<a name="line.424"></a>
-<span class="sourceLineNo">425</span>         *         consumer.<a name="line.425"></a>
-<span class="sourceLineNo">426</span>         *<a name="line.426"></a>
-<span class="sourceLineNo">427</span>         * @see BatchExporter<a name="line.427"></a>
-<span class="sourceLineNo">428</span>         */<a name="line.428"></a>
-<span class="sourceLineNo">429</span>        static Exporter batching(Consumer&lt;Map&lt;String, Integer&gt;&gt; publisher) {<a name="line.429"></a>
-<span class="sourceLineNo">430</span>           return new BatchExporter(false, publisher);<a name="line.430"></a>
-<span class="sourceLineNo">431</span>        }<a name="line.431"></a>
-<span class="sourceLineNo">432</span>    }<a name="line.432"></a>
-<span class="sourceLineNo">433</span><a name="line.433"></a>
-<span class="sourceLineNo">434</span>    /**<a name="line.434"></a>
-<span class="sourceLineNo">435</span>     * A strategy for allocating a port block.<a name="line.435"></a>
-<span class="sourceLineNo">436</span>     */<a name="line.436"></a>
-<span class="sourceLineNo">437</span>    public interface Registrar extends AutoCloseable {<a name="line.437"></a>
-<span class="sourceLineNo">438</span>        /**<a name="line.438"></a>
-<span class="sourceLineNo">439</span>         * Returns the actual {@code basePort} of the newly allocated block,<a name="line.439"></a>
-<span class="sourceLineNo">440</span>         * or throws exception.<a name="line.440"></a>
-<span class="sourceLineNo">441</span>         *<a name="line.441"></a>
-<span class="sourceLineNo">442</span>         * @param basePortHint the desired {@code basePort} to allocate port<a name="line.442"></a>
-<span class="sourceLineNo">443</span>         *        from. If zero, that means that the registrar implementation<a name="line.443"></a>
-<span class="sourceLineNo">444</span>         *        is free to choose.<a name="line.444"></a>
-<span class="sourceLineNo">445</span>         *<a name="line.445"></a>
-<span class="sourceLineNo">446</span>         * @return the base port of the newly allocated block.<a name="line.446"></a>
-<span class="sourceLineNo">447</span>         */<a name="line.447"></a>
-<span class="sourceLineNo">448</span>        int lock(int basePortHint);<a name="line.448"></a>
-<span class="sourceLineNo">449</span><a name="line.449"></a>
-<span class="sourceLineNo">450</span>        /**<a name="line.450"></a>
-<span class="sourceLineNo">451</span>         * Releases any resources related to this port block.<a name="line.451"></a>
-<span class="sourceLineNo">452</span>         * After calling this method, the in the allocated block<a name="line.452"></a>
-<span class="sourceLineNo">453</span>         * should not be considered reserved.<a name="line.453"></a>
-<span class="sourceLineNo">454</span>         */<a name="line.454"></a>
-<span class="sourceLineNo">455</span>        @Override void close();<a name="line.455"></a>
-<span class="sourceLineNo">456</span>    }<a name="line.456"></a>
-<span class="sourceLineNo">457</span><a name="line.457"></a>
-<span class="sourceLineNo">458</span>    /**<a name="line.458"></a>
-<span class="sourceLineNo">459</span>     * A simple block-based allocation strategy, trying to bind a port at a<a name="line.459"></a>
-<span class="sourceLineNo">460</span>     * fixed offset from {@code portBase} and on failure, retrying again<a name="line.460"></a>
-<span class="sourceLineNo">461</span>     * at a new {@code portBase}, one block-size up.<a name="line.461"></a>
-<span class="sourceLineNo">462</span>     */<a name="line.462"></a>
-<span class="sourceLineNo">463</span>    public static class BlockRegistrar implements Registrar {<a name="line.463"></a>
-<span class="sourceLineNo">464</span>        /**<a name="line.464"></a>
-<span class="sourceLineNo">465</span>         * The address of the interface we want to use for locking.<a name="line.465"></a>
-<span class="sourceLineNo">466</span>         */<a name="line.466"></a>
-<span class="sourceLineNo">467</span>        public final @NotNull InetAddress bindAddress;<a name="line.467"></a>
-<span class="sourceLineNo">468</span><a name="line.468"></a>
-<span class="sourceLineNo">469</span>        /**<a name="line.469"></a>
-<span class="sourceLineNo">470</span>         * The desired number of ports in the block (subsequent port offsets<a name="line.470"></a>
-<span class="sourceLineNo">471</span>         * should be in the [0..rangeSize-1] range).<a name="line.471"></a>
-<span class="sourceLineNo">472</span>         */<a name="line.472"></a>
-<span class="sourceLineNo">473</span>        public final int rangeSize;<a name="line.473"></a>
-<span class="sourceLineNo">474</span><a name="line.474"></a>
-<span class="sourceLineNo">475</span>        /**<a name="line.475"></a>
-<span class="sourceLineNo">476</span>         * The offset of the lock port, in the range [-1..rangeSize].<a name="line.476"></a>
-<span class="sourceLineNo">477</span>         * Keep in mind that if you choose zero, you need to register<a name="line.477"></a>
-<span class="sourceLineNo">478</span>         * the lock port, or it will clash with dynamically registered<a name="line.478"></a>
-<span class="sourceLineNo">479</span>         * ports.<a name="line.479"></a>
-<span class="sourceLineNo">480</span>         */<a name="line.480"></a>
-<span class="sourceLineNo">481</span>        public final int lockOffset;<a name="line.481"></a>
-<span class="sourceLineNo">482</span><a name="line.482"></a>
-<span class="sourceLineNo">483</span>        /**<a name="line.483"></a>
-<span class="sourceLineNo">484</span>         * If {@code true} this registrar will put extra effort to make sure<a name="line.484"></a>
-<span class="sourceLineNo">485</span>         * that the allocated {@code basePort==basePortHint+rangeSize*N}<a name="line.485"></a>
-<span class="sourceLineNo">486</span>         * (where N is an integer number)<a name="line.486"></a>
-<span class="sourceLineNo">487</span>         */<a name="line.487"></a>
-<span class="sourceLineNo">488</span>        public boolean alignToBasePortHint;<a name="line.488"></a>
-<span class="sourceLineNo">489</span>        private @Nullable ServerSocket locked;<a name="line.489"></a>
-<span class="sourceLineNo">490</span><a name="line.490"></a>
-<span class="sourceLineNo">491</span>        /**<a name="line.491"></a>
-<span class="sourceLineNo">492</span>         *<a name="line.492"></a>
-<span class="sourceLineNo">493</span>         * @param bindAddress the address of the interface we want to use for locking.<a name="line.493"></a>
-<span class="sourceLineNo">494</span>         * @param rangeSize the desired number of ports in the block<a name="line.494"></a>
-<span class="sourceLineNo">495</span>         *        (subsequent port offsets should be in the [0..rangeSize-1] range).<a name="line.495"></a>
-<span class="sourceLineNo">496</span>         * @param lockOffset the offset of the lock port, in the range [-1..rangeSize].<a name="line.496"></a>
-<span class="sourceLineNo">497</span>         *        See {@link #lockOffset the field} for details.<a name="line.497"></a>
-<span class="sourceLineNo">498</span>         */<a name="line.498"></a>
-<span class="sourceLineNo">499</span>        public BlockRegistrar(@NotNull InetAddress bindAddress, int rangeSize, int lockOffset) {<a name="line.499"></a>
-<span class="sourceLineNo">500</span>            if (lockOffset &lt; -1) throw new IllegalArgumentException("Lock offset " + lockOffset + " should be &gt;= -1");<a name="line.500"></a>
-<span class="sourceLineNo">501</span>            if (lockOffset &gt; rangeSize) throw new IllegalArgumentException("Lock offset " + lockOffset + " should be &lt;= " + rangeSize + " (rangeSize)");<a name="line.501"></a>
-<span class="sourceLineNo">502</span>            if (rangeSize&lt;=0) throw new IllegalArgumentException("rangeSize: " + rangeSize);<a name="line.502"></a>
-<span class="sourceLineNo">503</span>            this.bindAddress = bindAddress;<a name="line.503"></a>
-<span class="sourceLineNo">504</span>            this.lockOffset = lockOffset;<a name="line.504"></a>
-<span class="sourceLineNo">505</span>            this.rangeSize = rangeSize;<a name="line.505"></a>
-<span class="sourceLineNo">506</span>        }<a name="line.506"></a>
-<span class="sourceLineNo">507</span><a name="line.507"></a>
-<span class="sourceLineNo">508</span>        /**<a name="line.508"></a>
-<span class="sourceLineNo">509</span>         * @param basePortHint {@inheritDoc} Negative value forces it to retry one<a name="line.509"></a>
-<span class="sourceLineNo">510</span>         *        block up from the negated port.<a name="line.510"></a>
-<span class="sourceLineNo">511</span>         */<a name="line.511"></a>
-<span class="sourceLineNo">512</span>        @Override<a name="line.512"></a>
-<span class="sourceLineNo">513</span>        public synchronized int lock(int basePortHint) {<a name="line.513"></a>
-<span class="sourceLineNo">514</span>            if (Math.abs(basePortHint)&gt;0xFFFF) {<a name="line.514"></a>
-<span class="sourceLineNo">515</span>                throw new IllegalArgumentException("basePortHint: " + basePortHint);<a name="line.515"></a>
-<span class="sourceLineNo">516</span>            }<a name="line.516"></a>
-<span class="sourceLineNo">517</span><a name="line.517"></a>
-<span class="sourceLineNo">518</span>            int lastBasePort;<a name="line.518"></a>
-<span class="sourceLineNo">519</span>            if (locked!=null) {<a name="line.519"></a>
-<span class="sourceLineNo">520</span>                lastBasePort = locked.isBound() ? locked.getLocalPort() - lockOffset : -1;<a name="line.520"></a>
-<span class="sourceLineNo">521</span>                rethrow(locked::close);<a name="line.521"></a>
-<span class="sourceLineNo">522</span>            } else {<a name="line.522"></a>
-<span class="sourceLineNo">523</span>                lastBasePort = -1;<a name="line.523"></a>
-<span class="sourceLineNo">524</span>            }<a name="line.524"></a>
-<span class="sourceLineNo">525</span><a name="line.525"></a>
-<span class="sourceLineNo">526</span>            int rangeStep = lockOffset&lt;0 || lockOffset&gt;=rangeSize<a name="line.526"></a>
-<span class="sourceLineNo">527</span>                    ? rangeSize+1<a name="line.527"></a>
-<span class="sourceLineNo">528</span>                    : rangeSize;<a name="line.528"></a>
-<span class="sourceLineNo">529</span><a name="line.529"></a>
-<span class="sourceLineNo">530</span>            int basePort;<a name="line.530"></a>
-<span class="sourceLineNo">531</span>            if (basePortHint&gt;0) basePort=basePortHint;<a name="line.531"></a>
-<span class="sourceLineNo">532</span>            else if (basePortHint&lt;0) basePort = -basePortHint + rangeStep;<a name="line.532"></a>
-<span class="sourceLineNo">533</span>            else if (basePortHint==0 &amp;&amp; lastBasePort&gt;0) basePort = lastBasePort + rangeStep;<a name="line.533"></a>
-<span class="sourceLineNo">534</span>            else {<a name="line.534"></a>
-<span class="sourceLineNo">535</span>                throw new IllegalArgumentException("basePortHint: " + basePortHint + ", lastBasePort: " + lastBasePort);<a name="line.535"></a>
-<span class="sourceLineNo">536</span>            }<a name="line.536"></a>
-<span class="sourceLineNo">537</span><a name="line.537"></a>
-<span class="sourceLineNo">538</span>            if (alignToBasePortHint &amp;&amp; lastBasePort&gt;0) {<a name="line.538"></a>
-<span class="sourceLineNo">539</span>                int misalignment = Math.abs(lastBasePort - basePort) % rangeStep;<a name="line.539"></a>
-<span class="sourceLineNo">540</span>                if (misalignment&gt;0) {<a name="line.540"></a>
-<span class="sourceLineNo">541</span>                    basePort += rangeStep - misalignment;<a name="line.541"></a>
-<span class="sourceLineNo">542</span>                }<a name="line.542"></a>
-<span class="sourceLineNo">543</span>            }<a name="line.543"></a>
-<span class="sourceLineNo">544</span><a name="line.544"></a>
-<span class="sourceLineNo">545</span>            int lastPortInRange = basePort + rangeSize - 1;<a name="line.545"></a>
-<span class="sourceLineNo">546</span>            if (basePort&lt;=0 || lastPortInRange&gt;0xFFFF) {<a name="line.546"></a>
-<span class="sourceLineNo">547</span>                rethrow(new IOException("basePort: " + basePort));<a name="line.547"></a>
-<span class="sourceLineNo">548</span>            }<a name="line.548"></a>
-<span class="sourceLineNo">549</span><a name="line.549"></a>
-<span class="sourceLineNo">550</span>            int lockPort = basePort+lockOffset;<a name="line.550"></a>
-<span class="sourceLineNo">551</span>            if (lockPort&lt;=0 || lockPort&gt;0xFFFF) {<a name="line.551"></a>
-<span class="sourceLineNo">552</span>                rethrow(new IOException("lockPort: " + lockPort));<a name="line.552"></a>
-<span class="sourceLineNo">553</span>            }<a name="line.553"></a>
-<span class="sourceLineNo">554</span>            try {<a name="line.554"></a>
-<span class="sourceLineNo">555</span>                locked = new ServerSocket();<a name="line.555"></a>
-<span class="sourceLineNo">556</span>                locked.bind(new InetSocketAddress(bindAddress, lockPort));<a name="line.556"></a>
-<span class="sourceLineNo">557</span>                return lockPort-lockOffset;<a name="line.557"></a>
-<span class="sourceLineNo">558</span>            } catch (IOException e) {<a name="line.558"></a>
-<span class="sourceLineNo">559</span>                return lock(-basePort);<a name="line.559"></a>
-<span class="sourceLineNo">560</span>            }<a name="line.560"></a>
-<span class="sourceLineNo">561</span>        }<a name="line.561"></a>
-<span class="sourceLineNo">562</span><a name="line.562"></a>
-<span class="sourceLineNo">563</span>        @Override<a name="line.563"></a>
-<span class="sourceLineNo">564</span>        public synchronized void close() {<a name="line.564"></a>
-<span class="sourceLineNo">565</span>            if (locked !=null) rethrow(locked::close);<a name="line.565"></a>
-<span class="sourceLineNo">566</span>        }<a name="line.566"></a>
-<span class="sourceLineNo">567</span>    }<a name="line.567"></a>
-<span class="sourceLineNo">568</span><a name="line.568"></a>
-<span class="sourceLineNo">569</span>    /**<a name="line.569"></a>
-<span class="sourceLineNo">570</span>     * &lt;p&gt;A convenient way to receive all port mappings in one shot, rather<a name="line.570"></a>
-<span class="sourceLineNo">571</span>     * than getting them one by one. Cannot do validation.&lt;/p&gt;<a name="line.571"></a>
-<span class="sourceLineNo">572</span>     *<a name="line.572"></a>
-<span class="sourceLineNo">573</span>     * &lt;p&gt;This exporter internally aggregates all observed port mappings and<a name="line.573"></a>
-<span class="sourceLineNo">574</span>     * calls the publishing consumer once on successful allocation.&lt;/p&gt;<a name="line.574"></a>
-<span class="sourceLineNo">575</span>     *<a name="line.575"></a>
-<span class="sourceLineNo">576</span>     * @see Exporter#batching(Consumer)<a name="line.576"></a>
-<span class="sourceLineNo">577</span>     */<a name="line.577"></a>
-<span class="sourceLineNo">578</span>    private static class BatchExporter implements Exporter, AutoCloseable {<a name="line.578"></a>
-<span class="sourceLineNo">579</span>        private final Map&lt;String, Integer&gt; batched = new HashMap&lt;&gt;();<a name="line.579"></a>
-<span class="sourceLineNo">580</span>        private boolean withBasePort;<a name="line.580"></a>
-<span class="sourceLineNo">581</span>        private final Consumer&lt;Map&lt;String, Integer&gt;&gt; publisher;<a name="line.581"></a>
-<span class="sourceLineNo">582</span><a name="line.582"></a>
-<span class="sourceLineNo">583</span>        /**<a name="line.583"></a>
-<span class="sourceLineNo">584</span>         * Creates an aggregating exporter, calling {@code publisher} once<a name="line.584"></a>
-<span class="sourceLineNo">585</span>         * all mappings are finalized.<a name="line.585"></a>
-<span class="sourceLineNo">586</span>         *<a name="line.586"></a>
-<span class="sourceLineNo">587</span>         * @param withBasePort if {@code true}, the map passed to the<a name="line.587"></a>
-<span class="sourceLineNo">588</span>         *        {@code publisher} includes the {@code basePort} mapped to<a name="line.588"></a>
-<span class="sourceLineNo">589</span>         *        an empty string.<a name="line.589"></a>
-<span class="sourceLineNo">590</span>         *<a name="line.590"></a>
-<span class="sourceLineNo">591</span>         * @param publisher typically a closure that does something with the<a name="line.591"></a>
-<span class="sourceLineNo">592</span>         *        ports (i.e. creates config file, calls management APIs, etc.)<a name="line.592"></a>
-<span class="sourceLineNo">593</span>         */<a name="line.593"></a>
-<span class="sourceLineNo">594</span>        public BatchExporter(boolean withBasePort, Consumer&lt;Map&lt;String, Integer&gt;&gt; publisher) {<a name="line.594"></a>
-<span class="sourceLineNo">595</span>            this.withBasePort = withBasePort;<a name="line.595"></a>
-<span class="sourceLineNo">596</span>            this.publisher = publisher;<a name="line.596"></a>
-<span class="sourceLineNo">597</span>        }<a name="line.597"></a>
-<span class="sourceLineNo">598</span><a name="line.598"></a>
-<span class="sourceLineNo">599</span>        @Override<a name="line.599"></a>
-<span class="sourceLineNo">600</span>        public void export(@NotNull String id, int port) {<a name="line.600"></a>
-<span class="sourceLineNo">601</span>            if (!withBasePort &amp;&amp; id.isEmpty()) return;<a name="line.601"></a>
-<span class="sourceLineNo">602</span>            batched.put(id, port);<a name="line.602"></a>
-<span class="sourceLineNo">603</span>        }<a name="line.603"></a>
-<span class="sourceLineNo">604</span><a name="line.604"></a>
-<span class="sourceLineNo">605</span>        @Override<a name="line.605"></a>
-<span class="sourceLineNo">606</span>        public void close() {<a name="line.606"></a>
-<span class="sourceLineNo">607</span>            publisher.accept(batched);<a name="line.607"></a>
-<span class="sourceLineNo">608</span>        }<a name="line.608"></a>
-<span class="sourceLineNo">609</span>    }<a name="line.609"></a>
-<span class="sourceLineNo">610</span>}<a name="line.610"></a>
+<span class="sourceLineNo">109</span>     *<a name="line.109"></a>
+<span class="sourceLineNo">110</span>     * &lt;p&gt;If the implementation of this interface also implements<a name="line.110"></a>
+<span class="sourceLineNo">111</span>     * {@link AutoCloseable}, the {@code close()} method will be called after<a name="line.111"></a>
+<span class="sourceLineNo">112</span>     * all offsets have been exported and successfully validated, after<a name="line.112"></a>
+<span class="sourceLineNo">113</span>     * the allocation is confirmed successful.&lt;/p&gt;<a name="line.113"></a>
+<span class="sourceLineNo">114</span>     *<a name="line.114"></a>
+<span class="sourceLineNo">115</span>     * @param exporter a callback to publish or validate an allocated port.<a name="line.115"></a>
+<span class="sourceLineNo">116</span>     * @return {@code this} instance for chaining.<a name="line.116"></a>
+<span class="sourceLineNo">117</span>     *<a name="line.117"></a>
+<span class="sourceLineNo">118</span>     * @see Exporter#batching(Consumer)<a name="line.118"></a>
+<span class="sourceLineNo">119</span>     */<a name="line.119"></a>
+<span class="sourceLineNo">120</span>    public @NotNull Ports withExporter(@NotNull Exporter exporter) {<a name="line.120"></a>
+<span class="sourceLineNo">121</span>        if (basePort&gt;=0) throw new IllegalStateException("Already frozen!");<a name="line.121"></a>
+<span class="sourceLineNo">122</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.122"></a>
+<span class="sourceLineNo">123</span>        exporters.add(exporter);<a name="line.123"></a>
+<span class="sourceLineNo">124</span>        return this;<a name="line.124"></a>
+<span class="sourceLineNo">125</span>    }<a name="line.125"></a>
+<span class="sourceLineNo">126</span><a name="line.126"></a>
+<span class="sourceLineNo">127</span>    /**<a name="line.127"></a>
+<span class="sourceLineNo">128</span>     * Registers a port ID at desired offset within the block.<a name="line.128"></a>
+<span class="sourceLineNo">129</span>     * Should be called as many times as needed before {@link #freeze(int)}.<a name="line.129"></a>
+<span class="sourceLineNo">130</span>     *<a name="line.130"></a>
+<span class="sourceLineNo">131</span>     * @param id the ID of the port we are registering.<a name="line.131"></a>
+<span class="sourceLineNo">132</span>     *           Should be unique.<a name="line.132"></a>
+<span class="sourceLineNo">133</span>     * @param offset the desired offset for the finally allocated port.<a name="line.133"></a>
+<span class="sourceLineNo">134</span>     *               Should be unique.<a name="line.134"></a>
+<span class="sourceLineNo">135</span>     *<a name="line.135"></a>
+<span class="sourceLineNo">136</span>     * @return {@code this} instance for chaining.<a name="line.136"></a>
+<span class="sourceLineNo">137</span>     *<a name="line.137"></a>
+<span class="sourceLineNo">138</span>     * @throws IllegalArgumentException if any of the arguments is not unique<a name="line.138"></a>
+<span class="sourceLineNo">139</span>     *         within the scope of {@code this} instance.<a name="line.139"></a>
+<span class="sourceLineNo">140</span>     * @throws IllegalArgumentException if this port allocator has already been<a name="line.140"></a>
+<span class="sourceLineNo">141</span>     *         {@link #freeze(int) frozen} or {@link #close() closed}<a name="line.141"></a>
+<span class="sourceLineNo">142</span>     *<a name="line.142"></a>
+<span class="sourceLineNo">143</span>     * @see #reservePort(String)<a name="line.143"></a>
+<span class="sourceLineNo">144</span>     * @see #withPorts(int, Consumer)<a name="line.144"></a>
+<span class="sourceLineNo">145</span>     */<a name="line.145"></a>
+<span class="sourceLineNo">146</span>    public @NotNull Ports reservePort(@NotNull String id, int offset) {<a name="line.146"></a>
+<span class="sourceLineNo">147</span>        if (basePort&gt;=0) throw new IllegalStateException("Port allocation already finalized!");<a name="line.147"></a>
+<span class="sourceLineNo">148</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.148"></a>
+<span class="sourceLineNo">149</span><a name="line.149"></a>
+<span class="sourceLineNo">150</span>        if (Exporter.BASE_PORT_ID.equals(id)) throw new IllegalArgumentException("Port ID can not be empty");<a name="line.150"></a>
+<span class="sourceLineNo">151</span>        if (dynamicOffsets.contains(id)) throw new IllegalArgumentException("Port ID '" + id + "' already registered as dynamic (requested " + offset + ")");<a name="line.151"></a>
+<span class="sourceLineNo">152</span><a name="line.152"></a>
+<span class="sourceLineNo">153</span>        int pos = claimedOffsets.indexOf(id);<a name="line.153"></a>
+<span class="sourceLineNo">154</span>        if (pos&gt;=0 &amp;&amp; pos!=offset) throw new IllegalArgumentException("Port ID '" + id + "' already registered at offset: " + pos + " (requested " + offset + ")");<a name="line.154"></a>
+<span class="sourceLineNo">155</span><a name="line.155"></a>
+<span class="sourceLineNo">156</span>        while (offset&gt;=claimedOffsets.size()) claimedOffsets.add(null); // pad the list so we don't get an IOBE<a name="line.156"></a>
+<span class="sourceLineNo">157</span>        String old = claimedOffsets.set(offset, requireNonNull(id));<a name="line.157"></a>
+<span class="sourceLineNo">158</span><a name="line.158"></a>
+<span class="sourceLineNo">159</span>        if (old!=null &amp;&amp; !old.equals(id)) {<a name="line.159"></a>
+<span class="sourceLineNo">160</span>            claimedOffsets.set(offset, old); // EAFP to avoid TOCTOU issues<a name="line.160"></a>
+<span class="sourceLineNo">161</span>            throw new IllegalArgumentException("Clashing port reservations for offset " + offset + ": old='" + old + "', new='" + id + "'");<a name="line.161"></a>
+<span class="sourceLineNo">162</span>        }<a name="line.162"></a>
+<span class="sourceLineNo">163</span>        return this;<a name="line.163"></a>
+<span class="sourceLineNo">164</span>    }<a name="line.164"></a>
+<span class="sourceLineNo">165</span><a name="line.165"></a>
+<span class="sourceLineNo">166</span>    /**<a name="line.166"></a>
+<span class="sourceLineNo">167</span>     * Registers a port ID at automatically chosen offset within the block.<a name="line.167"></a>
+<span class="sourceLineNo">168</span>     * Should be called as many times as needed before {@link #freeze(int)}.<a name="line.168"></a>
+<span class="sourceLineNo">169</span>     *<a name="line.169"></a>
+<span class="sourceLineNo">170</span>     * @param id the ID of the port we are registering. Should be unique.<a name="line.170"></a>
+<span class="sourceLineNo">171</span>     *<a name="line.171"></a>
+<span class="sourceLineNo">172</span>     * @return {@code this} instance for chaining.<a name="line.172"></a>
+<span class="sourceLineNo">173</span>     *<a name="line.173"></a>
+<span class="sourceLineNo">174</span>     * @throws IllegalArgumentException if any of the ID is not unique<a name="line.174"></a>
+<span class="sourceLineNo">175</span>     *         within the scope of {@code this} instance.<a name="line.175"></a>
+<span class="sourceLineNo">176</span>     * @throws IllegalArgumentException if this port allocator has already been<a name="line.176"></a>
+<span class="sourceLineNo">177</span>     *         {@link #freeze(int) frozen} or {@link #close() closed}<a name="line.177"></a>
+<span class="sourceLineNo">178</span>     *<a name="line.178"></a>
+<span class="sourceLineNo">179</span>     * @see #reservePort(String, int)<a name="line.179"></a>
+<span class="sourceLineNo">180</span>     * @see #withPorts(int, Consumer)<a name="line.180"></a>
+<span class="sourceLineNo">181</span>     */<a name="line.181"></a>
+<span class="sourceLineNo">182</span>    public @NotNull Ports reservePort(@NotNull String id) {<a name="line.182"></a>
+<span class="sourceLineNo">183</span>        if (basePort&gt;=0) throw new IllegalStateException("Port allocation already finalized!");<a name="line.183"></a>
+<span class="sourceLineNo">184</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.184"></a>
+<span class="sourceLineNo">185</span><a name="line.185"></a>
+<span class="sourceLineNo">186</span>        if (Exporter.BASE_PORT_ID.equals(id)) throw new IllegalArgumentException("Port ID can not be empty");<a name="line.186"></a>
+<span class="sourceLineNo">187</span><a name="line.187"></a>
+<span class="sourceLineNo">188</span>        int pos = claimedOffsets.indexOf(id);<a name="line.188"></a>
+<span class="sourceLineNo">189</span>        if (pos&gt;=0) throw new IllegalArgumentException("Port ID '" + id + "' already registered at offset " + pos + " (requested dynamic offset)");<a name="line.189"></a>
+<span class="sourceLineNo">190</span><a name="line.190"></a>
+<span class="sourceLineNo">191</span>        dynamicOffsets.add(id);<a name="line.191"></a>
+<span class="sourceLineNo">192</span>        return this;<a name="line.192"></a>
+<span class="sourceLineNo">193</span>    }<a name="line.193"></a>
+<span class="sourceLineNo">194</span><a name="line.194"></a>
+<span class="sourceLineNo">195</span>    /**<a name="line.195"></a>
+<span class="sourceLineNo">196</span>     * Configures port IDs and freezes this allocator in one step. Uses a builder based DSL (see example).<a name="line.196"></a>
+<span class="sourceLineNo">197</span>     * Should be called only once, IMPORTANT: internally it calls {@code freeze(basePortHint)}.<a name="line.197"></a>
+<span class="sourceLineNo">198</span>     *<a name="line.198"></a>
+<span class="sourceLineNo">199</span>     * &lt;pre&gt;&lt;code&gt;<a name="line.199"></a>
+<span class="sourceLineNo">200</span>     * p.withPorts(5000, register -&amp;gt; {<a name="line.200"></a>
+<span class="sourceLineNo">201</span>     *     register.id("foo");<a name="line.201"></a>
+<span class="sourceLineNo">202</span>     *     register.id("bar").offset(1);<a name="line.202"></a>
+<span class="sourceLineNo">203</span>     *     register.id("baz").offset(2);<a name="line.203"></a>
+<span class="sourceLineNo">204</span>     *     register.id("qux");<a name="line.204"></a>
+<span class="sourceLineNo">205</span>     * });<a name="line.205"></a>
+<span class="sourceLineNo">206</span>     * assert p.getBasePort()==5000; // p is ready to use<a name="line.206"></a>
+<span class="sourceLineNo">207</span>     * &lt;/code&gt;&lt;/pre&gt;<a name="line.207"></a>
+<span class="sourceLineNo">208</span>     *<a name="line.208"></a>
+<span class="sourceLineNo">209</span>     * @param spec a closure configuring the builder (see example above).<a name="line.209"></a>
+<span class="sourceLineNo">210</span>     * @param basePortHint the desired base port - the actual base port may<a name="line.210"></a>
+<span class="sourceLineNo">211</span>     *                     differ if there is a conflict.<a name="line.211"></a>
+<span class="sourceLineNo">212</span>     *<a name="line.212"></a>
+<span class="sourceLineNo">213</span>     * @return {@code this} instance in {@link #freeze(int) frozen} state.<a name="line.213"></a>
+<span class="sourceLineNo">214</span>     *<a name="line.214"></a>
+<span class="sourceLineNo">215</span>     * @throws IllegalArgumentException if any of the ID's and offsets are conflicting.<a name="line.215"></a>
+<span class="sourceLineNo">216</span>     * @throws IllegalArgumentException if this port allocator has already been<a name="line.216"></a>
+<span class="sourceLineNo">217</span>     *         {@link #freeze(int) frozen} or {@link #close() closed}<a name="line.217"></a>
+<span class="sourceLineNo">218</span>     *<a name="line.218"></a>
+<span class="sourceLineNo">219</span>     * @see #reservePort(String)<a name="line.219"></a>
+<span class="sourceLineNo">220</span>     * @see #reservePort(String, int)<a name="line.220"></a>
+<span class="sourceLineNo">221</span>     * @see #freeze(int)<a name="line.221"></a>
+<span class="sourceLineNo">222</span>     */<a name="line.222"></a>
+<span class="sourceLineNo">223</span>    public @NotNull Ports withPorts(int basePortHint, @NotNull Consumer&lt;SpecIdBuilder&gt; spec) {<a name="line.223"></a>
+<span class="sourceLineNo">224</span>        PortsSpecBuilder builder = new PortsSpecBuilder();<a name="line.224"></a>
+<span class="sourceLineNo">225</span>        spec.accept(builder);<a name="line.225"></a>
+<span class="sourceLineNo">226</span>        builder.flush();<a name="line.226"></a>
+<span class="sourceLineNo">227</span>        return freeze(basePortHint);<a name="line.227"></a>
+<span class="sourceLineNo">228</span>    }<a name="line.228"></a>
+<span class="sourceLineNo">229</span><a name="line.229"></a>
+<span class="sourceLineNo">230</span>    /**<a name="line.230"></a>
+<span class="sourceLineNo">231</span>     * Uses the {@code registrar} and {@code dynamicPortFinder} to allocate<a name="line.231"></a>
+<span class="sourceLineNo">232</span>     * actual ports for each registered {@code portId} and transitions the<a name="line.232"></a>
+<span class="sourceLineNo">233</span>     * internal state to USE.<a name="line.233"></a>
+<span class="sourceLineNo">234</span>     * @param basePortHint the desired base port - the actual base port may<a name="line.234"></a>
+<span class="sourceLineNo">235</span>     *                     differ if there is a conflict.<a name="line.235"></a>
+<span class="sourceLineNo">236</span>     * @return this instance, on which now we can call {@link #port(String)}<a name="line.236"></a>
+<span class="sourceLineNo">237</span>     *         and {@link #getBasePort()}<a name="line.237"></a>
+<span class="sourceLineNo">238</span>     */<a name="line.238"></a>
+<span class="sourceLineNo">239</span>    public @NotNull Ports freeze(int basePortHint) {<a name="line.239"></a>
+<span class="sourceLineNo">240</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.240"></a>
+<span class="sourceLineNo">241</span>        if (this.basePort&gt;=0) throw new IllegalStateException("Port range already decided!");<a name="line.241"></a>
+<span class="sourceLineNo">242</span><a name="line.242"></a>
+<span class="sourceLineNo">243</span>        try {<a name="line.243"></a>
+<span class="sourceLineNo">244</span>            int allocatedBasePort = registrar.lock(basePortHint);<a name="line.244"></a>
+<span class="sourceLineNo">245</span>            if (allocatedBasePort&lt;=0) {<a name="line.245"></a>
+<span class="sourceLineNo">246</span>                throw new IllegalStateException("Failed to reserve a port range!");<a name="line.246"></a>
+<span class="sourceLineNo">247</span>            }<a name="line.247"></a>
+<span class="sourceLineNo">248</span><a name="line.248"></a>
+<span class="sourceLineNo">249</span>            for (String dynamicId : dynamicOffsets) {<a name="line.249"></a>
+<span class="sourceLineNo">250</span>                int freePort = dynamicPortFinder.get();<a name="line.250"></a>
+<span class="sourceLineNo">251</span><a name="line.251"></a>
+<span class="sourceLineNo">252</span>                while (freePort&gt;=claimedOffsets.size()) claimedOffsets.add(null); // pad the list so we don't get an IOBE<a name="line.252"></a>
+<span class="sourceLineNo">253</span>                String old = claimedOffsets.set(freePort, dynamicId);<a name="line.253"></a>
+<span class="sourceLineNo">254</span>                if (old!=null) {<a name="line.254"></a>
+<span class="sourceLineNo">255</span>                    claimedOffsets.set(freePort, old); // undo - better undo than check to avoid TOCTOU errors<a name="line.255"></a>
+<span class="sourceLineNo">256</span>                    throw new IllegalArgumentException("The dynamic port finder caused conflict! Clashing port reservations for offset " + freePort + ": old='" + old + "', new='" + dynamicId + "'");<a name="line.256"></a>
+<span class="sourceLineNo">257</span>                }<a name="line.257"></a>
+<span class="sourceLineNo">258</span>            }<a name="line.258"></a>
+<span class="sourceLineNo">259</span><a name="line.259"></a>
+<span class="sourceLineNo">260</span>            for (Exporter exporter : exporters) {<a name="line.260"></a>
+<span class="sourceLineNo">261</span>                exporter.export(Exporter.BASE_PORT_ID, allocatedBasePort);<a name="line.261"></a>
+<span class="sourceLineNo">262</span>                for (int portOffset = 0; portOffset &lt; claimedOffsets.size(); portOffset++) {<a name="line.262"></a>
+<span class="sourceLineNo">263</span>                    String id = claimedOffsets.get(portOffset);<a name="line.263"></a>
+<span class="sourceLineNo">264</span>                    if (id!=null) {<a name="line.264"></a>
+<span class="sourceLineNo">265</span>                        exporter.export(id, allocatedBasePort+portOffset);<a name="line.265"></a>
+<span class="sourceLineNo">266</span>                    }<a name="line.266"></a>
+<span class="sourceLineNo">267</span>                }<a name="line.267"></a>
+<span class="sourceLineNo">268</span>            }<a name="line.268"></a>
+<span class="sourceLineNo">269</span>            exporters.stream().filter(it -&gt; it instanceof AutoCloseable)<a name="line.269"></a>
+<span class="sourceLineNo">270</span>                     .forEach(it -&gt; rethrow(((AutoCloseable) it)::close));<a name="line.270"></a>
+<span class="sourceLineNo">271</span>            this.basePort = allocatedBasePort;<a name="line.271"></a>
+<span class="sourceLineNo">272</span>            return this;<a name="line.272"></a>
+<span class="sourceLineNo">273</span>        } catch (PortVetoException e) {<a name="line.273"></a>
+<span class="sourceLineNo">274</span>            return freeze(e.port + 1);<a name="line.274"></a>
+<span class="sourceLineNo">275</span>        }<a name="line.275"></a>
+<span class="sourceLineNo">276</span>    }<a name="line.276"></a>
+<span class="sourceLineNo">277</span><a name="line.277"></a>
+<span class="sourceLineNo">278</span>    /**<a name="line.278"></a>
+<span class="sourceLineNo">279</span>     * The lowest port of the allocated block or {@code IllegalStateException}<a name="line.279"></a>
+<span class="sourceLineNo">280</span>     * if {@link #freeze(int)} has not been called yet.<a name="line.280"></a>
+<span class="sourceLineNo">281</span>     *<a name="line.281"></a>
+<span class="sourceLineNo">282</span>     * @return the lowest port of the allocated block.<a name="line.282"></a>
+<span class="sourceLineNo">283</span>     */<a name="line.283"></a>
+<span class="sourceLineNo">284</span>    public int getBasePort() {<a name="line.284"></a>
+<span class="sourceLineNo">285</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.285"></a>
+<span class="sourceLineNo">286</span>        if (basePort==-1) throw new IllegalStateException("Port range not allocated yet!");<a name="line.286"></a>
+<span class="sourceLineNo">287</span>        return basePort;<a name="line.287"></a>
+<span class="sourceLineNo">288</span>    }<a name="line.288"></a>
+<span class="sourceLineNo">289</span><a name="line.289"></a>
+<span class="sourceLineNo">290</span>    /**<a name="line.290"></a>
+<span class="sourceLineNo">291</span>     * Look up a port for ID.<a name="line.291"></a>
+<span class="sourceLineNo">292</span>     * @param id the port ID, which we shall look up.<a name="line.292"></a>
+<span class="sourceLineNo">293</span>     * @return the port corresponding to the {@code id}<a name="line.293"></a>
+<span class="sourceLineNo">294</span>     */<a name="line.294"></a>
+<span class="sourceLineNo">295</span>    public int port(@NotNull String id) {<a name="line.295"></a>
+<span class="sourceLineNo">296</span>        if (basePort&lt;=0) throw new IllegalStateException("Port allocation not finished yet! Perhaps somebody forgot to call freeze()?");<a name="line.296"></a>
+<span class="sourceLineNo">297</span>        if (closed) throw new IllegalStateException("Already closed!");<a name="line.297"></a>
+<span class="sourceLineNo">298</span><a name="line.298"></a>
+<span class="sourceLineNo">299</span>        int offset = claimedOffsets.indexOf(id);<a name="line.299"></a>
+<span class="sourceLineNo">300</span>        return offset&gt;=0<a name="line.300"></a>
+<span class="sourceLineNo">301</span>                ? basePort + offset<a name="line.301"></a>
+<span class="sourceLineNo">302</span>                : rethrow(new NoSuchElementException("No registered port for id: '" + id + "'"));<a name="line.302"></a>
+<span class="sourceLineNo">303</span>    }<a name="line.303"></a>
+<span class="sourceLineNo">304</span><a name="line.304"></a>
+<span class="sourceLineNo">305</span>    /**<a name="line.305"></a>
+<span class="sourceLineNo">306</span>     * &lt;p&gt;Releases all resources and transitions the internal state, so that<a name="line.306"></a>
+<span class="sourceLineNo">307</span>     * a call to any methods other than {@code close()} will result in<a name="line.307"></a>
+<span class="sourceLineNo">308</span>     * {@code IllegalStateException}.&lt;/p&gt;<a name="line.308"></a>
+<span class="sourceLineNo">309</span>     *<a name="line.309"></a>
+<span class="sourceLineNo">310</span>     * &lt;p&gt;This method is idempotent.&lt;/p&gt;<a name="line.310"></a>
+<span class="sourceLineNo">311</span>     */<a name="line.311"></a>
+<span class="sourceLineNo">312</span>    @Override<a name="line.312"></a>
+<span class="sourceLineNo">313</span>    public void close() {<a name="line.313"></a>
+<span class="sourceLineNo">314</span>        if (basePort&gt;=0) registrar.close();<a name="line.314"></a>
+<span class="sourceLineNo">315</span>        basePort = 0;<a name="line.315"></a>
+<span class="sourceLineNo">316</span>        closed = true;<a name="line.316"></a>
+<span class="sourceLineNo">317</span>    }<a name="line.317"></a>
+<span class="sourceLineNo">318</span><a name="line.318"></a>
+<span class="sourceLineNo">319</span>    /** Builder interface used to provide constrained, typesafe DSL. */<a name="line.319"></a>
+<span class="sourceLineNo">320</span>    public interface SpecOffsetBuilder {<a name="line.320"></a>
+<span class="sourceLineNo">321</span>        /**<a name="line.321"></a>
+<span class="sourceLineNo">322</span>         * Specify port offset for an ID specified by preceding builder step.<a name="line.322"></a>
+<span class="sourceLineNo">323</span>         * @param offset the port offset<a name="line.323"></a>
+<span class="sourceLineNo">324</span>         * @see PortsSpecBuilder#id(String)<a name="line.324"></a>
+<span class="sourceLineNo">325</span>         */<a name="line.325"></a>
+<span class="sourceLineNo">326</span>        void offset(int offset);<a name="line.326"></a>
+<span class="sourceLineNo">327</span>    }<a name="line.327"></a>
+<span class="sourceLineNo">328</span><a name="line.328"></a>
+<span class="sourceLineNo">329</span>    /** Builder interface used to provide constrained, typesafe DSL. */<a name="line.329"></a>
+<span class="sourceLineNo">330</span>    public interface SpecIdBuilder {<a name="line.330"></a>
+<span class="sourceLineNo">331</span><a name="line.331"></a>
+<span class="sourceLineNo">332</span>        /**<a name="line.332"></a>
+<span class="sourceLineNo">333</span>         * Specify a port ID. If followed by a call to<a name="line.333"></a>
+<span class="sourceLineNo">334</span>         * {@link SpecOffsetBuilder#offset(int)},<a name="line.334"></a>
+<span class="sourceLineNo">335</span>         * then this ID would be with explicit offset,<a name="line.335"></a>
+<span class="sourceLineNo">336</span>         * otherwise it would be dynamic.<a name="line.336"></a>
+<span class="sourceLineNo">337</span>         *<a name="line.337"></a>
+<span class="sourceLineNo">338</span>         * @param id the port ID<a name="line.338"></a>
+<span class="sourceLineNo">339</span>         * @return {@code this} instance for chaining.<a name="line.339"></a>
+<span class="sourceLineNo">340</span>         */<a name="line.340"></a>
+<span class="sourceLineNo">341</span>        @NotNull Ports.SpecOffsetBuilder id(@NotNull String id);<a name="line.341"></a>
+<span class="sourceLineNo">342</span>    }<a name="line.342"></a>
+<span class="sourceLineNo">343</span><a name="line.343"></a>
+<span class="sourceLineNo">344</span>    /**<a name="line.344"></a>
+<span class="sourceLineNo">345</span>     * Typesafe builder implementation, used by extensions for specifying ports and offsets.<a name="line.345"></a>
+<span class="sourceLineNo">346</span>     */<a name="line.346"></a>
+<span class="sourceLineNo">347</span>    public class PortsSpecBuilder implements SpecIdBuilder, SpecOffsetBuilder {<a name="line.347"></a>
+<span class="sourceLineNo">348</span>        private String id;<a name="line.348"></a>
+<span class="sourceLineNo">349</span>        private Integer offset;<a name="line.349"></a>
+<span class="sourceLineNo">350</span><a name="line.350"></a>
+<span class="sourceLineNo">351</span>        @Override<a name="line.351"></a>
+<span class="sourceLineNo">352</span>        public @NotNull Ports.SpecOffsetBuilder id(@NotNull String id) {<a name="line.352"></a>
+<span class="sourceLineNo">353</span>            flush();<a name="line.353"></a>
+<span class="sourceLineNo">354</span>            this.id = id;<a name="line.354"></a>
+<span class="sourceLineNo">355</span>            return this;<a name="line.355"></a>
+<span class="sourceLineNo">356</span>        }<a name="line.356"></a>
+<span class="sourceLineNo">357</span><a name="line.357"></a>
+<span class="sourceLineNo">358</span>        @Override<a name="line.358"></a>
+<span class="sourceLineNo">359</span>        public void offset(int offset) {<a name="line.359"></a>
+<span class="sourceLineNo">360</span>            this.offset = offset;<a name="line.360"></a>
+<span class="sourceLineNo">361</span>            flush();<a name="line.361"></a>
+<span class="sourceLineNo">362</span>        }<a name="line.362"></a>
+<span class="sourceLineNo">363</span><a name="line.363"></a>
+<span class="sourceLineNo">364</span>        /**<a name="line.364"></a>
+<span class="sourceLineNo">365</span>         * Needs to be called after finishing building the configuration,<a name="line.365"></a>
+<span class="sourceLineNo">366</span>         * or the last configured port ID may be lost.<a name="line.366"></a>
+<span class="sourceLineNo">367</span>         */<a name="line.367"></a>
+<span class="sourceLineNo">368</span>        public void flush() {<a name="line.368"></a>
+<span class="sourceLineNo">369</span>            if (offset != null &amp;&amp; id == null) {<a name="line.369"></a>
+<span class="sourceLineNo">370</span>                throw new IllegalArgumentException("Ambiguous port offset in spec: " + offset);<a name="line.370"></a>
+<span class="sourceLineNo">371</span>            }<a name="line.371"></a>
+<span class="sourceLineNo">372</span>            if (id == null) return;<a name="line.372"></a>
+<span class="sourceLineNo">373</span>            if (offset == null) {<a name="line.373"></a>
+<span class="sourceLineNo">374</span>                reservePort(id);<a name="line.374"></a>
+<span class="sourceLineNo">375</span>            } else {<a name="line.375"></a>
+<span class="sourceLineNo">376</span>                reservePort(id, offset);<a name="line.376"></a>
+<span class="sourceLineNo">377</span>            }<a name="line.377"></a>
+<span class="sourceLineNo">378</span>            offset = null;<a name="line.378"></a>
+<span class="sourceLineNo">379</span>            id = null;<a name="line.379"></a>
+<span class="sourceLineNo">380</span>        }<a name="line.380"></a>
+<span class="sourceLineNo">381</span>    }<a name="line.381"></a>
+<span class="sourceLineNo">382</span><a name="line.382"></a>
+<span class="sourceLineNo">383</span>    /**<a name="line.383"></a>
+<span class="sourceLineNo">384</span>     * &lt;p&gt;A hook notified about allocated ports, and optionally validating them.<a name="line.384"></a>
+<span class="sourceLineNo">385</span>     * Can be used to update configs, set system properties, validate port<a name="line.385"></a>
+<span class="sourceLineNo">386</span>     * availability, etc.&lt;/p&gt;<a name="line.386"></a>
+<span class="sourceLineNo">387</span>     *<a name="line.387"></a>
+<span class="sourceLineNo">388</span>     * &lt;p&gt;If the implementation of this interface also implements<a name="line.388"></a>
+<span class="sourceLineNo">389</span>     * {@link AutoCloseable}, the {@code close()} method will be called after<a name="line.389"></a>
+<span class="sourceLineNo">390</span>     * all offsets have been exported and successfully validated, after<a name="line.390"></a>
+<span class="sourceLineNo">391</span>     * the allocation is confirmed successful.&lt;/p&gt;<a name="line.391"></a>
+<span class="sourceLineNo">392</span>     */<a name="line.392"></a>
+<span class="sourceLineNo">393</span>    @FunctionalInterface<a name="line.393"></a>
+<span class="sourceLineNo">394</span>    public interface Exporter {<a name="line.394"></a>
+<span class="sourceLineNo">395</span>        /**<a name="line.395"></a>
+<span class="sourceLineNo">396</span>         * The base port will be passed with empty-string ID.<a name="line.396"></a>
+<span class="sourceLineNo">397</span>         * It is easier to check for empty string, but if you want to be explicit, you may use this constant.<a name="line.397"></a>
+<span class="sourceLineNo">398</span>         */<a name="line.398"></a>
+<span class="sourceLineNo">399</span>        String BASE_PORT_ID = "";<a name="line.399"></a>
+<span class="sourceLineNo">400</span><a name="line.400"></a>
+<span class="sourceLineNo">401</span>        /**<a name="line.401"></a>
+<span class="sourceLineNo">402</span>         * Called for each allocated port in the range, as well as for the base port.<a name="line.402"></a>
+<span class="sourceLineNo">403</span>         * Note that in event of {@code PortVetoException}, you would receive the<a name="line.403"></a>
+<span class="sourceLineNo">404</span>         * base port and port ID's more than once - the last value is the actual.<a name="line.404"></a>
+<span class="sourceLineNo">405</span>         *<a name="line.405"></a>
+<span class="sourceLineNo">406</span>         * @param id the port ID (empty string means base port)<a name="line.406"></a>
+<span class="sourceLineNo">407</span>         * @param port the allocated port<a name="line.407"></a>
+<span class="sourceLineNo">408</span>         * @throws PortVetoException to indicate that this block is bad and<a name="line.408"></a>
+<span class="sourceLineNo">409</span>         *         request reallocation of different block.<a name="line.409"></a>
+<span class="sourceLineNo">410</span>         */<a name="line.410"></a>
+<span class="sourceLineNo">411</span>        void export(@NotNull String id, int port) throws PortVetoException;<a name="line.411"></a>
+<span class="sourceLineNo">412</span><a name="line.412"></a>
+<span class="sourceLineNo">413</span>        /**<a name="line.413"></a>
+<span class="sourceLineNo">414</span>         * &lt;p&gt;A convenient way to receive the allocated ports (without the base port)<a name="line.414"></a>
+<span class="sourceLineNo">415</span>         * in one shot, rather than getting them one by one. Cannot do validation.&lt;/p&gt;<a name="line.415"></a>
+<span class="sourceLineNo">416</span>         *<a name="line.416"></a>
+<span class="sourceLineNo">417</span>         * &lt;p&gt;If you need the base port maping during export, you may use the<a name="line.417"></a>
+<span class="sourceLineNo">418</span>         * {@link BatchExporter} directly and pass {@code true} in the<a name="line.418"></a>
+<span class="sourceLineNo">419</span>         * constructor.&lt;/p&gt;<a name="line.419"></a>
+<span class="sourceLineNo">420</span>         *<a name="line.420"></a>
+<span class="sourceLineNo">421</span>         * @param publisher a consumer that does something with a map<a name="line.421"></a>
+<span class="sourceLineNo">422</span>         *                  mapping portId to port.<a name="line.422"></a>
+<span class="sourceLineNo">423</span>         *<a name="line.423"></a>
+<span class="sourceLineNo">424</span>         * @return the exporter aggregating the port mappings and<a name="line.424"></a>
+<span class="sourceLineNo">425</span>         *         on successful allocation calling the publishing<a name="line.425"></a>
+<span class="sourceLineNo">426</span>         *         consumer.<a name="line.426"></a>
+<span class="sourceLineNo">427</span>         *<a name="line.427"></a>
+<span class="sourceLineNo">428</span>         * @see BatchExporter<a name="line.428"></a>
+<span class="sourceLineNo">429</span>         */<a name="line.429"></a>
+<span class="sourceLineNo">430</span>        static Exporter batching(Consumer&lt;Map&lt;String, Integer&gt;&gt; publisher) {<a name="line.430"></a>
+<span class="sourceLineNo">431</span>           return new BatchExporter(false, publisher);<a name="line.431"></a>
+<span class="sourceLineNo">432</span>        }<a name="line.432"></a>
+<span class="sourceLineNo">433</span>    }<a name="line.433"></a>
+<span class="sourceLineNo">434</span><a name="line.434"></a>
+<span class="sourceLineNo">435</span>    /**<a name="line.435"></a>
+<span class="sourceLineNo">436</span>     * A strategy for allocating a port block.<a name="line.436"></a>
+<span class="sourceLineNo">437</span>     */<a name="line.437"></a>
+<span class="sourceLineNo">438</span>    public interface Registrar extends AutoCloseable {<a name="line.438"></a>
+<span class="sourceLineNo">439</span>        /**<a name="line.439"></a>
+<span class="sourceLineNo">440</span>         * Returns the actual {@code basePort} of the newly allocated block,<a name="line.440"></a>
+<span class="sourceLineNo">441</span>         * or throws exception.<a name="line.441"></a>
+<span class="sourceLineNo">442</span>         *<a name="line.442"></a>
+<span class="sourceLineNo">443</span>         * @param basePortHint the desired {@code basePort} to allocate port<a name="line.443"></a>
+<span class="sourceLineNo">444</span>         *        from. If zero, that means that the registrar implementation<a name="line.444"></a>
+<span class="sourceLineNo">445</span>         *        is free to choose.<a name="line.445"></a>
+<span class="sourceLineNo">446</span>         *<a name="line.446"></a>
+<span class="sourceLineNo">447</span>         * @return the base port of the newly allocated block.<a name="line.447"></a>
+<span class="sourceLineNo">448</span>         */<a name="line.448"></a>
+<span class="sourceLineNo">449</span>        int lock(int basePortHint);<a name="line.449"></a>
+<span class="sourceLineNo">450</span><a name="line.450"></a>
+<span class="sourceLineNo">451</span>        /**<a name="line.451"></a>
+<span class="sourceLineNo">452</span>         * Releases any resources related to this port block.<a name="line.452"></a>
+<span class="sourceLineNo">453</span>         * After calling this method, the in the allocated block<a name="line.453"></a>
+<span class="sourceLineNo">454</span>         * should not be considered reserved.<a name="line.454"></a>
+<span class="sourceLineNo">455</span>         */<a name="line.455"></a>
+<span class="sourceLineNo">456</span>        @Override void close();<a name="line.456"></a>
+<span class="sourceLineNo">457</span>    }<a name="line.457"></a>
+<span class="sourceLineNo">458</span><a name="line.458"></a>
+<span class="sourceLineNo">459</span>    /**<a name="line.459"></a>
+<span class="sourceLineNo">460</span>     * A simple block-based allocation strategy, trying to bind a port at a<a name="line.460"></a>
+<span class="sourceLineNo">461</span>     * fixed offset from {@code portBase} and on failure, retrying again<a name="line.461"></a>
+<span class="sourceLineNo">462</span>     * at a new {@code portBase}, one block-size up.<a name="line.462"></a>
+<span class="sourceLineNo">463</span>     */<a name="line.463"></a>
+<span class="sourceLineNo">464</span>    public static class BlockRegistrar implements Registrar {<a name="line.464"></a>
+<span class="sourceLineNo">465</span>        /**<a name="line.465"></a>
+<span class="sourceLineNo">466</span>         * The address of the interface we want to use for locking.<a name="line.466"></a>
+<span class="sourceLineNo">467</span>         */<a name="line.467"></a>
+<span class="sourceLineNo">468</span>        public final @NotNull InetAddress bindAddress;<a name="line.468"></a>
+<span class="sourceLineNo">469</span><a name="line.469"></a>
+<span class="sourceLineNo">470</span>        /**<a name="line.470"></a>
+<span class="sourceLineNo">471</span>         * The desired number of ports in the block (subsequent port offsets<a name="line.471"></a>
+<span class="sourceLineNo">472</span>         * should be in the [0..rangeSize-1] range).<a name="line.472"></a>
+<span class="sourceLineNo">473</span>         */<a name="line.473"></a>
+<span class="sourceLineNo">474</span>        public final int rangeSize;<a name="line.474"></a>
+<span class="sourceLineNo">475</span><a name="line.475"></a>
+<span class="sourceLineNo">476</span>        /**<a name="line.476"></a>
+<span class="sourceLineNo">477</span>         * The offset of the lock port, in the range [-1..rangeSize].<a name="line.477"></a>
+<span class="sourceLineNo">478</span>         * Keep in mind that if you choose zero, you need to register<a name="line.478"></a>
+<span class="sourceLineNo">479</span>         * the lock port, or it will clash with dynamically registered<a name="line.479"></a>
+<span class="sourceLineNo">480</span>         * ports.<a name="line.480"></a>
+<span class="sourceLineNo">481</span>         */<a name="line.481"></a>
+<span class="sourceLineNo">482</span>        public final int lockOffset;<a name="line.482"></a>
+<span class="sourceLineNo">483</span><a name="line.483"></a>
+<span class="sourceLineNo">484</span>        /**<a name="line.484"></a>
+<span class="sourceLineNo">485</span>         * If {@code true} this registrar will put extra effort to make sure<a name="line.485"></a>
+<span class="sourceLineNo">486</span>         * that the allocated {@code basePort==basePortHint+rangeSize*N}<a name="line.486"></a>
+<span class="sourceLineNo">487</span>         * (where N is an integer number)<a name="line.487"></a>
+<span class="sourceLineNo">488</span>         */<a name="line.488"></a>
+<span class="sourceLineNo">489</span>        public boolean alignToBasePortHint;<a name="line.489"></a>
+<span class="sourceLineNo">490</span>        private @Nullable ServerSocket locked;<a name="line.490"></a>
+<span class="sourceLineNo">491</span><a name="line.491"></a>
+<span class="sourceLineNo">492</span>        /**<a name="line.492"></a>
+<span class="sourceLineNo">493</span>         *<a name="line.493"></a>
+<span class="sourceLineNo">494</span>         * @param bindAddress the address of the interface we want to use for locking.<a name="line.494"></a>
+<span class="sourceLineNo">495</span>         * @param rangeSize the desired number of ports in the block<a name="line.495"></a>
+<span class="sourceLineNo">496</span>         *        (subsequent port offsets should be in the [0..rangeSize-1] range).<a name="line.496"></a>
+<span class="sourceLineNo">497</span>         * @param lockOffset the offset of the lock port, in the range [-1..rangeSize].<a name="line.497"></a>
+<span class="sourceLineNo">498</span>         *        See {@link #lockOffset the field} for details.<a name="line.498"></a>
+<span class="sourceLineNo">499</span>         */<a name="line.499"></a>
+<span class="sourceLineNo">500</span>        public BlockRegistrar(@NotNull InetAddress bindAddress, int rangeSize, int lockOffset) {<a name="line.500"></a>
+<span class="sourceLineNo">501</span>            if (lockOffset &lt; -1) throw new IllegalArgumentException("Lock offset " + lockOffset + " should be &gt;= -1");<a name="line.501"></a>
+<span class="sourceLineNo">502</span>            if (lockOffset &gt; rangeSize) throw new IllegalArgumentException("Lock offset " + lockOffset + " should be &lt;= " + rangeSize + " (rangeSize)");<a name="line.502"></a>
+<span class="sourceLineNo">503</span>            if (rangeSize&lt;=0) throw new IllegalArgumentException("rangeSize: " + rangeSize);<a name="line.503"></a>
+<span class="sourceLineNo">504</span>            this.bindAddress = bindAddress;<a name="line.504"></a>
+<span class="sourceLineNo">505</span>            this.lockOffset = lockOffset;<a name="line.505"></a>
+<span class="sourceLineNo">506</span>            this.rangeSize = rangeSize;<a name="line.506"></a>
+<span class="sourceLineNo">507</span>        }<a name="line.507"></a>
+<span class="sourceLineNo">508</span><a name="line.508"></a>
+<span class="sourceLineNo">509</span>        /**<a name="line.509"></a>
+<span class="sourceLineNo">510</span>         * @param basePortHint {@inheritDoc} Negative value forces it to retry one<a name="line.510"></a>
+<span class="sourceLineNo">511</span>         *        block up from the negated port.<a name="line.511"></a>
+<span class="sourceLineNo">512</span>         */<a name="line.512"></a>
+<span class="sourceLineNo">513</span>        @Override<a name="line.513"></a>
+<span class="sourceLineNo">514</span>        public synchronized int lock(int basePortHint) {<a name="line.514"></a>
+<span class="sourceLineNo">515</span>            if (Math.abs(basePortHint)&gt;0xFFFF) {<a name="line.515"></a>
+<span class="sourceLineNo">516</span>                throw new IllegalArgumentException("basePortHint: " + basePortHint);<a name="line.516"></a>
+<span class="sourceLineNo">517</span>            }<a name="line.517"></a>
+<span class="sourceLineNo">518</span><a name="line.518"></a>
+<span class="sourceLineNo">519</span>            int lastBasePort;<a name="line.519"></a>
+<span class="sourceLineNo">520</span>            if (locked!=null) {<a name="line.520"></a>
+<span class="sourceLineNo">521</span>                lastBasePort = locked.isBound() ? locked.getLocalPort() - lockOffset : -1;<a name="line.521"></a>
+<span class="sourceLineNo">522</span>                rethrow(locked::close);<a name="line.522"></a>
+<span class="sourceLineNo">523</span>            } else {<a name="line.523"></a>
+<span class="sourceLineNo">524</span>                lastBasePort = -1;<a name="line.524"></a>
+<span class="sourceLineNo">525</span>            }<a name="line.525"></a>
+<span class="sourceLineNo">526</span><a name="line.526"></a>
+<span class="sourceLineNo">527</span>            int rangeStep = lockOffset&lt;0 || lockOffset&gt;=rangeSize<a name="line.527"></a>
+<span class="sourceLineNo">528</span>                    ? rangeSize+1<a name="line.528"></a>
+<span class="sourceLineNo">529</span>                    : rangeSize;<a name="line.529"></a>
+<span class="sourceLineNo">530</span><a name="line.530"></a>
+<span class="sourceLineNo">531</span>            int basePort;<a name="line.531"></a>
+<span class="sourceLineNo">532</span>            if (basePortHint&gt;0) basePort=basePortHint;<a name="line.532"></a>
+<span class="sourceLineNo">533</span>            else if (basePortHint&lt;0) basePort = -basePortHint + rangeStep;<a name="line.533"></a>
+<span class="sourceLineNo">534</span>            else if (basePortHint==0 &amp;&amp; lastBasePort&gt;0) basePort = lastBasePort + rangeStep;<a name="line.534"></a>
+<span class="sourceLineNo">535</span>            else {<a name="line.535"></a>
+<span class="sourceLineNo">536</span>                throw new IllegalArgumentException("basePortHint: " + basePortHint + ", lastBasePort: " + lastBasePort);<a name="line.536"></a>
+<span class="sourceLineNo">537</span>            }<a name="line.537"></a>
+<span class="sourceLineNo">538</span><a name="line.538"></a>
+<span class="sourceLineNo">539</span>            if (alignToBasePortHint &amp;&amp; lastBasePort&gt;0) {<a name="line.539"></a>
+<span class="sourceLineNo">540</span>                int misalignment = Math.abs(lastBasePort - basePort) % rangeStep;<a name="line.540"></a>
+<span class="sourceLineNo">541</span>                if (misalignment&gt;0) {<a name="line.541"></a>
+<span class="sourceLineNo">542</span>                    basePort += rangeStep - misalignment;<a name="line.542"></a>
+<span class="sourceLineNo">543</span>                }<a name="line.543"></a>
+<span class="sourceLineNo">544</span>            }<a name="line.544"></a>
+<span class="sourceLineNo">545</span><a name="line.545"></a>
+<span class="sourceLineNo">546</span>            int lastPortInRange = basePort + rangeSize - 1;<a name="line.546"></a>
+<span class="sourceLineNo">547</span>            if (basePort&lt;=0 || lastPortInRange&gt;0xFFFF) {<a name="line.547"></a>
+<span class="sourceLineNo">548</span>                rethrow(new IOException("basePort: " + basePort));<a name="line.548"></a>
+<span class="sourceLineNo">549</span>            }<a name="line.549"></a>
+<span class="sourceLineNo">550</span><a name="line.550"></a>
+<span class="sourceLineNo">551</span>            int lockPort = basePort+lockOffset;<a name="line.551"></a>
+<span class="sourceLineNo">552</span>            if (lockPort&lt;=0 || lockPort&gt;0xFFFF) {<a name="line.552"></a>
+<span class="sourceLineNo">553</span>                rethrow(new IOException("lockPort: " + lockPort));<a name="line.553"></a>
+<span class="sourceLineNo">554</span>            }<a name="line.554"></a>
+<span class="sourceLineNo">555</span>            try {<a name="line.555"></a>
+<span class="sourceLineNo">556</span>                locked = new ServerSocket();<a name="line.556"></a>
+<span class="sourceLineNo">557</span>                locked.bind(new InetSocketAddress(bindAddress, lockPort));<a name="line.557"></a>
+<span class="sourceLineNo">558</span>                return lockPort-lockOffset;<a name="line.558"></a>
+<span class="sourceLineNo">559</span>            } catch (IOException e) {<a name="line.559"></a>
+<span class="sourceLineNo">560</span>                return lock(-basePort);<a name="line.560"></a>
+<span class="sourceLineNo">561</span>            }<a name="line.561"></a>
+<span class="sourceLineNo">562</span>        }<a name="line.562"></a>
+<span class="sourceLineNo">563</span><a name="line.563"></a>
+<span class="sourceLineNo">564</span>        @Override<a name="line.564"></a>
+<span class="sourceLineNo">565</span>        public synchronized void close() {<a name="line.565"></a>
+<span class="sourceLineNo">566</span>            if (locked !=null) rethrow(locked::close);<a name="line.566"></a>
+<span class="sourceLineNo">567</span>        }<a name="line.567"></a>
+<span class="sourceLineNo">568</span>    }<a name="line.568"></a>
+<span class="sourceLineNo">569</span><a name="line.569"></a>
+<span class="sourceLineNo">570</span>    /**<a name="line.570"></a>
+<span class="sourceLineNo">571</span>     * &lt;p&gt;A convenient way to receive all port mappings in one shot, rather<a name="line.571"></a>
+<span class="sourceLineNo">572</span>     * than getting them one by one. Cannot do validation.&lt;/p&gt;<a name="line.572"></a>
+<span class="sourceLineNo">573</span>     *<a name="line.573"></a>
+<span class="sourceLineNo">574</span>     * &lt;p&gt;This exporter internally aggregates all observed port mappings and<a name="line.574"></a>
+<span class="sourceLineNo">575</span>     * calls the publishing consumer once on successful allocation.&lt;/p&gt;<a name="line.575"></a>
+<span class="sourceLineNo">576</span>     *<a name="line.576"></a>
+<span class="sourceLineNo">577</span>     * @see Exporter#batching(Consumer)<a name="line.577"></a>
+<span class="sourceLineNo">578</span>     */<a name="line.578"></a>
+<span class="sourceLineNo">579</span>    private static class BatchExporter implements Exporter, AutoCloseable {<a name="line.579"></a>
+<span class="sourceLineNo">580</span>        private final Map&lt;String, Integer&gt; batched = new HashMap&lt;&gt;();<a name="line.580"></a>
+<span class="sourceLineNo">581</span>        private boolean withBasePort;<a name="line.581"></a>
+<span class="sourceLineNo">582</span>        private final Consumer&lt;Map&lt;String, Integer&gt;&gt; publisher;<a name="line.582"></a>
+<span class="sourceLineNo">583</span><a name="line.583"></a>
+<span class="sourceLineNo">584</span>        /**<a name="line.584"></a>
+<span class="sourceLineNo">585</span>         * Creates an aggregating exporter, calling {@code publisher} once<a name="line.585"></a>
+<span class="sourceLineNo">586</span>         * all mappings are finalized.<a name="line.586"></a>
+<span class="sourceLineNo">587</span>         *<a name="line.587"></a>
+<span class="sourceLineNo">588</span>         * @param withBasePort if {@code true}, the map passed to the<a name="line.588"></a>
+<span class="sourceLineNo">589</span>         *        {@code publisher} includes the {@code basePort} mapped to<a name="line.589"></a>
+<span class="sourceLineNo">590</span>         *        an empty string.<a name="line.590"></a>
+<span class="sourceLineNo">591</span>         *<a name="line.591"></a>
+<span class="sourceLineNo">592</span>         * @param publisher typically a closure that does something with the<a name="line.592"></a>
+<span class="sourceLineNo">593</span>         *        ports (i.e. creates config file, calls management APIs, etc.)<a name="line.593"></a>
+<span class="sourceLineNo">594</span>         */<a name="line.594"></a>
+<span class="sourceLineNo">595</span>        public BatchExporter(boolean withBasePort, Consumer&lt;Map&lt;String, Integer&gt;&gt; publisher) {<a name="line.595"></a>
+<span class="sourceLineNo">596</span>            this.withBasePort = withBasePort;<a name="line.596"></a>
+<span class="sourceLineNo">597</span>            this.publisher = publisher;<a name="line.597"></a>
+<span class="sourceLineNo">598</span>        }<a name="line.598"></a>
+<span class="sourceLineNo">599</span><a name="line.599"></a>
+<span class="sourceLineNo">600</span>        @Override<a name="line.600"></a>
+<span class="sourceLineNo">601</span>        public void export(@NotNull String id, int port) {<a name="line.601"></a>
+<span class="sourceLineNo">602</span>            if (!withBasePort &amp;&amp; id.isEmpty()) return;<a name="line.602"></a>
+<span class="sourceLineNo">603</span>            batched.put(id, port);<a name="line.603"></a>
+<span class="sourceLineNo">604</span>        }<a name="line.604"></a>
+<span class="sourceLineNo">605</span><a name="line.605"></a>
+<span class="sourceLineNo">606</span>        @Override<a name="line.606"></a>
+<span class="sourceLineNo">607</span>        public void close() {<a name="line.607"></a>
+<span class="sourceLineNo">608</span>            publisher.accept(batched);<a name="line.608"></a>
+<span class="sourceLineNo">609</span>        }<a name="line.609"></a>
+<span class="sourceLineNo">610</span>    }<a name="line.610"></a>
+<span class="sourceLineNo">611</span>}<a name="line.611"></a>
 
 
 
