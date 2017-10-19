@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static io.github.ddimitrov.nuggets.Exceptions.rethrow;
+import static io.github.ddimitrov.nuggets.Exceptions.rethrowC;
+import static io.github.ddimitrov.nuggets.Exceptions.rethrowR;
 
 public class ExceptionsJavaDemo {
     /**
@@ -96,14 +98,14 @@ public class ExceptionsJavaDemo {
      */
     public static Collection<File> findLongerThan(Collection<File> c, int scale) {
         return c.stream()
-                .filter(it -> rethrow(() ->             // the rethrow decorator reinterprets the IOException as unchecked
+                .filter(it -> rethrowC(() ->             // the rethrow decorator reinterprets the IOException as unchecked
                         Files.size(it.toPath()) > scale // Files.size() and File.toPath() throw IOException
                 ))
                 .collect(Collectors.toList());
     }
 
     public static Collection<File> assureAllFresh(Collection<File> c) {
-        c.forEach(it -> rethrow(() -> processFile(it)));
+        c.forEach(it -> rethrowR(() -> processFile(it)));
         return c;
     }
 

@@ -323,6 +323,37 @@ public class Exceptions {
         }
     }
 
+
+    /**
+     * <p>Alias for {@code rethrow(closure)} for the case where the compiler cannot disambiguate
+     * callable vs runnable by return value. For usage examples, see {@link #rethrow(ThrowingRunnable)}.</p>
+     *
+     * @param throwingRunnable typically a parameterless lambda inside a capturing lambda of the desired type
+     * @throws Throwable thrown from the {@code throwingSupplier} (undeclared)
+     *
+     * @see #rethrowC(Callable)
+     */
+    @SuppressWarnings({"JavaDoc", "ResultOfMethodCallIgnored"}) // declaring we throw an exception not in the signature
+    public static void rethrowR(@NotNull ThrowingRunnable throwingRunnable) {
+        rethrow(throwingRunnable);
+    }
+
+    /**
+     * <p>Alias for {@code rethrow(closure)} for the case where the compiler cannot disambiguate
+     * callable vs runnable by return value. For usage examples, see {@link #rethrow(Callable)}.</p>
+     *
+     * @param throwingSupplier typically a parameterless lambda inside a capturing lambda of the desired type
+     * @param <T> inferred return type
+     * @return the return value of the {@code throwingSupplier}
+     * @throws Throwable thrown from the {@code throwingSupplier} (undeclared)
+     *
+     * @see #rethrowR(ThrowingRunnable)
+     */
+    @SuppressWarnings("JavaDoc") // declaring we throw an exception not in the signature
+    public static <T> T rethrowC(@NotNull Callable<T> throwingSupplier) {
+        return rethrow(throwingSupplier);
+    }
+
     /**
      * <p>Adapter allowing to use throwing methods from void lambdas of non-throwing interfaces.
      * For usage examples, see {@link #rethrow(Callable)}.</p>
