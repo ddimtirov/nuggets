@@ -14,6 +14,7 @@
  *    limitations under the License.
  */
 
+// NOTE: this class overuses nested classes, because I find I often need to copy/paste it to proprietary projects.
 package io.github.ddimitrov.nuggets;
 
 import org.jetbrains.annotations.Nullable;
@@ -115,7 +116,7 @@ public final class UrlStreamHandlers {
      */
     public static class DataUrl extends URLStreamHandler {
         @Override
-        protected URLConnection openConnection(URL u) throws IOException {
+        protected URLConnection openConnection(URL u) {
             return new DataUrlConnection(u);
         }
     }
@@ -255,6 +256,7 @@ public final class UrlStreamHandlers {
     public static class ResolversUrl extends ResolvingUrl {
         private final Function<String, URL> resolver;
 
+        @SuppressWarnings("varargs") // passing varargs down to fallback could be potentially unsafe, but we know what it does
         @SafeVarargs
         public ResolversUrl(Function<String, URL>... resolvers) {
             resolver = fallback(false, Objects::nonNull, resolvers);

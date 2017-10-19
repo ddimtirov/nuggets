@@ -14,6 +14,7 @@
  *    limitations under the License.
  */
 
+// NOTE: this class overuses nested classes, because I find I often need to copy/paste it to proprietary projects.
 package io.github.ddimitrov.nuggets;
 
 import org.jetbrains.annotations.NotNull;
