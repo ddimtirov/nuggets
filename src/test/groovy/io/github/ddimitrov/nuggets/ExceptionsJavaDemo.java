@@ -22,13 +22,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.github.ddimitrov.nuggets.Exceptions.rethrow;
-import static io.github.ddimitrov.nuggets.Exceptions.rethrowC;
-import static io.github.ddimitrov.nuggets.Exceptions.rethrowR;
+import static io.github.ddimitrov.nuggets.Exceptions.*;
 
 public class ExceptionsJavaDemo {
     /**
@@ -114,5 +114,14 @@ public class ExceptionsJavaDemo {
     }
     public static void processFile(File f) throws Exception {
         if (!f.createNewFile()) throw new IOException(f + " not created");
+    }
+
+    public static boolean rethrowing() {
+        Object value = new Object();
+        CompletableFuture<Object> f = CompletableFuture.completedFuture(value);
+        Runnable runnable = rethrowingR(f::get);
+        Supplier<Object> supplier = rethrowingC(f::get);
+        runnable.run();
+        return supplier.get().equals(value);
     }
 }

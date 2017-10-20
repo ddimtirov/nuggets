@@ -354,6 +354,34 @@ public class Exceptions {
         return rethrow(throwingSupplier);
     }
 
+
+    /**
+     /**
+     * <p>Alias for {@code rethrowing(closure)} for the case where the compiler cannot disambiguate
+     * callable vs runnable by return value. For usage examples, see {@link #rethrowing(ThrowingRunnable)}.</p>
+     *
+     * @param throwingRunnable runnable to be converted, may declare checked exceptions
+     * @return normal runnable that does not declare checked exceptions
+     */
+    @Contract("null->null;!null->!null")
+    public static @Nullable Runnable rethrowingR(@Nullable ThrowingRunnable throwingRunnable) {
+        return rethrowing(throwingRunnable);
+    }
+
+    /**
+     /**
+     * <p>Alias for {@code rethrowing(closure)} for the case where the compiler cannot disambiguate
+     * callable vs runnable by return value. For usage examples, see {@link #rethrowing(Callable)}.</p>
+     *
+     * @param throwingSupplier callable to be converted, may declare checked exceptions
+     * @return normal supplier that does not declare checked exceptions
+     */
+    @Contract("null->null;!null->!null")
+    public static <T> @Nullable Supplier<T> rethrowingC(@Nullable Callable<T> throwingSupplier) {
+        return rethrowing(throwingSupplier);
+    }
+
+
     /**
      * <p>Adapter allowing to use throwing methods from void lambdas of non-throwing interfaces.
      * For usage examples, see {@link #rethrow(Callable)}.</p>
@@ -576,7 +604,7 @@ scan_loop:
      * @return normal supplier that does not declare checked exceptions
      */
     @Contract("null->null;!null->!null")
-    public static <T> @Nullable Supplier rethrowing(@Nullable Callable<T> throwingSupplier) {
+    public static <T> @Nullable Supplier<T> rethrowing(@Nullable Callable<T> throwingSupplier) {
         return throwingSupplier==null ? null : () -> rethrow(throwingSupplier);
     }
 

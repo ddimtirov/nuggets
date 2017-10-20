@@ -66,6 +66,10 @@ class ExceptionsSpec extends Specification {
         e.message == f.path
     }
 
+    def "Illustrate the use of rethrowing"() {
+        expect: ExceptionsJavaDemo.rethrowing()
+    }
+
     def "Use rethrowSilent(e, reason) to decorate rethrown exception with layer-specific info (i.e. TxnId)"() {
         setup:
         String txnId = "[txn:${System.nanoTime()}]"
