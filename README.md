@@ -13,18 +13,18 @@ experiment until the result pleases me.
 [![Codacy Grade](https://api.codacy.com/project/badge/Grade/0951cb36db314ff1bf69646402f4b988)](https://www.codacy.com/app/dimitar-dimitrov/nuggets?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ddimtirov/nuggets&amp;utm_campaign=Badge_Grade)
 [![Codacy Coverage](https://api.codacy.com/project/badge/Coverage/0951cb36db314ff1bf69646402f4b988)](https://www.codacy.com/app/dimitar-dimitrov/nuggets?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ddimtirov/nuggets&amp;utm_campaign=Badge_Coverage)
 [![codecov](https://codecov.io/gh/ddimtirov/nuggets/branch/master/graph/badge.svg)](https://codecov.io/gh/ddimtirov/nuggets) 
-[![Dependency Status](https://www.versioneye.com/user/projects/57d2624987b0f6003c14ac1e/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/57d2624987b0f6003c14ac1e)
 [![Latest Release](https://api.bintray.com/packages/ddimitrov/oss/nuggets/images/download.svg) ](https://bintray.com/ddimitrov/oss/nuggets/_latestVersion)
 [![Coverity Scan](https://scan.coverity.com/projects/10133/badge.svg)](https://scan.coverity.com/projects/ddimtirov-nuggets)
 
 ### Functionality:
 
-Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nuggets/javadoc/io/github/ddimitrov/nuggets/package-summary.html) for detailed documentation. 
-<!-- browse the sources at [sourcegraph](https://sourcegraph.com/github.com/ddimtirov/nuggets@master). -->
+Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nuggets/javadoc/io/github/ddimitrov/nuggets/package-summary.html) for detailed documentation, 
+browse the sources at [sourcegraph](https://sourcegraph.com/github.com/ddimtirov/nuggets@master). 
 
 - `Exceptions` - utils for [dealing with checked exceptions](https://kotlinlang.org/docs/reference/exceptions.html#checked-exceptions)
   and [huge stacktraces](https://dzone.com/articles/filtering-stack-trace-hell)
   - rethrow checked exception as unchecked
+  - convert throwing functional interfaces into non-throwing counterparts
   - enable the usage of throwing methods in not-throwing lambdas
   - enrich exception message without wrapping it
   - cleanup exception stacktrace, causes and suppressed exceptions
@@ -44,9 +44,13 @@ Below is a list of features, see the [javadocs](https://ddimtirov.github.io/nugg
   - iterator through all constructors, fields or methods (including private inherited)
 - `TextTable` - formats complex data in logs, stdout and file reports
   - rendering to any `Appendable` object (`StringBuilder`, `Writer`, etc.)
-  - alignment, padding and custom formatting per column
+  - alignment, padding, right-hand border and custom formatting per cell or column 
   - default values for optional column
-  - extensible visual styles
+  - extensible visual styles for frames, borders, separators, headers
+  - row-group separators
+  - each cell can contain multi-line strings
+  - virtual calculated columns, based on row and column siblings
+  - hiden columns, holding data used by calcolations, but not rendered
 - `Functions` - utilities for lambdas and `java.util.function` objects
   - decorate lambdas and functional objects with human-readable `toString()`
   - flexible `fallback()` combinator, trying multiple functions until the 
