@@ -1,4 +1,47 @@
-# v0.4.0 Thread Introspection, Reflection Proxy, Retry, Data and Classpath URLs 
+# v0.5.0 TextTable enhancements
+
+`TextTable` is the star of this release! 
+
+Lwt's start with the brand new `separator()` method, allowing to 
+organize the rows into logical groups with custom titles and styling. 
+Another great addition is that each table cell can now contain a 
+multi-line string, which comes in handy when you need to display 
+long line-wrapped values. 
+
+The formatting of table frames and column-headers is extended, so we 
+can specify glyphs for each of these or turn them off entirely. We 
+can even simulate cell-spans by disabling the the right-hand border 
+per-cell (though content is still limited to a single grid cell).
+
+Furthermore, calculated columns are getting a lot more powerful with 
+the addition of `SiblingLookup` that can be transparently injected and  
+allow query values from the same row, process all column values (i.e. 
+for aggregated metric) or iterate through the table rows.
+
+If a table column is declared as `hidden`, we can use it for lookups, 
+but it will not render in the final output; or declare it as `virtual` 
+when it is entirely calculated without underlying value in the input 
+dataset.
+
+The `Exceptions` class has two minor additions - `rethrowing()` converts
+throwing functional interfaces in their non-throwing counterparts. While 
+`rethrowR()` and `rethrowC()` aliases, can be used to disambiguate the 
+cases where Java mandates an explicit cast in a `rwthrow()` call.
+
+For example, Java gets confused whether a method literal should be a 
+considered a `ThrowingRunnable` or `Callable`  and requires an explicit cast
+in the following case
+
+```$java
+return rethrow((Callable)future::get)
+```
+
+Removing the cast to `Callable` in the case above would be a syntax error, 
+but we can make it a little bit nicer if we use `rethrowC(future::get)` 
+instead.
+
+
+# v0.4.0 Thread introspection, Reflection Proxy, Retry, Data and Classpath URLs 
 
 This release delivers 4 small features - while not related, they are 
 especially useful if you are hacking legacy code or doing whitebox testing.
