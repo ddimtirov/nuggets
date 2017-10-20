@@ -1,4 +1,4 @@
-# v0.5.0 TextTable enhancements
+# v0.5.0 TextTable enhancements and Exceptions usability fixes
 
 `TextTable` is the star of this release! 
 
