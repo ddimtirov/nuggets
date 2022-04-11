@@ -14,5 +14,64 @@
  *    limitations under the License.
  */
 
+plugins {
+    id 'com.gradle.enterprise' version '3.9'
+}
+
 rootProject.name = 'nuggets'
 
+/*gradleEnterprise {
+    buildScan {
+        termsOfServiceUrl  = 'https://gradle.com/terms-of-service'
+        termsOfServiceAgree  = 'yes'
+
+        if (System.getenv("CI")) {
+            publishAlways()
+            uploadInBackground = false
+            tag "CI"
+        }
+        tag System.getProperty("os.name")
+        link "GutHub", "https://github.com/dimitrda/nuggets"
+        background {
+            def commitId = "git rev-parse --verify HEAD".execute().text.trim()
+            value "Git Commit ID", commitId
+        }
+
+        obfuscation {
+            username { name -> "user_${name.hashCode()%1000}" }
+            hostname { host -> "host_${name.hashCode()%1000}" }
+            ipAddresses { addresses -> addresses.collect { InetAddress a -> "0.0.0.${a.address[3]}"} }
+        }
+    }
+}*/
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+    }
+    versionCatalogs {
+        libs {
+            // todo: figure plugin locking
+            plugin('gradle-enterprise', 'com.gradle.enterprise').version('3.9')
+            plugin("errorprone", "net.ltgt.errorprone").version("2.0.2")
+            plugin("codacy", "io.github.ddimtirov.codacy").version("0.1.0")
+            plugin("kotlin-jvm", "org.jetbrains.kotlin.jvm").version("1.6.20")
+            plugin("kotlin-dokka", "org.jetbrains.dokka").version("1.6.10")
+            plugin('benmanes-versions', 'com.github.ben-manes.versions').version('0.15.0')
+            plugin("spotbugs", "com.github.spotbugs").version("5.0.6")
+
+            // we use these with dependency locking
+            library("boms-spock", "org.spockframework:spock-bom:2.2-M1-groovy-4.0")
+            library('apache-groovy', 'org.apache.groovy:groovy:4.+')
+            library('kotlin-stdlib', 'org.jetbrains.kotlin:kotlin-stdlib:+')
+            library('kotlin-test', 'org.jetbrains.kotlin:kotlin-test-junit5:+')
+            library('jetbrains-annotations', 'org.jetbrains:annotations:23.+')
+            library('inject', 'javax.inject:javax.inject:1')
+            library("spock-core", "org.spockframework:spock-core:+")
+            library('bytebuddy', 'net.bytebuddy:byte-buddy:+')
+            library('objenesis', 'org.objenesis:objenesis:+')
+
+            bundle('spock', ['spock-core', 'bytebuddy', 'objenesis'])
+        }
+    }
+}

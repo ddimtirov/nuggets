@@ -374,6 +374,7 @@ public class Exceptions {
      * callable vs runnable by return value. For usage examples, see {@link #rethrowing(Callable)}.</p>
      *
      * @param throwingSupplier callable to be converted, may declare checked exceptions
+     * @param <T> inferred generic type of the callable/supplier
      * @return normal supplier that does not declare checked exceptions
      */
     @Contract("null->null;!null->!null")
@@ -601,6 +602,7 @@ scan_loop:
     /**
      * Convert throwing runnable interface to normal runnable that rethrows silently.
      * @param throwingSupplier callable to be converted, may declare checked exceptions
+     * @param <T> inferred generic type of the callable/supplier
      * @return normal supplier that does not declare checked exceptions
      */
     @Contract("null->null;!null->!null")

@@ -38,9 +38,9 @@ public class ExceptionsJavaDemo {
      * <p>To prevent "missing return statement" errors, we can use the result
      * of {@code rethrow()} as return value.</p>
      */
-    public static long quietFileSize(File f) {
+    public static long quietFileSize(Path f) {
         try {
-            return Files.size(f.toPath()); // throws IOException
+            return Files.size(f); // throws IOException
         } catch (IOException e) {
             return rethrow(e);
         }
@@ -93,27 +93,23 @@ public class ExceptionsJavaDemo {
     }
 
     /**
-     * Demonstrates how to use throwing methods (i.e. {@link Files#size(Path)} and {@link File#toPath()} from
+     * Demonstrates how to use throwing methods (i.e. {@link Files#size(Path) from
      * within a non-throwing lambda (i.e. {@link Stream#filter(Predicate)}.
      */
-    public static Collection<File> findLongerThan(Collection<File> c, int scale) {
+    public static Collection<Path> findLongerThan(Collection<Path> c, int scale) {
         return c.stream()
-                .filter(it -> rethrowC(() ->             // the rethrow decorator reinterprets the IOException as unchecked
-                        Files.size(it.toPath()) > scale // Files.size() and File.toPath() throw IOException
-                ))
+                // the rethrow decorator reinterprets the IOException thrown by Files.size() as unchecked
+                .filter(it -> rethrow(() -> Files.size(it) > scale))
                 .collect(Collectors.toList());
     }
 
-    public static Collection<File> assureAllFresh(Collection<File> c) {
-        c.forEach(it -> rethrowR(() -> processFile(it)));
+    public static Collection<Path> assureAllFresh(Collection<Path> c) {
+        c.forEach(it -> rethrowR(() -> Files.createFile(it)));
         return c;
     }
 
-    public static <T> T assureFresh(File f, T retval) {
-        return rethrow(() -> processFile(f), retval);
-    }
-    public static void processFile(File f) throws Exception {
-        if (!f.createNewFile()) throw new IOException(f + " not created");
+    public static <T> T assureFresh(Path f, T retval) {
+        return rethrow(() -> Files.createFile(f), retval);
     }
 
     public static boolean rethrowing() {

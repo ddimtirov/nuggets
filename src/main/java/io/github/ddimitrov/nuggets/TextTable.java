@@ -282,10 +282,11 @@ public class TextTable {
 
         c2d = mapColumnIndexToDataIndex(columns);
         List<SiblingAwareFormatter> safs = new ArrayList<>();
+        RenderCache cache = new RenderCache(columns.size());
         for (Column column : columns) {
             if (column.formatter instanceof SiblingAwareFormatter) {
                 SiblingAwareFormatter saf = (SiblingAwareFormatter) column.formatter;
-                saf.lookup = new SiblingLookup(column.name);
+                saf.lookup = new SiblingLookup(column.name, cache);
                 safs.add(saf);
             }
         }
@@ -940,6 +941,82 @@ public class TextTable {
         }
     }
 
+    public static class RenderCache {
+        private boolean cachedRowCalculated;
+        private Object cachedRowValue;
+        private final boolean[] cachedColumnCalculated;
+        private final Object[] cachedColumnValue;
+        private boolean cachedSectionCalculated;
+        private Object cachedSectionValue;
+        private boolean cachedRenderCalculated;
+        private Object cachedRenderValue;
+
+        private String currentSectionName;
+        private int row;
+        private int column;
+
+        public RenderCache(int columns) {
+            cachedColumnCalculated = new boolean[columns];
+            cachedColumnValue = new Object[columns];
+        }
+
+        public void onCell(int row, int column) {
+            if (this.row!=row) cachedRowCalculated=false;
+            this.row=row;
+            this.column = column;
+        }
+
+        public void onSectionStart(String name) {
+            currentSectionName = name;
+            cachedSectionCalculated = false;
+        }
+
+        public void onRenderFinished() {
+            cachedRowCalculated = false;
+            Arrays.fill(cachedColumnCalculated, false);
+            cachedSectionCalculated = false;
+            cachedRenderCalculated = false;
+        }
+
+
+
+        public <T> @Nullable T forRow(@NotNull Supplier<T> factory) {
+            if (!cachedRowCalculated) {
+                cachedRowCalculated = true;
+                cachedRowValue = factory.get();
+            }
+            //noinspection unchecked
+            return (T) cachedRowValue;
+        }
+
+        public @Nullable <T> T forColumn(@NotNull Supplier<T> factory) {
+            if (!cachedColumnCalculated[column]) {
+                cachedColumnCalculated[column] = true;
+                cachedColumnValue[column] = factory.get();
+            }
+            //noinspection unchecked
+            return (T) cachedColumnValue[column];
+        }
+
+        public @Nullable <T> T forSection(@NotNull Function<@Nullable String, T> factory) {
+            if (!cachedSectionCalculated) {
+                cachedSectionCalculated = true;
+                cachedSectionValue = factory.apply(currentSectionName);
+            }
+            //noinspection unchecked
+            return (T) cachedSectionValue;
+        }
+
+        public @Nullable <T> T forRender(@NotNull Supplier<T> factory) {
+            if (!cachedRenderCalculated) {
+                cachedRenderCalculated = true;
+                cachedRenderValue = factory.get();
+            }
+            //noinspection unchecked
+            return (T) cachedRenderValue;
+        }
+    }
+
     /**
      * Used by renderers to lookup values from the same row, coordinates of te currently rendered cell,
      * as well as column aggregates.
@@ -952,6 +1029,11 @@ public class TextTable {
         public final @NotNull String columnName;
 
         /**
+         * Use the cache to store and lookup values instead of repeatedly recalculating for each cell.
+         */
+        public final @NotNull RenderCache cache;
+
+        /**
          * The index of the row for the cell being rendered.
          */
         public int row;
@@ -962,8 +1044,9 @@ public class TextTable {
          * for more efficient caching.
          * @param columnName the current column name.
          */
-        protected SiblingLookup(@NotNull String columnName) {
+        protected SiblingLookup(@NotNull String columnName, @NotNull RenderCache cache) {
             this.columnName = columnName;
+            this.cache = cache;
         }
 
         /**

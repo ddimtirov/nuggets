@@ -10,7 +10,7 @@ matrix:
             - pip install --user codecov
           script: >
             if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then
-            ./gradlew build jacocoTestReport javadoc versionEyeSecurityAndLicenseCheck artifactoryPublish codacyUpload
+            ./gradlew build jacocoTestReport javadoc # versionEyeSecurityAndLicenseCheck artifactoryPublish codacyUpload
             -PbuildInfo.build.number=$TRAVIS_BUILD_NUMBER
             -PbuildInfo.buildUrl=https://travis-ci.org/${TRAVIS_REPO_SLUG}/builds/${TRAVIS_JOB_ID}
             -PbuildInfo.principal=$USER

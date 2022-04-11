@@ -368,7 +368,7 @@ public class Extractors {
      * @see #pokeField(Object, String, Object)
      * @see Field#setAccessible(boolean)
      */
-    @Contract(pure=true) @SuppressWarnings("JavaDoc")
+    @Contract(pure=true) @SuppressWarnings({"JavaDoc", "PMD.AvoidBranchingStatementAsLastInLoop"})
     public static Method getAccessibleMethod(@NotNull Class<?> type, boolean checkSuperclasses, @Identifier @NotNull String methodName, Class<?>... signature) {
         try {
             Method declaredMethod = type.getDeclaredMethod(methodName, signature);

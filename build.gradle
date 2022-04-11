@@ -14,62 +14,136 @@
  *    limitations under the License.
  */
 
-// buildscript { dependencies { classpath "io.github.ddimtirov:codacy-gradle-plugin:0.2.0-SNAPSHOT"  }}
 plugins {
-    id 'com.gradle.build-scan' version '1.8'
-    id "com.jfrog.artifactory" version "4.5.4"
-    id "com.jfrog.bintray" version "1.7.3"
-    id "net.ltgt.errorprone" version "0.0.10" apply false // coverity doesn't like it
-    id "io.github.ddimtirov.codacy" version "0.1.0"
-    id "org.standardout.versioneye" version "1.5.0"
-    id "org.jetbrains.kotlin.jvm" version "1.1.51"
-//    id "org.jetbrains.dokka" version "0.9.15" // TODO: update when works
-    id 'com.github.ben-manes.versions' version '0.15.0' // gradlew dependencyUpdates
     id "java-library"
     id "groovy"
-    id "pmd"
-    id "findbugs"
     id "jacoco"
+    id "pmd"
+    id "signing"
     id "maven-publish"
-}
-// apply plugin: "io.github.ddimtirov.codacy"
-
-if (!System.getenv('COVERITY_SCAN_BRANCH')) {
-    apply plugin:"net.ltgt.errorprone"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.dokka)
+    alias(libs.plugins.spotbugs)
 }
 
-group 'io.github.ddimtirov'
-description 'Loosely coupled utilities for Java 8'
+group = 'io.github.ddimtirov'
+description = 'Loosely coupled utilities for Java 8'
 
-ext.bintrayUsername = project.findProperty('bintrayUsername')?:System.getenv('BINTRAY_USER')?:''
-ext.bintrayKey = project.findProperty('bintrayKey')?:System.getenv('BINTRAY_KEY')?:''
+java {
+    registerFeature('kotlin') {
+        usingSourceSet(sourceSets.main)
+    }
+    registerFeature('groovy') {
+        usingSourceSet(sourceSets.main)
+    }
+}
 
-apply from: file('gradle/publishing.gradle')
-apply from: file('gradle/artifactory.gradle')
-apply from: file('gradle/bintray.gradle')
-apply from: file('gradle/versions.gradle')
-apply from: file('gradle/javadoc.gradle')
-apply from: file('gradle/quality.gradle')
+kotlin {
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
+pmd {
+    ruleSets.clear()
+    ruleSetFiles = files('gradle/quality/pmd-rules.xml')
+}
+
+spotbugs {
+    excludeFilter = file('gradle/quality/findbugs-suppressed.xml', PathValidation.FILE)
+}
+
+dependencyLocking {
+    lockAllConfigurations()
+    lockMode = LockMode.STRICT
+}
 
 dependencies {
-    compileOnly 'org.jetbrains:annotations:',
-                'org.jetbrains.kotlin:kotlin-stdlib-jre8:',
-                'org.codehaus.groovy:groovy:'
+    compileOnly libs.jetbrains.annotations
+    kotlinApi  libs.kotlin.stdlib
+    groovyApi  libs.apache.groovy
 
-    testCompileOnly 'org.jetbrains:annotations:' // so that the Groovy compiler won't complain
+    testCompileOnly libs.jetbrains.annotations // so that the Groovy compiler won't complain
 
-    testImplementation 'org.spockframework:spock-core:',
-                       'org.jetbrains.kotlin:kotlin-stdlib:',
-                       'org.jetbrains.kotlin:kotlin-test-junit:',
-                       'javax.inject:javax.inject:'
+    testImplementation libs.inject
+    testImplementation libs.kotlin.test
 
-    testRuntimeOnly 'net.bytebuddy:byte-buddy:' // so we can use Spock Spy'es
+    testImplementation platform(libs.boms.spock)
+    testImplementation libs.bundles.spock
 }
 
-test {
+tasks.withType(Test) {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+
     // for predictable stack traces we disable the reflection bytecode generation
     systemProperties 'sun.reflect.inflationThreshold': Integer.MAX_VALUE
 
     // used by Groovy extension methods, such as `File().text` or `new URL().text`
     systemProperties 'file.encoding': 'UTF-8'
+}
+
+tasks.withType(JacocoReport) {
+    reports {
+        xml.enabled true
+        html.enabled true
+    }
+}
+
+tasks.withType(Javadoc) {
+    exclude '**/internal'
+    (options as StandardJavadocDocletOptions).with {
+        linksOffline 'https://docs.oracle.com/javase/8/docs/api/',         'gradle/javadocs/jdk'
+        linksOffline 'http://javadox.com/org.jetbrains/annotations/15.0/', 'gradle/javadocs/jetbrains-annotations'
+        stylesheetFile file('gradle/javadocs/stylesheet.css')
+        addStringOption('Xdoclint:all,-reference', '-quiet') // we report a few exceptions not declared on methods
+
+        // Workaround for Java standard Doclet all of a sudden starting to throw errors in 8u121
+        // if Javadocs header or footer contain scripts.
+        // see https://github.com/gradle/gradle/issues/1393, http://bugs.java.com/bugdatabase/view_bug.do?bug_id=JDK-8176089
+        def confImpl = Class.forName('com.sun.tools.doclets.formats.html.ConfigurationImpl').newInstance()
+        if (confImpl.optionLength('--allow-script-in-comments') > 0) {
+            addBooleanOption('-allow-script-in-comments').value = true
+        }
+
+        windowTitle = "nuggets API"
+        docTitle = "<b>nuggets</b> - loosely coupled utilities for Java 8"
+        header = '<a href="https://github.com/ddimtirov/nuggets" target="_top" class="github-corner" aria-label="View source on Github">' +
+                '<svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true">' +
+                '<path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>' +
+                '<path fill="currentColor" class="octo-arm" style="transform-origin: 130px 106px;" d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"></path>' +
+                '<path fill="currentColor" class="octo-body" d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"></path>' +
+                '</svg>' +
+                '</a>' +
+                '<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/highlight.min.js"></script>' +
+                '<script>hljs.initHighlightingOnLoad();</script>'
+        footer "nuggets-$project.version built ${new Date().format('MMM dd, yyyy')}"
+        linkSource()
+        noIndex()
+        noHelp()
+        noTree()
+    }
+    doLast {
+        copy { (delegate as CopySpec).with {
+            from files('LICENSE', 'RELEASENOTES.md')
+            into destinationDir
+        }}
+    }
+}
+
+if (pluginManager.hasPlugin("net.ltgt.errorprone")) {
+    tasks.withType(JavaCompile) {
+        // disable errorprone check - we use this trick in Exceptions
+        it.options.compilerArgs << '-Xep:TypeParameterUnusedInFormals:OFF'
+    }
+}
+
+tasks.named('spotbugsTest') { enabled = false }
+tasks.named('spotbugsMain') {
+    reports {
+        xml.enabled=false
+        html.enabled=true
+    }
 }

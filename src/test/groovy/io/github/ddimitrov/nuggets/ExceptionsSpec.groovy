@@ -16,19 +16,20 @@
 
 package io.github.ddimitrov.nuggets
 
-import org.junit.Rule
-import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
 import spock.lang.Subject
+import spock.lang.TempDir
 import spock.lang.Title
 
+import java.nio.file.Files
 import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 
 @Title("Exceptions :: Silent rethrows and formatting")
 @Subject(Exceptions)
 @SuppressWarnings("GroovyAccessibility")
 class ExceptionsSpec extends Specification {
-    @Rule TemporaryFolder temporaryFolder
+    @TempDir Path temporaryFolder
 
     void setup() {
         assert Exceptions.TRANSFORMER.get()==null : "Some of the previous tests did not clean up the global exception transformer"
@@ -38,7 +39,7 @@ class ExceptionsSpec extends Specification {
         when: def string = Exceptions.toStackTraceString(new IllegalArgumentException())
         then: !string.empty
 
-        when:  def lines = string.split('(\n|\r)+') as List<String>
+        when:  def lines = string.split('([\n\r])+') as List<String>
         then:
         lines.first()==IllegalArgumentException.name
         lines.drop(1).each {
@@ -48,15 +49,15 @@ class ExceptionsSpec extends Specification {
 
     def "Use rethrowSilent(e) to tunnel exceptions without declaring them in Java"() {
         setup:
-        def f = temporaryFolder.newFile()
-        f.text="hello"
+        def f = Files.createTempFile(temporaryFolder, ExceptionsSpec.simpleName, null)
+        f.toFile().text="hello"
 
         when: "we get the size of existing file"
         def fileSize = ExceptionsJavaDemo.quietFileSize(f)
 
         then: "it comes back correct"
         fileSize==5L
-        f.delete() // make sure deletion succeeds
+        Files.delete(f) // make sure deletion succeeds
 
         when: "we try to get the size of missing file"
         ExceptionsJavaDemo.quietFileSize(f)
@@ -85,10 +86,10 @@ class ExceptionsSpec extends Specification {
     // See ExceptionsJavaDemo.assureAllFresh() as Groovy is transparent to exceptions anyway
     def "Mute exceptions in void closure"() {
         setup:
-        def f1 = temporaryFolder.newFile()
-        def f2 = temporaryFolder.newFile()
-        def f3 = temporaryFolder.newFile()
-        [f1, f2, f3].each { assert it.delete() }
+        def f1 = Files.createTempFile(temporaryFolder, ExceptionsSpec.simpleName, null)
+        def f2 = Files.createTempFile(temporaryFolder, ExceptionsSpec.simpleName, null)
+        def f3 = Files.createTempFile(temporaryFolder, ExceptionsSpec.simpleName, null)
+        [f1, f2, f3].each { Files.delete(it) }
 
         when: 'calling with files missing'
         ExceptionsJavaDemo.assureAllFresh([f1, f2, f3])
@@ -104,8 +105,8 @@ class ExceptionsSpec extends Specification {
     // See ExceptionsJavaDemo.assureFresh() as Groovy is transparent to exceptions anyway
     def "Mute exceptions in void closure returning result on success"() {
         setup:
-        def f = temporaryFolder.newFile()
-        assert f.delete()
+        def f = Files.createTempFile(temporaryFolder, ExceptionsSpec.simpleName, null)
+        Files.delete(f)
 
         when: 'calling with file missing'
         def v = ExceptionsJavaDemo.assureFresh(f, "success")
@@ -121,10 +122,10 @@ class ExceptionsSpec extends Specification {
     // See ExceptionsJavaDemo.findLongerThan() as Groovy is transparent to exceptions anyway
     def "Mute exceptions in closure returning result"() {
         setup: 'setup 2 files - one larget than 5 chars, one smaller'
-        def file = temporaryFolder.newFile()
-        file << 'foobar' // longer than 5 bytes
-        temporaryFolder.newFile() << 'foo' // shorter than 5 bytes
-        def allFiles = temporaryFolder.root.listFiles() as List
+        def file = Files.createTempFile(temporaryFolder, "one", null)
+        file.toFile() << 'foobar' // longer than 5 bytes
+        Files.createTempFile(temporaryFolder, "another", null).toFile() << 'foo' // shorter than 5 bytes
+        def allFiles = Files.list(temporaryFolder) as List
 
         when: 'we search for all files larget than 5'
         def longerThan5 = ExceptionsJavaDemo.findLongerThan(allFiles, 5)
@@ -133,8 +134,8 @@ class ExceptionsSpec extends Specification {
         longerThan5 ==[file]
 
         when: 'we add a missing file to the list'
-        def deleted = temporaryFolder.newFile()
-        assert deleted.delete()
+        def deleted = Files.createTempFile(temporaryFolder, "deleted", null)
+        Files.delete(deleted)
         ExceptionsJavaDemo.findLongerThan(allFiles + deleted, 5)==[file]
 
         then: 'checking the length of the deleted file throws checked exception (and we used Collection.forEach())'

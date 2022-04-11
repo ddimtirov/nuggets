@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/buildSrc.iml" filepath="$PROJECT_DIR$/.idea/modules/buildSrc.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/nuggets.iml" filepath="$PROJECT_DIR$/.idea/modules/nuggets.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/nuggets.buildSrc.main.iml" filepath="$PROJECT_DIR$/.idea/modules/nuggets.buildSrc.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/nuggets.buildSrc.test.iml" filepath="$PROJECT_DIR$/.idea/modules/nuggets.buildSrc.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/nuggets.main.iml" filepath="$PROJECT_DIR$/.idea/modules/nuggets.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/nuggets.test.iml" filepath="$PROJECT_DIR$/.idea/modules/nuggets.test.iml" />
     </modules>
   </component>
 </project>

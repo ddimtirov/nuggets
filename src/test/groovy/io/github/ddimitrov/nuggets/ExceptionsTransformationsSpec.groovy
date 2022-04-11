@@ -46,50 +46,10 @@ class ExceptionsTransformationsSpec extends Specification {
 
     def "Rethrow transformed can be used to trim the stacktrace"() {
         setup:
-        def bigUglyStackTrace = '''java.lang.Exception: error message
-                                \tat sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
-                                \tat sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java)
-                                \tat sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java)
-                                \tat java.lang.reflect.Constructor.newInstance(Constructor.java)
-                                \tat org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java)
-                                \tat org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java)
-                                \tat org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCallConstructor(CallSiteArray.java)
-                                \tat org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java)
-                                \tat org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java)
-                                \tat io.github.ddimitrov.nuggets.ExceptionsTransformationsSpec.$spock_feature_0_0(ExceptionsTransformationsSpec.groovy)
-                                \tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-                                \tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java)
-                                \tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java)
-                                \tat java.lang.reflect.Method.invoke(Method.java)
-                                \tat org.spockframework.util.ReflectionUtil.invokeMethod(ReflectionUtil.java)
-                                \tat org.spockframework.runtime.model.MethodInfo.invoke(MethodInfo.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runFeatureMethod(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.doRunIteration(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner$6.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runIteration(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.initializeAndRunIteration(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runSimpleFeature(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.doRunFeature(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner$5.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runFeature(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runFeatures(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.doRunSpec(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner$1.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runSpec(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.run(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.Sputnik.run(Sputnik.java)
-                                '''.replaceAll(STACKTRACE_LITERAL_PRETTYPRINT, '')
-
         def niceStacktrace = '''java.lang.Exception: error message
                              \tat io.github.ddimitrov.nuggets.ExceptionsTransformationsSpec.$spock_feature_0_0(ExceptionsTransformationsSpec.groovy)
+                             \tat java.util.ArrayList.forEach(ArrayList.java)
+                             \tat java.util.ArrayList.forEach(ArrayList.java)
                              '''.replaceAll(STACKTRACE_LITERAL_PRETTYPRINT, '')
 
         when: 'an exception is thrown'
@@ -97,7 +57,7 @@ class ExceptionsTransformationsSpec extends Specification {
 
         then: 'it comes with a hefty stacktrace'
         Exception e = thrown()
-        cleanString(e) == bigUglyStackTrace
+        e.stackTrace.length > 50
 
         when: 'we specify the following transformations and rethrow'
         Exceptions.rethrowTransformed(e, true)
@@ -119,50 +79,10 @@ class ExceptionsTransformationsSpec extends Specification {
 
     def "We can set a global transform, applied by default for all Exception.rethrow() methods"() {
         setup:
-        def bigUglyStackTrace = '''java.lang.Exception: error message
-                                \tat sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
-                                \tat sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java)
-                                \tat sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java)
-                                \tat java.lang.reflect.Constructor.newInstance(Constructor.java)
-                                \tat org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java)
-                                \tat org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java)
-                                \tat org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCallConstructor(CallSiteArray.java)
-                                \tat org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java)
-                                \tat org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java)
-                                \tat io.github.ddimitrov.nuggets.ExceptionsTransformationsSpec.$spock_feature_0_1(ExceptionsTransformationsSpec.groovy)
-                                \tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-                                \tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java)
-                                \tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java)
-                                \tat java.lang.reflect.Method.invoke(Method.java)
-                                \tat org.spockframework.util.ReflectionUtil.invokeMethod(ReflectionUtil.java)
-                                \tat org.spockframework.runtime.model.MethodInfo.invoke(MethodInfo.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runFeatureMethod(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.doRunIteration(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner$6.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runIteration(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.initializeAndRunIteration(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runSimpleFeature(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.doRunFeature(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner$5.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runFeature(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runFeatures(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.doRunSpec(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner$1.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.runSpec(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.BaseSpecRunner.run(BaseSpecRunner.java)
-                                \tat org.spockframework.runtime.Sputnik.run(Sputnik.java)
-                                '''.replaceAll(STACKTRACE_LITERAL_PRETTYPRINT, '')
-
         def niceStacktrace = '''java.lang.Exception: error message
                              \tat io.github.ddimitrov.nuggets.ExceptionsTransformationsSpec.$spock_feature_0_1(ExceptionsTransformationsSpec.groovy)
+                             \tat java.util.ArrayList.forEach(ArrayList.java)
+                             \tat java.util.ArrayList.forEach(ArrayList.java)
                              '''.replaceAll(STACKTRACE_LITERAL_PRETTYPRINT, '')
 
         when: 'an exception is thrown'
@@ -170,7 +90,7 @@ class ExceptionsTransformationsSpec extends Specification {
 
         then: 'it comes with a hefty stacktrace'
         Exception eo = thrown()
-        cleanString(eo) == bigUglyStackTrace
+        eo.stackTrace.length > 80
 
         when: 'if we we specify the following transform as the default for this thread and its children'
         Exceptions.transformOnRethrow()
@@ -178,6 +98,7 @@ class ExceptionsTransformationsSpec extends Specification {
                 .filterStackFramesForClass(~/(sun|java\.lang)\.reflect\..*/)
                 .filterStackFramesForClassPrefix('org.junit.')
                 .filterStackFramesForClassPrefix('org.codehaus.groovy.')
+                .filterStackFramesForClassPrefix('org.apache.groovy.')
                 .filterStackFramesForClassPrefix('com.intellij.') // IDEA only
                 .filterStackFramesForClassPrefix('org.gradle.')   // Gradle only (from here on)
                 .filterStackFramesForClassPrefix('java.lang.Thread')
@@ -189,6 +110,7 @@ class ExceptionsTransformationsSpec extends Specification {
 
         then: 'any of the Exceptions.rethrow() methods automatically applies the default transform'
         Exception te = thrown()
+        te.stackTrace.length == 3
         cleanString(te)==niceStacktrace
 
         when: 'we need to bypass the default transform, we can use Exceptions.rethrowTransformed(e, true) without specifying transform'
@@ -196,11 +118,12 @@ class ExceptionsTransformationsSpec extends Specification {
 
         then: 'we get the full stack trace'
         Exception oet = thrown()
-        cleanString(oet) == bigUglyStackTrace
+        oet.stackTrace.length > 80
 
         when: 'if we want to add an extra transform before the default is applied, use Exceptions.rethrowTransformed(e, false)'
         Exceptions.rethrowTransformed(new Exception("error message"), false)
                 .filterStackFramesForClassPrefix('io.github.ddimitrov.nuggets')
+                .filterStackFramesForClassPrefix('java.util.ArrayList')
                 .done()
 
         then: 'we get the trimmed stack trace, filtered with our extra transform'
@@ -213,39 +136,62 @@ class ExceptionsTransformationsSpec extends Specification {
 
         then: 'we get the full stack trace'
         Exception ret = thrown()
-        cleanString(ret) == bigUglyStackTrace
+        ret.stackTrace.length > 80
     }
 
     def "use the recommended transforms in the beginning of your main() method"() {
         setup: 'by calling Exceptions.setupTransformOnRethrowDefaultConfig(), you set reasonable defaults'
         Exceptions.setupTransformOnRethrowDefaultConfig()
+        
         def cleanYetInformativeStackTrace='''java.lang.Exception: error message
                                             \tat io.github.ddimitrov.nuggets.ExceptionsTransformationsSpec.$spock_feature_0_2(ExceptionsTransformationsSpec.groovy)
                                             \tat org.spockframework.util.ReflectionUtil.invokeMethod(ReflectionUtil.java)
+                                            \tat org.spockframework.runtime.model.MethodInfo.lambda$new$0(MethodInfo.java)
                                             \tat org.spockframework.runtime.model.MethodInfo.invoke(MethodInfo.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.runFeatureMethod(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.doRunIteration(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner$6.invoke(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.runIteration(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.initializeAndRunIteration(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.runSimpleFeature(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.doRunFeature(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner$5.invoke(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.runFeature(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.runFeatures(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.doRunSpec(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner$1.invoke(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.invokeRaw(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.invoke(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.runSpec(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.BaseSpecRunner.run(BaseSpecRunner.java)
-                                            \tat org.spockframework.runtime.Sputnik.run(Sputnik.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.invokeRaw(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.invoke(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.runFeatureMethod(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.IterationNode.execute(IterationNode.java)
+                                            \tat org.spockframework.runtime.SimpleFeatureNode.execute(SimpleFeatureNode.java)
+                                            \tat org.spockframework.runtime.SimpleFeatureNode.execute(SimpleFeatureNode.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java)
+                                            \tat org.spockframework.runtime.SpockNode.sneakyInvoke(SpockNode.java)
+                                            \tat org.spockframework.runtime.IterationNode.lambda$around$0(IterationNode.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.lambda$createMethodInfoForDoRunIteration$5(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.model.MethodInfo.invoke(MethodInfo.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.invokeRaw(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.invoke(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.runIteration(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.IterationNode.around(IterationNode.java)
+                                            \tat org.spockframework.runtime.SimpleFeatureNode.lambda$around$0(SimpleFeatureNode.java)
+                                            \tat org.spockframework.runtime.SpockNode.sneakyInvoke(SpockNode.java)
+                                            \tat org.spockframework.runtime.FeatureNode.lambda$around$0(FeatureNode.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.lambda$createMethodInfoForDoRunFeature$4(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.model.MethodInfo.invoke(MethodInfo.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.invokeRaw(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.invoke(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.runFeature(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.FeatureNode.around(FeatureNode.java)
+                                            \tat org.spockframework.runtime.SimpleFeatureNode.around(SimpleFeatureNode.java)
+                                            \tat org.spockframework.runtime.SimpleFeatureNode.around(SimpleFeatureNode.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java)
+                                            \tat java.util.ArrayList.forEach(ArrayList.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java)
+                                            \tat org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java)
+                                            \tat org.spockframework.runtime.SpockNode.sneakyInvoke(SpockNode.java)
+                                            \tat org.spockframework.runtime.SpecNode.lambda$around$0(SpecNode.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.lambda$createMethodInfoForDoRunSpec$0(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.model.MethodInfo.invoke(MethodInfo.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.invokeRaw(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.invoke(PlatformSpecRunner.java)
+                                            \tat org.spockframework.runtime.PlatformSpecRunner.runSpec(PlatformSpecRunner.java)
         '''.replaceAll(STACKTRACE_LITERAL_PRETTYPRINT, '')
 
         when: Exceptions.rethrow(new Exception("error message"))
@@ -402,7 +348,7 @@ class ExceptionsTransformationsSpec extends Specification {
                 .replaceAll(~/:\d+\)/, ')')             // strip line numbers
 
         def lines = es.split('\n')
-        def startOfSpock = lines.findIndexOf { it =~ /Sputnik\.run/ }
+        def startOfSpock = lines.findIndexOf { it =~ /PlatformSpecRunner\.runSpec/ }
         return startOfSpock<0 ? es : lines.take(startOfSpock + 1).join('\n') + '\n'
     }
     

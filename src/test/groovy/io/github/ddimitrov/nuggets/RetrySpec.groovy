@@ -66,8 +66,8 @@ class RetrySpec extends Specification {
     def "one can listen for retries - useful for test reports"() {
         given:
         def results = [:]
-        assert !Functions.snoopRetries("test-listener") { description, result, error ->
-            results[description] = error ?: result
+        assert !Functions.snoopRetries("test-listener") { description, retval, error ->
+            results[description] = error ?: retval
         }
 
         when:

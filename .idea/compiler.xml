@@ -4,6 +4,8 @@
     <bytecodeTargetLevel target="1.8">
       <module name="buildSrc_main" target="1.8" />
       <module name="buildSrc_test" target="1.8" />
+      <module name="nuggets.main" target="8" />
+      <module name="nuggets.test" target="8" />
       <module name="nuggets_main" target="1.8" />
       <module name="nuggets_test" target="1.8" />
     </bytecodeTargetLevel>

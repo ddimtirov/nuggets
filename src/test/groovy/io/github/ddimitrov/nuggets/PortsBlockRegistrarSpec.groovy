@@ -65,9 +65,9 @@ class PortsBlockRegistrarSpec extends Specification {
 
         when: 'we reserve some ports and freeze the config'
         ports.withPorts(5000, { reserve ->
-            reserve.id("foo");
-            reserve.id("bar").offset(1);
-            reserve.id("baz");
+            reserve.id("foo")
+            reserve.id("bar").offset(1)
+            reserve.id("baz")
         } as Consumer<Ports.PortsSpecBuilder>) // ignore the closure coercion - from Java, you would use a real lambda
 
         then:
@@ -332,7 +332,7 @@ class PortsBlockRegistrarSpec extends Specification {
 
     def "error when statically allocated ports clash with dynamic allocated"() {
         given: 'a custom dynamic port finder, returning a fixed offset'
-        final CLASHING_PORT_OFFSET = 1
+        def CLASHING_PORT_OFFSET = 1
         registrar = new Ports.BlockRegistrar(InetAddress.localHost, 10, 0)
         def dynamicPortFinder = {-> CLASHING_PORT_OFFSET}
         ports = new Ports(registrar, dynamicPortFinder)

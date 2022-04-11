@@ -19,7 +19,7 @@ package io.github.ddimitrov.nuggets.kotlin
 import io.github.ddimitrov.nuggets.Exceptions
 import io.github.ddimitrov.nuggets.TextTable
 import io.github.ddimitrov.nuggets.internal.kotlin.*
-import org.junit.Test
+import kotlin.test.Test
 import java.lang.reflect.InvocationTargetException
 import java.sql.Time
 import java.util.*
