@@ -10,5 +10,5 @@ tasks:
       sdk install java 8.0.322.fx-zulu
       sdk default java 8.0.322.fx-zulu
       sdk use java 8.0.322.fx-zulu
-      ./gradlew build
+      ./gradlew jar testClasses
       
