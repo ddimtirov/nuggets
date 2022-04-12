@@ -64,7 +64,7 @@ class ExceptionsSpec extends Specification {
 
         then: "a checked exception is thrown, even if the quietFileSize() method does not declare it"
         def e = thrown(NoSuchFileException)
-        e.message == f.path
+        e.message == f.toFile().path
     }
 
     def "Illustrate the use of rethrowing"() {

@@ -1,0 +1,14 @@
+# Please adjust to your needs (see https://www.gitpod.io/docs/config-gitpod-file)
+# and commit this file to your remote git repository to share the goodness with others.
+
+tasks:
+  - name: Fetch Gradle
+    before: |
+      echo 'sdkman_auto_answer=true' >> ~/.sdkman/etc/config
+      echo 'sdkman_selfupdate_enable=false' >> ~/.sdkman/etc/config
+    init: |
+      sdk install java 8.0.322.fx-zulu
+      sdk default java 8.0.322.fx-zulu
+      sdk use java 8.0.322.fx-zulu
+      ./gradlew build
+      
